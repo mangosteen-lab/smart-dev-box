@@ -72,26 +72,45 @@ export default function Home() {
       <ToolSidebar />
 
       <div
-        className="flex-1 overflow-y-auto p-4 flex flex-col gap-3"
-        style={{ minWidth: 0 }}
+        className="flex-1 overflow-y-auto flex flex-col gap-4"
+        style={{ minWidth: 0, padding: '20px 24px' }}
       >
         {customPanel ? (
-          <section className="flex flex-col gap-2">
-            <div className="flex items-center justify-between mb-1 shrink-0">
-              <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-                {customPanel.title}
-              </h2>
-              {customPanel.badge && (
-                <span className="text-xs px-2 py-0.5 rounded font-mono"
-                  style={{ background: 'var(--surface-2)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
-                  {customPanel.badge}
-                </span>
-              )}
+          <section className="flex flex-col gap-3 animate-fade-in">
+            {/* Panel header */}
+            <div
+              className="flex items-center justify-between px-4 py-3 rounded-xl"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: 'var(--primary-muted)', color: 'var(--primary)', fontSize: '15px' }}
+                >
+                  ⚙
+                </div>
+                <h2 style={{ color: 'var(--foreground)', fontSize: '16px', fontWeight: 700 }}>
+                  {customPanel.title}
+                </h2>
+                {customPanel.badge && (
+                  <span
+                    className="px-2.5 py-1 rounded-full font-mono"
+                    style={{
+                      background: 'var(--surface-3)',
+                      color: 'var(--muted)',
+                      border: '1px solid var(--border)',
+                      fontSize: '12px',
+                    }}
+                  >
+                    {customPanel.badge}
+                  </span>
+                )}
+              </div>
             </div>
             {customPanel.component}
           </section>
         ) : splitMode ? (
-          <section className="flex flex-col gap-2">
+          <section className="flex flex-col gap-3 animate-fade-in">
             <SplitDiffPanel
               onClose={() => setSplitMode(false)}
               initialInput={splitSnapshot?.input}
@@ -102,24 +121,33 @@ export default function Home() {
           </section>
         ) : (
           <>
-            <section className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
+            {/* Input section */}
+            <section className="flex flex-col gap-3">
+              {/* Generator bar + split toggle */}
+              <div className="flex items-center justify-between gap-3">
                 <GeneratorBar />
                 <button
                   onClick={() => handleEnterSplit()}
-                  className="text-xs px-3 py-1.5 rounded font-medium shrink-0 hover:opacity-80 transition-opacity"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold shrink-0 transition-all hover:opacity-90 active:scale-95"
                   style={{
-                    background: 'var(--surface)',
-                    color: 'var(--muted)',
-                    border: '1px solid var(--border)',
+                    background: 'var(--gradient-brand)',
+                    color: 'white',
+                    border: 'none',
+                    fontSize: '13px',
+                    boxShadow: '0 2px 10px var(--primary-glow)',
+                    letterSpacing: '0.01em',
                   }}
                 >
-                  ⇔ Split
+                  <span style={{ fontSize: '15px', lineHeight: 1 }}>⇔</span>
+                  Split view
                 </button>
               </div>
+
               <UniversalInput />
               <DetectionBar />
             </section>
+
+            {/* Output section */}
             <section>
               <OutputPanel />
             </section>
