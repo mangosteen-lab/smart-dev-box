@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartDevBox — Free Online Developer Tools | Base64, JSON, JWT &amp; 91 more</title>
+<meta name="description" content="Free online developer tools in one place. Base64 encode/decode, JSON formatter, JWT decoder, URL encoder, regex tester, hash generator, and 91 more utilities. No install required.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0a0a0a;
+    --bg1:       #0d0d0d;
+    --bg2:       #111111;
+    --bg3:       #161616;
+    --border:    #1e1e1e;
+    --border2:   #2a2a2a;
+    --text:      #e2e2e2;
+    --text2:     #888888;
+    --text3:     #444444;
+    --text4:     #2a2a2a;
+    --green:     #4ade80;
+    --green-dim: #2d6b2d;
+    --green-bg:  #0b160b;
+    --purple:    #a78bfa;
+    --purple-dim:#534AB7;
+    --amber:     #fbbf24;
+    --amber-dim: #854F0B;
+    --blue:      #60a5fa;
+    --blue-dim:  #185FA5;
+    --font:      'JetBrains Mono', monospace;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+
+  /* ── LAYOUT ── */
+  .app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ── TITLEBAR ── */
+  .titlebar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+    height: 40px;
+    background: var(--bg1);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    user-select: none;
+  }
+  .traffic { display: flex; gap: 7px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; transition: opacity .15s; }
+  .dot:hover { opacity: .75; }
+  .dot.r { background: #ff5f57; }
+  .dot.y { background: #febc2e; }
+  .dot.g { background: #28c840; }
+  .logo-wrap { display: flex; align-items: center; gap: 8px; margin-left: 8px; }
+  .logo-icon {
+    width: 22px; height: 22px;
+    background: var(--green);
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #0a0a0a;
+    flex-shrink: 0;
+  }
+  .logo-text { font-size: 13px; font-weight: 700; color: var(--text); }
+  .logo-text span { color: var(--green); }
+  .tagline { font-size: 11px; color: var(--text3); margin-left: 4px; }
+  .tb-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .tb-btn {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text3);
+    background: none; border: 1px solid var(--border); border-radius: 4px;
+    padding: 3px 10px; cursor: pointer; font-family: var(--font);
+    transition: color .15s, border-color .15s;
+  }
+  .tb-btn:hover { color: var(--text2); border-color: var(--border2); }
+  .tb-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ── BODY ── */
+  .body { display: flex; flex: 1; min-height: 0; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 190px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: #080808;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sb-search {
+    display: flex; align-items: center; gap: 7px;
+    margin: 10px 8px 6px;
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 4px;
+    padding: 6px 9px; flex-shrink: 0;
+  }
+  .sb-search svg { width: 13px; height: 13px; stroke: var(--text3); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .sb-search input {
+    background: none; border: none; outline: none;
+    font-size: 11px; color: var(--text2); font-family: var(--font); width: 100%;
+  }
+  .sb-search input::placeholder { color: var(--text4); }
+  .sb-list { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+  .sb-list::-webkit-scrollbar { width: 4px; }
+  .sb-list::-webkit-scrollbar-track { background: transparent; }
+  .sb-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .cat-header {
+    display: flex; align-items: center; gap: 7px;
+    padding: 10px 10px 5px;
+    font-size: 10px; font-weight: 700; letter-spacing: .08em;
+    cursor: pointer; user-select: none;
+  }
+  .cat-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .cat-header.green  { color: var(--green-dim); } .cat-header.green  .cat-dot { background: var(--green); }
+  .cat-header.purple { color: var(--purple-dim); } .cat-header.purple .cat-dot { background: var(--purple); }
+  .cat-header.amber  { color: var(--amber-dim); }  .cat-header.amber  .cat-dot { background: var(--amber); }
+  .cat-header.blue   { color: var(--blue-dim); }   .cat-header.blue   .cat-dot { background: var(--blue); }
+  .sb-item {
+    display: block; padding: 5px 10px 5px 23px;
+    font-size: 11px; color: var(--text3);
+    cursor: pointer; border-left: 2px solid transparent;
+    transition: color .12s, background .12s;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sb-item:hover { color: var(--text2); background: #0f0f0f; }
+  .sb-item.active { color: var(--green); border-left-color: var(--green); background: var(--green-bg); }
+
+  /* ── MAIN ── */
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg1);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .toolbar-label { font-size: 10px; color: var(--text3); margin-right: 2px; letter-spacing: .04em; }
+  .gen-btn {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; background: var(--bg2); border: 1px solid var(--border); color: var(--text2);
+    padding: 4px 10px; border-radius: 4px; cursor: pointer; font-family: var(--font);
+    transition: color .12s, border-color .12s;
+  }
+  .gen-btn:hover { border-color: var(--green); color: var(--green); }
+  .gen-btn .arr { color: var(--text4); font-size: 9px; margin-left: 2px; }
+  .split-btn {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; background: none; border: 1px solid var(--border); color: var(--text3);
+    padding: 4px 12px; border-radius: 4px; cursor: pointer; font-family: var(--font);
+    transition: color .12s, border-color .12s;
+  }
+  .split-btn:hover { border-color: var(--border2); color: var(--text2); }
+  .split-btn svg, .gen-btn svg, .tb-btn svg, .sb-search svg {
+    width: 13px; height: 13px; stroke: currentColor; fill: none;
+    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  }
+
+  /* ── WORKSPACE ── */
+  .workspace { flex: 1; display: flex; flex-direction: column; padding: 10px; gap: 8px; min-height: 0; }
+
+  /* ── PANE ── */
+  .pane {
+    border: 1px solid var(--border); border-radius: 6px;
+    display: flex; flex-direction: column;
+    background: var(--bg1); overflow: hidden;
+  }
+  .pane.input-pane { flex: 1.3; }
+  .pane.output-pane { flex: 1; }
+  .pane-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-bottom: 1px solid #141414;
+    flex-shrink: 0;
+  }
+  .pane-header svg { width: 13px; height: 13px; stroke: var(--text4); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .pane-label { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--text3); }
+  .pane-label.green { color: var(--green-dim); }
+  .pane-meta { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .pane-stat { font-size: 10px; color: var(--text4); }
+  .pane-action {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 10px; color: var(--text4); cursor: pointer;
+    transition: color .12s;
+  }
+  .pane-action:hover { color: var(--text2); }
+  .pane-action svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .pane-body { flex: 1; padding: 14px; overflow: auto; position: relative; }
+  .pane-body::-webkit-scrollbar { width: 4px; }
+  .pane-body::-webkit-scrollbar-track { background: transparent; }
+  .pane-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* textarea inside pane */
+  .pane-body textarea {
+    width: 100%; height: 100%;
+    background: transparent; border: none; outline: none; resize: none;
+    font-family: var(--font); font-size: 12px; color: var(--text); line-height: 1.7;
+    caret-color: var(--green);
+  }
+  .pane-body textarea::placeholder { color: var(--text4); }
+
+  .output-empty {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 100%; gap: 8px; pointer-events: none;
+  }
+  .output-empty svg { width: 22px; height: 22px; stroke: var(--text4); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .output-empty span { font-size: 11px; color: var(--text4); }
+
+  /* ── HINTS ── */
+  .hints {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+    padding: 5px 10px; border-top: 1px solid #111; flex-shrink: 0;
+  }
+  .hint { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text4); }
+  .hint svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+  /* ── STATUS BAR ── */
+  .statusbar {
+    display: flex; align-items: center; gap: 14px;
+    padding: 4px 14px; border-top: 1px solid var(--border);
+    background: #080808; flex-shrink: 0;
+  }
+  .sb-pill { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text4); }
+  .sb-pill.on { color: var(--green-dim); }
+  .sb-pill svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .sb-vdiv { width: 1px; height: 12px; background: var(--border); }
+
+  /* ── CURSOR BLINK ── */
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  .cursor { display: inline-block; width: 7px; height: 13px; background: var(--green); vertical-align: middle; margin-left: 1px; animation: blink 1.1s step-end infinite; }
+
+  /* ── FORMAT CHIPS ── */
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chip {
+    font-size: 10px; padding: 2px 8px; border-radius: 3px;
+    border: 1px solid var(--border); color: var(--text3); cursor: pointer;
+    background: var(--bg2); transition: all .12s;
+  }
+  .chip:hover { border-color: var(--green); color: var(--green); }
+  .chip.detected { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+
+  /* ── SCROLLBAR GLOBAL ── */
+  * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TITLEBAR -->
+  <div class="titlebar">
+    <div class="traffic">
+      <div class="dot r"></div>
+      <div class="dot y"></div>
+      <div class="dot g"></div>
+    </div>
+    <div class="logo-wrap">
+      <div class="logo-icon">&gt;_</div>
+      <div class="logo-text">smart<span>dev</span>box</div>
+    </div>
+    <span class="tagline">Everything a dev needs, in one box.</span>
+    <div class="tb-right">
+      <button class="tb-btn" title="Toggle theme">
+        <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="tb-btn" title="Settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button class="tb-btn">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        login
+      </button>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sb-search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="search-input" placeholder="Search tools..." oninput="filterTools(this.value)" />
+      </div>
+      <div class="sb-list" id="sidebar-list">
+
+        <div class="cat-header green"><span class="cat-dot"></span>encoding / decoding</div>
+        <div class="sb-item active" onclick="selectTool(this,'Base64 Encode')">Base64 Encode</div>
+        <div class="sb-item" onclick="selectTool(this,'Base64 Decode')">Base64 Decode</div>
+        <div class="sb-item" onclick="selectTool(this,'URL Encode')">URL Encode</div>
+        <div class="sb-item" onclick="selectTool(this,'URL Decode')">URL Decode</div>
+        <div class="sb-item" onclick="selectTool(this,'JWT Inspector')">JWT Inspector</div>
+        <div class="sb-item" onclick="selectTool(this,'JWT Encoder')">JWT Encoder</div>
+        <div class="sb-item" onclick="selectTool(this,'HTML Encode')">HTML Encode</div>
+        <div class="sb-item" onclick="selectTool(this,'HTML Decode')">HTML Decode</div>
+        <div class="sb-item" onclick="selectTool(this,'Hex → ASCII')">Hex → ASCII</div>
+        <div class="sb-item" onclick="selectTool(this,'ASCII → Hex')">ASCII → Hex</div>
+        <div class="sb-item" onclick="selectTool(this,'Backslash Escape')">Backslash Escape</div>
+        <div class="sb-item" onclick="selectTool(this,'Backslash Unescape')">Backslash Unescape</div>
+        <div class="sb-item" onclick="selectTool(this,'ROT13')">ROT13</div>
+        <div class="sb-item" onclick="selectTool(this,'ROT47')">ROT47</div>
+        <div class="sb-item" onclick="selectTool(this,'Base32 Encode')">Base32 Encode</div>
+        <div class="sb-item" onclick="selectTool(this,'Base32 Decode')">Base32 Decode</div>
+        <div class="sb-item" onclick="selectTool(this,'URL Parser')">URL Parser</div>
+        <div class="sb-item" onclick="selectTool(this,'Base64 Image Decode')">Base64 Image Decode</div>
+
+        <div class="cat-header purple"><span class="cat-dot"></span>formatting</div>
+        <div class="sb-item" onclick="selectTool(this,'JSON Formatter')">JSON Formatter</div>
+        <div class="sb-item" onclick="selectTool(this,'XML Formatter')">XML Formatter</div>
+        <div class="sb-item" onclick="selectTool(this,'SQL Formatter')">SQL Formatter</div>
+        <div class="sb-item" onclick="selectTool(this,'CSS Beautifier')">CSS Beautifier</div>
+        <div class="sb-item" onclick="selectTool(this,'HTML Beautifier')">HTML Beautifier</div>
+        <div class="sb-item" onclick="selectTool(this,'JS Beautifier')">JS Beautifier</div>
+        <div class="sb-item" onclick="selectTool(this,'JS Minifier')">JS Minifier</div>
+
+        <div class="cat-header amber"><span class="cat-dot"></span>generators</div>
+        <div class="sb-item" onclick="selectTool(this,'UUID v4')">UUID v4</div>
+        <div class="sb-item" onclick="selectTool(this,'ULID')">ULID</div>
+        <div class="sb-item" onclick="selectTool(this,'Random String')">Random String</div>
+        <div class="sb-item" onclick="selectTool(this,'Lorem Ipsum')">Lorem Ipsum</div>
+        <div class="sb-item" onclick="selectTool(this,'Hash (MD5/SHA)')">Hash (MD5/SHA)</div>
+
+        <div class="cat-header blue"><span class="cat-dot"></span>converters</div>
+        <div class="sb-item" onclick="selectTool(this,'Unix Timestamp')">Unix Timestamp</div>
+        <div class="sb-item" onclick="selectTool(this,'Color Converter')">Color Converter</div>
+        <div class="sb-item" onclick="selectTool(this,'Regex Tester')">Regex Tester</div>
+        <div class="sb-item" onclick="selectTool(this,'Markdown Preview')">Markdown Preview</div>
+        <div class="sb-item" onclick="selectTool(this,'Diff Checker')">Diff Checker</div>
+
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+      <!-- TOOLBAR -->
+      <div class="toolbar">
+        <span class="toolbar-label">generate:</span>
+        <button class="gen-btn" onclick="generateValue('UUID')">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          UUID <span class="arr">▾</span>
+        </button>
+        <button class="gen-btn" onclick="generateValue('ULID')">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          ULID <span class="arr">▾</span>
+        </button>
+        <button class="gen-btn" onclick="generateValue('Random')">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Random String <span class="arr">▾</span>
+        </button>
+        <button class="gen-btn" onclick="generateValue('Lorem')">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Lorem Ipsum <span class="arr">▾</span>
+        </button>
+        <button class="gen-btn" onclick="generateValue('Hash')">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Hash <span class="arr">▾</span>
+        </button>
+        <button class="split-btn">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+          Split view
+        </button>
+      </div>
+
+      <!-- WORKSPACE -->
+      <div class="workspace">
+
+        <!-- INPUT PANE -->
+        <div class="pane input-pane">
+          <div class="pane-header">
+            <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            <span class="pane-label green">input</span>
+            <div class="pane-meta">
+              <span class="pane-stat" id="char-count">0 chars &nbsp;·&nbsp; 0.0 KB</span>
+              <div class="pane-action" onclick="copyInput()">
+                <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                copy
+              </div>
+              <div class="pane-action" onclick="clearInput()">
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                clear
+              </div>
+              <div class="pane-action" onclick="document.getElementById('file-input').click()">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                file
+              </div>
+              <input type="file" id="file-input" style="display:none" onchange="loadFile(this)">
+            </div>
+          </div>
+          <div class="pane-body">
+            <textarea id="input-area"
+              placeholder="Paste anything here — JSON, Base64, XML, timestamps, JWT tokens, UUIDs, URLs..."
+              oninput="onInput(this)"></textarea>
+          </div>
+          <div class="hints">
+            <div class="hint">
+              <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              format is <span style="color:#2d6b2d;margin-left:3px">auto-detected</span>
+            </div>
+            <div class="hint">
+              <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+              click chip to transform
+            </div>
+            <div class="hint">
+              <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+              re-run active tool
+            </div>
+            <div class="hint">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              drop file to load
+            </div>
+          </div>
+        </div>
+
+        <!-- OUTPUT PANE -->
+        <div class="pane output-pane">
+          <div class="pane-header">
+            <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            <span class="pane-label">output</span>
+            <div class="pane-meta">
+              <div class="pane-action" id="copy-output-btn" onclick="copyOutput()">
+                <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                copy
+              </div>
+              <div class="pane-action" onclick="saveOutput()">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                save
+              </div>
+            </div>
+          </div>
+          <div class="pane-body" id="output-body">
+            <div class="output-empty" id="output-empty">
+              <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+              <span>output will appear here</span>
+            </div>
+            <textarea id="output-area" style="display:none;width:100%;height:100%;background:transparent;border:none;outline:none;resize:none;font-family:'JetBrains Mono',monospace;font-size:12px;color:#e2e2e2;line-height:1.7;" readonly></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- STATUS BAR -->
+      <div class="statusbar">
+        <div class="sb-pill on" id="status-pill">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          ready
+        </div>
+        <div class="sb-vdiv"></div>
+        <div class="sb-pill">
+          <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span id="active-tool-label">Base64 Encode</span>
+        </div>
+        <div class="sb-vdiv"></div>
+        <div class="sb-pill">
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          ? for shortcuts
+        </div>
+        <div class="sb-vdiv"></div>
+        <div class="sb-pill">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          last run: <span id="last-run" style="margin-left:4px">—</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+let activeTool = 'Base64 Encode';
+
+function selectTool(el, name) {
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  activeTool = name;
+  document.getElementById('active-tool-label').textContent = name;
+  const inp = document.getElementById('input-area').value;
+  if (inp.trim()) runTool(inp);
+}
+
+function onInput(el) {
+  const val = el.value;
+  const bytes = new Blob([val]).size;
+  const kb = (bytes / 1024).toFixed(1);
+  document.getElementById('char-count').textContent = `${val.length} chars \u00a0·\u00a0 ${kb} KB`;
+  if (val.trim()) runTool(val);
+  else clearOutput();
+}
+
+function runTool(input) {
+  let result = '';
+  try {
+    switch (activeTool) {
+      case 'Base64 Encode':   result = btoa(unescape(encodeURIComponent(input))); break;
+      case 'Base64 Decode':   result = decodeURIComponent(escape(atob(input.trim()))); break;
+      case 'URL Encode':      result = encodeURIComponent(input); break;
+      case 'URL Decode':      result = decodeURIComponent(input); break;
+      case 'HTML Encode':     result = input.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); break;
+      case 'HTML Decode':     const d=document.createElement('div');d.innerHTML=input;result=d.textContent; break;
+      case 'ROT13':           result = input.replace(/[a-zA-Z]/g,c=>String.fromCharCode(c.charCodeAt(0)+(c.toLowerCase()<'n'?13:-13))); break;
+      case 'ROT47':           result = input.replace(/[!-~]/g,c=>String.fromCharCode(33+((c.charCodeAt(0)-33+47)%94))); break;
+      case 'Backslash Escape':   result = input.replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/\t/g,'\\t').replace(/"/g,'\\"'); break;
+      case 'Backslash Unescape': result = input.replace(/\\n/g,'\n').replace(/\\t/g,'\t').replace(/\\\\/g,'\\').replace(/\\"/g,'"'); break;
+      case 'Hex → ASCII':     result = input.replace(/[0-9a-fA-F]{2}/g,h=>String.fromCharCode(parseInt(h,16))); break;
+      case 'ASCII → Hex':     result = Array.from(input).map(c=>c.charCodeAt(0).toString(16).padStart(2,'0')).join(' '); break;
+      case 'JSON Formatter':  result = JSON.stringify(JSON.parse(input), null, 2); break;
+      case 'URL Parser': {
+        const u = new URL(input.trim());
+        result = `protocol:  ${u.protocol}\nhost:      ${u.host}\npath:      ${u.pathname}\nquery:     ${u.search}\nhash:      ${u.hash}`;
+        break;
+      }
+      case 'UUID v4':
+      case 'ULID':
+      case 'Random String':
+      case 'Lorem Ipsum':
+      case 'Hash (MD5/SHA)':
+        result = input; break;
+      default: result = input;
+    }
+    showOutput(result);
+    setStatus('ready','on');
+    document.getElementById('last-run').textContent = new Date().toLocaleTimeString();
+  } catch(e) {
+    showOutput('error: ' + e.message);
+    setStatus('error','err');
+  }
+}
+
+function showOutput(text) {
+  document.getElementById('output-empty').style.display = 'none';
+  const oa = document.getElementById('output-area');
+  oa.style.display = 'block';
+  oa.value = text;
+}
+
+function clearOutput() {
+  document.getElementById('output-empty').style.display = 'flex';
+  document.getElementById('output-area').style.display = 'none';
+  document.getElementById('output-area').value = '';
+}
+
+function clearInput() {
+  document.getElementById('input-area').value = '';
+  document.getElementById('char-count').textContent = '0 chars \u00a0·\u00a0 0.0 KB';
+  clearOutput();
+}
+
+function copyInput() {
+  navigator.clipboard.writeText(document.getElementById('input-area').value);
+  flashStatus('copied!');
+}
+
+function copyOutput() {
+  navigator.clipboard.writeText(document.getElementById('output-area').value);
+  flashStatus('copied!');
+}
+
+function saveOutput() {
+  const text = document.getElementById('output-area').value;
+  if (!text) return;
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'smartdevbox-output.txt';
+  a.click();
+}
+
+function loadFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const ta = document.getElementById('input-area');
+    ta.value = e.target.result;
+    onInput(ta);
+  };
+  reader.readAsText(file);
+}
+
+function generateValue(type) {
+  const ta = document.getElementById('input-area');
+  let val = '';
+  if (type === 'UUID') val = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:r&0x3|0x8).toString(16);});
+  else if (type === 'Random') val = Array.from({length:32},()=>'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random()*62)]).join('');
+  else if (type === 'Lorem') val = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.';
+  else if (type === 'ULID') val = Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2,16).toUpperCase();
+  else val = type;
+  ta.value = val; onInput(ta);
+}
+
+function setStatus(msg, cls) {
+  const p = document.getElementById('status-pill');
+  p.className = 'sb-pill' + (cls === 'on' ? ' on' : '');
+  p.querySelector('svg + *') ? null : null;
+}
+
+function flashStatus(msg) {
+  const el = document.getElementById('last-run');
+  const old = el.textContent;
+  el.textContent = msg;
+  el.style.color = '#4ade80';
+  setTimeout(()=>{ el.textContent = old; el.style.color = ''; }, 1200);
+}
+
+function filterTools(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.sb-item').forEach(el => {
+    el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+  document.querySelectorAll('.cat-header').forEach(h => {
+    let next = h.nextElementSibling;
+    let any = false;
+    while (next && next.classList.contains('sb-item')) {
+      if (next.style.display !== 'none') any = true;
+      next = next.nextElementSibling;
+    }
+    h.style.display = any ? '' : 'none';
+  });
+}
+
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const ta = document.getElementById('input-area');
+    ta.value = ev.target.result;
+    onInput(ta);
+  };
+  reader.readAsText(file);
+});
+</script>
+</body>
+</html>

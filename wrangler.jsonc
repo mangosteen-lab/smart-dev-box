@@ -1,0 +1,38 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"main": ".open-next/worker.js",
+	"name": "smart-dev-box",
+	"compatibility_date": "2026-05-08",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"routes": [
+		{
+			"pattern": "smartdevbox.com",
+			"custom_domain": true
+		}
+	],
+	"services": [
+		{
+			// Self-reference service binding, the service name must match the worker name
+			// see https://opennext.js.org/cloudflare/caching
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "smart-dev-box"
+		}
+	],
+	"images": {
+		// Enable image optimization
+		// see https://opennext.js.org/cloudflare/howtos/image
+		"binding": "IMAGES"
+	},
+	"vars": {
+		// URL to the raw index.json from the SmartDevBox Plugin Hub.
+		// Set this to the GitHub raw URL after the hub repo is published, e.g.:
+		"PLUGIN_HUB_INDEX_URL": "https://raw.githubusercontent.com/mangosteen-lab/smart-dev-box-plugin/master/index.json"
+	}
+}
