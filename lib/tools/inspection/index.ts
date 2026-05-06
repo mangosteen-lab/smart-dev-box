@@ -1,5 +1,4 @@
 import { registerTool } from '../registry';
-import * as Diff from 'diff';
 
 registerTool({
   id: 'regex-tester',
@@ -37,29 +36,6 @@ registerTool({
     } catch (err) {
       return { output: '', error: err instanceof Error ? err.message : 'Regex error' };
     }
-  },
-});
-
-registerTool({
-  id: 'text-diff',
-  name: 'Text Diff',
-  category: 'Inspection',
-  description: 'Compare two texts and show differences',
-  keywords: ['diff', 'compare', 'difference', 'text', 'patch'],
-  outputExtension: 'txt',
-  detect: () => 0,
-  execute: (input, options) => {
-    const original = (options?.original as string) ?? input;
-    const modified = (options?.modified as string) ?? '';
-    if (!modified) {
-      return { output: '', error: 'Provide the modified text via the "modified" option.' };
-    }
-    const changes = Diff.diffLines(original, modified);
-    const lines = changes.map((part) => {
-      const prefix = part.added ? '+' : part.removed ? '-' : ' ';
-      return (part.value.split('\n').filter(Boolean).map((l) => `${prefix} ${l}`).join('\n'));
-    });
-    return { output: lines.join('\n'), outputLanguage: 'diff' };
   },
 });
 

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useDevboxStore } from '@/store/devbox';
 import type { ToolOutput } from '@/lib/tools/types';
-import * as Diff from 'diff';
 
 function getExtensionForLanguage(lang?: string): string {
   const map: Record<string, string> = {
@@ -56,144 +55,8 @@ function HighlightedCode({ code, language }: { code: string; language?: string }
   );
 }
 
-function DiffView({ left, right }: { left: string; right: string }) {
-  const changes = Diff.diffLines(left, right);
-  return (
-    <pre className="text-xs overflow-auto leading-relaxed" style={{ fontFamily: 'monospace' }}>
-      {changes.map((part, i) => (
-        <span
-          key={i}
-          style={{
-            background: part.added
-              ? 'rgba(34,197,94,0.15)'
-              : part.removed
-              ? 'rgba(239,68,68,0.15)'
-              : 'transparent',
-            color: part.added
-              ? 'var(--success)'
-              : part.removed
-              ? 'var(--error)'
-              : 'var(--muted)',
-            display: 'block',
-          }}
-        >
-          {part.value.split('\n').filter(Boolean).map((line, j) => (
-            <span key={j} style={{ display: 'block' }}>
-              {part.added ? '+ ' : part.removed ? '- ' : '  '}{line}
-            </span>
-          ))}
-        </span>
-      ))}
-    </pre>
-  );
-}
-
-// ── Diff modal ────────────────────────────────────────────────────────────────
-
-function DiffModal({ initial, onClose }: { initial: string; onClose: () => void }) {
-  const [left, setLeft] = useState(initial);
-  const [right, setRight] = useState('');
-  const [diffed, setDiffed] = useState(false);
-
-  const textareaStyle: React.CSSProperties = {
-    background: 'var(--surface-2)',
-    border: '1px solid var(--border)',
-    color: 'var(--foreground)',
-    fontFamily: 'monospace',
-    fontSize: '12px',
-    resize: 'none',
-    outline: 'none',
-    width: '100%',
-    height: '220px',
-    padding: '10px',
-    borderRadius: '6px',
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className="flex flex-col rounded-xl shadow-2xl overflow-hidden"
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          width: 'min(900px, 96vw)',
-          maxHeight: '90vh',
-        }}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-5 py-3 border-b shrink-0"
-          style={{ borderColor: 'var(--border)' }}
-        >
-          <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>Diff</span>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded hover:opacity-70 text-lg leading-none"
-            style={{ color: 'var(--muted)' }}
-          >×</button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
-          {/* Two input panes */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>Left (original)</span>
-              <textarea
-                value={left}
-                onChange={(e) => { setLeft(e.target.value); setDiffed(false); }}
-                style={textareaStyle}
-                placeholder="Paste original text here…"
-                spellCheck={false}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>Right (compare to)</span>
-              <textarea
-                value={right}
-                onChange={(e) => { setRight(e.target.value); setDiffed(false); }}
-                style={textareaStyle}
-                placeholder="Paste text to compare against…"
-                spellCheck={false}
-                autoFocus
-              />
-            </div>
-          </div>
-
-          {/* Compare button */}
-          <div>
-            <button
-              onClick={() => setDiffed(true)}
-              disabled={!left || !right}
-              className="px-4 py-1.5 rounded text-xs font-semibold hover:opacity-90 disabled:opacity-40"
-              style={{ background: 'var(--primary)', color: '#fff' }}
-            >
-              Compare
-            </button>
-          </div>
-
-          {/* Diff result */}
-          {diffed && (
-            <div
-              className="rounded-lg p-3 overflow-auto"
-              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', maxHeight: '320px' }}
-            >
-              <DiffView left={left} right={right} />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function OutputTab({ output }: { output: ToolOutput }) {
   const [copied, setCopied] = useState(false);
-  const [diffOpen, setDiffOpen] = useState(false);
 
   const handleCopy = () => {
     const text = output.result.output;
@@ -245,13 +108,6 @@ function OutputTab({ output }: { output: ToolOutput }) {
           </div>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setDiffOpen(true)}
-              className="text-xs px-2 py-1 rounded"
-              style={{ background: 'transparent', color: 'var(--muted)', border: '1px solid var(--border)' }}
-            >
-              Diff
-            </button>
-            <button
               onClick={handleCopy}
               className="text-xs px-2 py-1 rounded transition-colors"
               style={{
@@ -286,13 +142,6 @@ function OutputTab({ output }: { output: ToolOutput }) {
           )}
         </div>
       </div>
-
-      {diffOpen && (
-        <DiffModal
-          initial={output.result.output}
-          onClose={() => setDiffOpen(false)}
-        />
-      )}
     </>
   );
 }
