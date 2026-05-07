@@ -364,7 +364,7 @@ registerTool({
     if (/^0b[01]+$/i.test(t)) return 0.95;
     if (/^0x[0-9a-f]+$/i.test(t)) return 0.95;
     if (/^0o[0-7]+$/i.test(t)) return 0.95;
-    if (/^\d+$/.test(t) && t.length <= 20) return 0.4;
+    if (/^-?\d+$/.test(t) && t.length <= 21) return 0.4;
     return 0;
   },
   execute: (input) => {
@@ -373,7 +373,7 @@ registerTool({
     if (/^0b[01]+$/i.test(t)) n = parseInt(t.slice(2), 2);
     else if (/^0x[0-9a-f]+$/i.test(t)) n = parseInt(t.slice(2), 16);
     else if (/^0o[0-7]+$/i.test(t)) n = parseInt(t.slice(2), 8);
-    else if (/^\d+$/.test(t)) n = parseInt(t, 10);
+    else if (/^-?\d+$/.test(t)) n = parseInt(t, 10);
     else return { output: '', error: 'Unrecognized number format' };
 
     if (isNaN(n)) return { output: '', error: 'Invalid number' };
@@ -611,5 +611,53 @@ registerTool({
     } catch (err) {
       return { output: '', error: err instanceof Error ? err.message : 'Conversion failed' };
     }
+  },
+});
+
+// ── UUID ↔ Hex UUID ──────────────────────────────────────────────────────────
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// 32 hex chars, no dashes
+const HEX_UUID_RE = /^[0-9a-f]{32}$/i;
+
+function uuidToHex(uuid: string): string {
+  return uuid.replace(/-/g, '').toLowerCase();
+}
+
+function hexToUuid(hex: string): string {
+  const h = hex.toLowerCase();
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+registerTool({
+  id: 'uuid-hex-converter',
+  name: 'UUID ↔ Hex',
+  category: 'Conversion',
+  description: 'Convert between standard UUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx) and plain 32-char hex',
+  keywords: ['uuid', 'guid', 'hex', 'convert'],
+  outputExtension: 'txt',
+  detect: (input) => {
+    const t = input.trim();
+    if (UUID_RE.test(t)) return 0.97;
+    if (HEX_UUID_RE.test(t)) return 0.97;
+    return 0;
+  },
+  execute: (input) => {
+    const t = input.trim();
+    if (UUID_RE.test(t)) {
+      const hex = uuidToHex(t);
+      return {
+        output: `UUID:    ${t}\nHex:     ${hex}`,
+        outputLanguage: 'text',
+      };
+    }
+    if (HEX_UUID_RE.test(t)) {
+      const uuid = hexToUuid(t);
+      return {
+        output: `Hex:     ${t.toLowerCase()}\nUUID:    ${uuid}`,
+        outputLanguage: 'text',
+      };
+    }
+    return { output: '', error: 'Input must be a standard UUID or a 32-character hex string' };
   },
 });

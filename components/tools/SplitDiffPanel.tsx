@@ -4,6 +4,115 @@ import { useState, useCallback, useRef } from 'react';
 import { executeTool, runDetection, getAllTools } from '@/lib/tools';
 import * as Diff from 'diff';
 
+// ── Numeric detection & logic operators ──────────────────────────────────────
+
+/** Returns the integer value of the input if it is a plain integer, binary, hex, or octal literal; otherwise null. */
+function parseNumericInput(input: string): bigint | null {
+  const t = input.trim();
+  if (!t) return null;
+  try {
+    if (/^0b[01]+$/i.test(t)) return BigInt(t);
+    if (/^0x[0-9a-f]+$/i.test(t)) return BigInt(t);
+    if (/^0o[0-7]+$/i.test(t)) return BigInt(t);
+    if (/^-?\d+$/.test(t)) return BigInt(t);
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+type LogicOp = 'AND' | 'OR' | 'XOR' | 'NAND' | 'NOR' | 'XNOR';
+
+const LOGIC_OPS: { op: LogicOp; symbol: string; title: string }[] = [
+  { op: 'AND',  symbol: '&',   title: 'Bitwise AND' },
+  { op: 'OR',   symbol: '|',   title: 'Bitwise OR' },
+  { op: 'XOR',  symbol: '^',   title: 'Bitwise XOR' },
+  { op: 'NAND', symbol: '~&',  title: 'Bitwise NAND' },
+  { op: 'NOR',  symbol: '~|',  title: 'Bitwise NOR' },
+  { op: 'XNOR', symbol: '~^',  title: 'Bitwise XNOR' },
+];
+
+function applyLogicOp(a: bigint, b: bigint, op: LogicOp): bigint {
+  switch (op) {
+    case 'AND':  return a & b;
+    case 'OR':   return a | b;
+    case 'XOR':  return a ^ b;
+    // For NAND/NOR/XNOR we return the two's-complement of the inner op.
+    // Since BigInt has arbitrary precision we mask to the bit-width of the wider operand.
+    case 'NAND': return ~(a & b);
+    case 'NOR':  return ~(a | b);
+    case 'XNOR': return ~(a ^ b);
+  }
+}
+
+/** Format result in decimal, hex, binary */
+function formatLogicResult(val: bigint, a: bigint, b: bigint): string {
+  // For display, mask to the bit-width of the larger input so NAND/NOR/XNOR don't produce huge negative numbers.
+  const bitWidth = Math.max(a.toString(2).replace('-', '').length, b.toString(2).replace('-', '').length, 1);
+  const mask = (BigInt(1) << BigInt(bitWidth)) - BigInt(1);
+  const masked = val < BigInt(0) ? val & mask : val;
+  return [
+    `Dec: ${masked}`,
+    `Hex: 0x${masked.toString(16).toUpperCase()}`,
+    `Bin: 0b${masked.toString(2)}`,
+  ].join('   ');
+}
+
+// ── Logic operator bar ────────────────────────────────────────────────────────
+
+function LogicOpBar({
+  leftVal,
+  rightVal,
+}: {
+  leftVal: bigint;
+  rightVal: bigint;
+}) {
+  const [activeOp, setActiveOp] = useState<LogicOp | null>(null);
+
+  const result = activeOp !== null ? applyLogicOp(leftVal, rightVal, activeOp) : null;
+
+  return (
+    <div
+      className="rounded-lg px-4 py-3 flex flex-col gap-2 shrink-0"
+      style={{ border: '1px solid var(--border)', background: 'var(--surface-2)' }}
+    >
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-semibold" style={{ color: 'var(--muted)' }}>
+          Logic:
+        </span>
+        {LOGIC_OPS.map(({ op, symbol, title }) => (
+          <button
+            key={op}
+            title={title}
+            onClick={() => setActiveOp((prev) => (prev === op ? null : op))}
+            className="text-xs px-3 py-1 rounded-full font-mono font-semibold transition-opacity hover:opacity-90"
+            style={{
+              background: activeOp === op ? 'var(--primary)' : 'rgba(59,130,246,0.10)',
+              color: activeOp === op ? '#fff' : 'var(--primary)',
+              border: '1px solid rgba(59,130,246,0.3)',
+            }}
+          >
+            {op} <span style={{ opacity: 0.7 }}>({symbol})</span>
+          </button>
+        ))}
+      </div>
+      {result !== null && activeOp !== null && (
+        <div
+          className="text-xs font-mono px-3 py-1.5 rounded"
+          style={{
+            background: 'var(--surface)',
+            color: 'var(--foreground)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <span style={{ color: 'var(--muted)' }}>{activeOp}({leftVal.toString()}, {rightVal.toString()}) = </span>
+          {formatLogicResult(result, leftVal, rightVal)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Inline syntax highlighted output ─────────────────────────────────────────
 
 function PlainOutput({ code }: { code: string; language?: string }) {
@@ -281,6 +390,11 @@ export function SplitDiffPanel({
   const [right, setRight] = useState<PaneState>(emptyPane());
   const [diffVisible, setDiffVisible] = useState(false);
 
+  // Detect numeric inputs for logic operator bar
+  const leftNumVal = parseNumericInput(left.input);
+  const rightNumVal = parseNumericInput(right.input);
+  const bothNumeric = leftNumVal !== null && rightNumVal !== null;
+
   // Update pane input + run detection
   const handleChange = useCallback(
     (side: 'left' | 'right', value: string) => {
@@ -360,6 +474,11 @@ export function SplitDiffPanel({
           onRun={(id) => handleRun('right', id)}
         />
       </div>
+
+      {/* Logic operator bar — shown when both panes contain numeric values */}
+      {bothNumeric && leftNumVal !== null && rightNumVal !== null && (
+        <LogicOpBar leftVal={leftNumVal} rightVal={rightNumVal} />
+      )}
 
       {/* Diff action row */}
       <div className="flex items-center gap-3 shrink-0">
