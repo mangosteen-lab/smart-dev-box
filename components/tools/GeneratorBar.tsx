@@ -24,23 +24,21 @@ function copyToClipboard(text: string) {
 function ResultBox({ value, onUse }: { value: string; onUse: (v: string) => void }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="rounded" style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}>
-      <div className="flex items-center justify-between px-3 py-1.5 border-b text-xs" style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}>
+    <div style={{ border: '1px solid var(--border)', background: 'var(--bg3)', borderRadius: '4px' }}>
+      <div className="flex items-center justify-between px-3 py-1.5 border-b" style={{ borderColor: 'var(--border)', color: 'var(--text3)', fontSize: 'var(--fs-2xs)' }}>
         <span>Result</span>
         <div className="flex gap-2">
           <button
             onClick={() => { copyToClipboard(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-            className="px-2 py-0.5 rounded text-xs hover:opacity-80"
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+            style={{ padding: '2px 7px', borderRadius: '3px', fontSize: 'var(--fs-2xs)', cursor: 'pointer', background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text2)', fontFamily: 'var(--font)' }}
           >{copied ? 'Copied!' : 'Copy'}</button>
           <button
             onClick={() => onUse(value)}
-            className="px-2 py-0.5 rounded text-xs font-medium hover:opacity-80"
-            style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--primary)' }}
+            style={{ padding: '2px 7px', borderRadius: '3px', fontSize: 'var(--fs-2xs)', cursor: 'pointer', fontWeight: 600, background: 'var(--green-bg)', border: '1px solid var(--green-dim)', color: 'var(--green)', fontFamily: 'var(--font)' }}
           >Use as input →</button>
         </div>
       </div>
-      <pre className="p-3 text-xs font-mono overflow-auto" style={{ color: 'var(--foreground)', maxHeight: '180px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+      <pre style={{ padding: '10px 12px', fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)', color: 'var(--text)', maxHeight: '180px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', overflow: 'auto' }}>
         {value}
       </pre>
     </div>
@@ -58,15 +56,14 @@ function NumberInput({ label, value, min, max, onChange }: { label: string; valu
     onChange(clamped);
   };
   return (
-    <label className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--muted)' }}>
-      <span className="shrink-0">{label}</span>
+    <label className="flex items-center gap-1.5" style={{ fontSize: 'var(--fs-xs)', color: 'var(--text2)' }}>
+      <span style={{ flexShrink: 0 }}>{label}</span>
       <input
         type="number" value={raw} min={min} max={max}
         onChange={(e) => setRaw(e.target.value)}
         onBlur={(e) => commit(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') commit((e.target as HTMLInputElement).value); }}
-        className="w-20 px-2 py-1 rounded text-xs outline-none"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+        style={{ width: '72px', padding: '3px 8px', borderRadius: '4px', fontSize: 'var(--fs-xs)', outline: 'none', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font)' }}
       />
     </label>
   );
@@ -76,12 +73,14 @@ function NumberInput({ label, value, min, max, onChange }: { label: string; valu
 
 function ToggleChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="px-2 py-0.5 rounded text-xs transition-colors"
+    <button onClick={onClick}
       style={{
-        background: active ? 'rgba(59,130,246,0.18)' : 'var(--surface)',
-        border: `1px solid ${active ? 'rgba(59,130,246,0.5)' : 'var(--border)'}`,
-        color: active ? 'var(--primary)' : 'var(--muted)',
+        padding: '2px 8px', borderRadius: '3px', fontSize: 'var(--fs-2xs)', cursor: 'pointer', fontFamily: 'var(--font)',
+        background: active ? 'var(--green-bg)' : 'var(--bg3)',
+        border: `1px solid ${active ? 'var(--green-dim)' : 'var(--border)'}`,
+        color: active ? 'var(--green)' : 'var(--text3)',
         fontWeight: active ? 600 : 400,
+        transition: 'all .12s',
       }}
     >{label}</button>
   );
@@ -91,8 +90,15 @@ function ToggleChip({ label, active, onClick }: { label: string; active: boolean
 
 function GenerateButton({ onClick }: { onClick: () => void }) {
   return (
-    <button onClick={onClick} className="px-3 py-1 rounded text-xs font-semibold hover:opacity-90"
-      style={{ background: 'var(--primary)', color: '#fff' }}>
+    <button onClick={onClick}
+      style={{
+        padding: '4px 12px', borderRadius: '4px', fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer',
+        background: 'var(--green)', color: '#0a0a0a', border: 'none', fontFamily: 'var(--font)',
+        transition: 'opacity .12s',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+    >
       Generate
     </button>
   );
@@ -285,8 +291,7 @@ function RandomStringBody({ onUse }: { onUse: (v: string) => void }) {
         <label className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--muted)' }}>
           Charset
           <select value={charset} onChange={(e) => setCharset(e.target.value as Charset)}
-            className="px-2 py-1 rounded text-xs outline-none"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--foreground)' }}>
+            style={{ padding: '3px 6px', borderRadius: '4px', fontSize: 'var(--fs-xs)', outline: 'none', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font)' }}>
             {CHARSETS.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
@@ -310,8 +315,7 @@ function LoremBody({ onUse }: { onUse: (v: string) => void }) {
         <label className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--muted)' }}>
           Mode
           <select value={mode} onChange={(e) => setMode(e.target.value as LoremMode)}
-            className="px-2 py-1 rounded text-xs outline-none"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--foreground)' }}>
+            style={{ padding: '3px 6px', borderRadius: '4px', fontSize: 'var(--fs-xs)', outline: 'none', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font)' }}>
             {LOREM_MODES.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         </label>
@@ -330,8 +334,7 @@ function HashBody({ onUse }: { onUse: (v: string) => void }) {
     <div className="flex flex-col gap-3">
       <textarea value={text} onChange={(e) => setText(e.target.value)}
         placeholder="Enter text to hash…" rows={3}
-        className="w-full px-3 py-2 rounded text-xs font-mono outline-none resize-none"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
+        style={{ width: '100%', padding: '8px 10px', borderRadius: '4px', fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)', outline: 'none', resize: 'none', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)' }} />
       <GenerateButton onClick={() => { if (text.trim()) setResult(genHashes(text)); }} />
       {result && <ResultBox value={result} onUse={onUse} />}
     </div>
@@ -376,30 +379,44 @@ function Popover({ id, label, open, onToggle, onUse, Body }: {
       {/* Chip button */}
       <button
         onClick={onToggle}
-        className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+        className="flex items-center"
         style={{
-          background: open ? 'rgba(59,130,246,0.15)' : 'var(--surface)',
-          border: `1px solid ${open ? 'rgba(59,130,246,0.4)' : 'var(--border)'}`,
-          color: open ? 'var(--primary)' : 'var(--foreground)',
+          gap: '5px',
+          fontSize: 'var(--fs-xs)',
+          background: open ? 'var(--green-bg)' : 'var(--bg2)',
+          border: `1px solid ${open ? 'var(--green)' : 'var(--border)'}`,
+          color: open ? 'var(--green)' : 'var(--text2)',
+          padding: '4px 10px',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontFamily: 'var(--font)',
+          transition: 'color .12s, border-color .12s',
         }}
+        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; if (!open) { el.style.borderColor = 'var(--green)'; el.style.color = 'var(--green)'; }}}
+        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; if (!open) { el.style.borderColor = 'var(--border)'; el.style.color = 'var(--text2)'; }}}
       >
-        <span style={{ fontSize: '10px', opacity: 0.7 }}>✦</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
         {label}
-        <span style={{ fontSize: '9px', opacity: 0.5, marginLeft: '2px' }}>{open ? '▲' : '▼'}</span>
+        <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)', marginLeft: '2px' }}>{open ? '▲' : '▾'}</span>
       </button>
 
       {/* Popover panel */}
       {open && (
         <div
-          className="absolute top-full left-0 mt-1.5 z-40 rounded-lg shadow-xl p-4"
+          className="absolute top-full left-0 z-40 p-4"
           style={{
-            background: 'var(--surface-2)',
-            border: '1px solid var(--border)',
+            marginTop: '4px',
+            background: 'var(--bg2)',
+            border: '1px solid var(--border2)',
+            borderRadius: '6px',
+            boxShadow: 'var(--shadow-lg)',
             width: id === 'uuid' ? '380px' : id === 'random' ? '360px' : '300px',
             minWidth: '260px',
           }}
         >
-          <div className="text-xs font-semibold mb-3" style={{ color: 'var(--foreground)' }}>{label} Generator</div>
+          <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, marginBottom: '12px', color: 'var(--text2)', letterSpacing: '0.04em' }}>{label} Generator</div>
           <Body onUse={onUse} />
         </div>
       )}
@@ -423,7 +440,7 @@ export function GeneratorBar() {
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-xs shrink-0" style={{ color: 'var(--muted)' }}>Generate:</span>
+      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', flexShrink: 0 }}>generate:</span>
       {GENERATORS.map(({ id, label, body: Body }) => (
         <Popover
           key={id}

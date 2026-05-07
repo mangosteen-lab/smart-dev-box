@@ -13,27 +13,18 @@ const CATEGORY_ORDER: Category[] = [
   'Inspection',
 ];
 
-const CATEGORY_ICONS: Record<Category, string> = {
-  'Encoding / Decoding': '🔐',
-  'Formatting': '{}',
-  'Conversion': '⇄',
-  'Generation': '✦',
-  'Text': 'Aa',
-  'Inspection': '🔍',
-};
-
-const CATEGORY_COLORS: Record<Category, string> = {
-  'Encoding / Decoding': '#6366f1',
-  'Formatting': '#10b981',
-  'Conversion': '#f59e0b',
-  'Generation': '#8b5cf6',
-  'Text': '#3b82f6',
-  'Inspection': '#f43f5e',
+// Map categories to the reference's color scheme
+const CATEGORY_COLORS: Record<Category, { color: string; dim: string }> = {
+  'Encoding / Decoding': { color: '#4ade80', dim: '#2d6b2d' },
+  'Formatting':          { color: '#a78bfa', dim: '#534ab7' },
+  'Conversion':          { color: '#fbbf24', dim: '#854f0b' },
+  'Generation':          { color: '#fbbf24', dim: '#854f0b' },
+  'Text':                { color: '#60a5fa', dim: '#185fa5' },
+  'Inspection':          { color: '#60a5fa', dim: '#185fa5' },
 };
 
 export function ToolSidebar() {
-  const { sidebarOpen, toggleSidebar, activeToolId, setActiveToolId, addOutput, input } =
-    useDevboxStore();
+  const { activeToolId, setActiveToolId, addOutput, input } = useDevboxStore();
   const [search, setSearch] = useState('');
   const [expandedCats, setExpandedCats] = useState<Set<Category>>(new Set(CATEGORY_ORDER));
 
@@ -69,171 +60,152 @@ export function ToolSidebar() {
 
   return (
     <aside
-      className="flex flex-col shrink-0 overflow-hidden transition-all duration-200"
+      className="flex flex-col shrink-0 overflow-hidden"
       style={{
-        width: sidebarOpen ? '240px' : '52px',
-        background: 'var(--surface)',
+        width: '190px',
+        background: '#080808',
         borderRight: '1px solid var(--border)',
       }}
     >
-      {/* Header / Toggle */}
+      {/* Search */}
       <div
-        className="flex items-center justify-between px-3 shrink-0"
+        className="flex items-center shrink-0"
         style={{
-          height: '48px',
-          borderBottom: '1px solid var(--border)',
+          margin: '10px 8px 6px',
+          background: 'var(--bg2)',
+          border: '1px solid var(--border)',
+          borderRadius: '4px',
+          padding: '6px 9px',
+          gap: '7px',
         }}
       >
-        {sidebarOpen && (
-          <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-            Tools
-          </span>
-        )}
-        <button
-          onClick={toggleSidebar}
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:opacity-80 ml-auto"
-          style={{ background: 'var(--surface-2)', color: 'var(--muted)', border: '1px solid var(--border)', fontSize: '13px' }}
-          title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-        >
-          {sidebarOpen ? '◀' : '▶'}
-        </button>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search tools..."
+          style={{
+            background: 'none',
+            border: 'none',
+            outline: 'none',
+            fontSize: 'var(--fs-xs)',
+            color: 'var(--text2)',
+            fontFamily: 'var(--font)',
+            width: '100%',
+          }}
+        />
       </div>
 
-      {sidebarOpen ? (
-        <>
-          {/* Search */}
-          <div className="px-3 py-3 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-            <div className="relative">
-              <span
-                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: 'var(--muted)', fontSize: '14px' }}
-              >
-                ⌕
-              </span>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search tools..."
-                className="w-full pl-8 pr-3 py-2 rounded-lg outline-none transition-colors"
-                style={{
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--foreground)',
-                  fontSize: '13px',
-                }}
+      {/* Tool list */}
+      <div className="flex-1 overflow-y-auto" style={{ paddingBottom: '16px' }}>
+        {filteredTools ? (
+          filteredTools.length === 0 ? (
+            <p style={{ color: 'var(--text3)', fontSize: 'var(--fs-xs)', padding: '16px 10px' }}>
+              No tools found
+            </p>
+          ) : (
+            filteredTools.map((tool) => (
+              <ToolItem
+                key={tool.id}
+                name={tool.name}
+                isActive={activeToolId === tool.id}
+                onClick={() => handleToolClick(tool.id)}
+                dataAttr={tool.id === 'json-format' ? { 'data-onboard-json-format': '' } : undefined}
               />
-            </div>
-          </div>
-
-          {/* Tool list */}
-          <div className="overflow-y-auto flex-1 py-2">
-            {filteredTools ? (
-              <div className="px-2">
-                {filteredTools.length === 0 ? (
-                  <p className="text-center py-8" style={{ color: 'var(--muted)', fontSize: '13px' }}>
-                    No tools found
-                  </p>
-                ) : (
-                  filteredTools.map((tool) => (
-                    <ToolItem
-                      key={tool.id}
-                      id={tool.id}
-                      name={tool.name}
-                      isActive={activeToolId === tool.id}
-                      onClick={() => handleToolClick(tool.id)}
-                    />
-                  ))
-                )}
-              </div>
-            ) : (
-              CATEGORY_ORDER.filter((cat) => toolsByCategory[cat]?.length > 0).map((cat) => {
-                const isExpanded = expandedCats.has(cat);
-                const color = CATEGORY_COLORS[cat];
-                return (
-                  <div key={cat} className="mb-1">
-                    {/* Category header */}
-                    <button
-                      onClick={() => toggleCat(cat)}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 transition-colors hover:opacity-80"
-                      style={{ color: 'var(--muted)' }}
-                    >
-                      <span
-                        className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-                        style={{ background: `${color}1a`, color, fontSize: '13px' }}
-                      >
-                        {CATEGORY_ICONS[cat]}
-                      </span>
-                      <span
-                        className="flex-1 text-left font-semibold uppercase tracking-wide"
-                        style={{ fontSize: '11px', color: 'var(--muted)' }}
-                      >
-                        {cat}
-                      </span>
-                      <span style={{ fontSize: '11px', opacity: 0.6 }}>
-                        {isExpanded ? '▾' : '▸'}
-                      </span>
-                    </button>
-                    {isExpanded && (
-                      <div className="px-2 pb-1">
-                        {toolsByCategory[cat].map((tool) => (
-                          <ToolItem
-                            key={tool.id}
-                            id={tool.id}
-                            name={tool.name}
-                            isActive={activeToolId === tool.id}
-                            onClick={() => handleToolClick(tool.id)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </>
-      ) : (
-        /* Collapsed icon rail */
-        <div className="overflow-y-auto flex-1 flex flex-col items-center py-3 gap-2">
-          {CATEGORY_ORDER.filter((cat) => toolsByCategory[cat]?.length > 0).map((cat) => {
-            const color = CATEGORY_COLORS[cat];
+            ))
+          )
+        ) : (
+          CATEGORY_ORDER.filter((cat) => toolsByCategory[cat]?.length > 0).map((cat) => {
+            const isExpanded = expandedCats.has(cat);
+            const { color, dim } = CATEGORY_COLORS[cat];
             return (
-              <button
-                key={cat}
-                onClick={toggleSidebar}
-                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:scale-105"
-                style={{ background: `${color}1a`, color, fontSize: '15px' }}
-                title={cat}
-              >
-                {CATEGORY_ICONS[cat]}
-              </button>
+              <div key={cat}>
+                {/* Category header */}
+                <button
+                  onClick={() => toggleCat(cat)}
+                  className="w-full flex items-center"
+                  style={{
+                    gap: '7px',
+                    padding: '10px 10px 5px',
+                    fontSize: 'var(--fs-2xs)',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    color: dim,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    background: 'none',
+                    border: 'none',
+                    fontFamily: 'var(--font)',
+                  }}
+                >
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: color, flexShrink: 0, display: 'inline-block' }} />
+                  {cat.toLowerCase()}
+                  <span style={{ marginLeft: 'auto', opacity: 0.5, fontSize: 'var(--fs-2xs)' }}>{isExpanded ? '▾' : '▸'}</span>
+                </button>
+                {isExpanded && toolsByCategory[cat].map((tool) => (
+                  <ToolItem
+                    key={tool.id}
+                    name={tool.name}
+                    isActive={activeToolId === tool.id}
+                    onClick={() => handleToolClick(tool.id)}
+                    dataAttr={tool.id === 'json-format' ? { 'data-onboard-json-format': '' } : undefined}
+                  />
+                ))}
+              </div>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </div>
     </aside>
   );
 }
 
 function ToolItem({
-  name, isActive, onClick,
+  name, isActive, onClick, dataAttr,
 }: {
-  id: string;
   name: string;
   isActive: boolean;
   onClick: () => void;
+  dataAttr?: Record<string, string>;
 }) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left px-3 py-2 rounded-lg transition-all hover:opacity-90 mb-0.5"
+      {...(dataAttr ?? {})}
       style={{
-        background: isActive ? 'var(--primary-muted)' : 'transparent',
-        color: isActive ? 'var(--primary)' : 'var(--foreground)',
-        borderLeft: isActive ? '2px solid var(--primary)' : '2px solid transparent',
-        fontWeight: isActive ? 600 : 400,
-        fontSize: '13px',
+        display: 'block',
+        width: '100%',
+        textAlign: 'left',
+        padding: '5px 10px 5px 23px',
+        fontSize: 'var(--fs-xs)',
+        color: isActive ? 'var(--green)' : 'var(--text3)',
+        background: isActive ? 'var(--green-bg)' : 'transparent',
+        borderLeft: isActive ? '2px solid var(--green)' : '2px solid transparent',
+        fontFamily: 'var(--font)',
+        cursor: 'pointer',
+        border: 'none',
+        borderTopRightRadius: 0,
+        borderBottomRightRadius: 0,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        transition: 'color 0.12s, background 0.12s',
+      }}
+      onMouseEnter={e => {
+        if (!isActive) {
+          (e.currentTarget as HTMLElement).style.color = 'var(--text2)';
+          (e.currentTarget as HTMLElement).style.background = '#0f0f0f';
+        }
+      }}
+      onMouseLeave={e => {
+        if (!isActive) {
+          (e.currentTarget as HTMLElement).style.color = 'var(--text3)';
+          (e.currentTarget as HTMLElement).style.background = 'transparent';
+        }
       }}
     >
       {name}

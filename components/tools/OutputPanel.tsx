@@ -23,9 +23,7 @@ function HighlightedCode({ code, language }: { code: string; language?: string }
         const { codeToHtml } = await import('shiki');
         const result = await codeToHtml(code, {
           lang: language ?? 'text',
-          theme: document.documentElement.getAttribute('data-theme') === 'light'
-            ? 'github-light'
-            : 'github-dark',
+          theme: 'github-dark',
         });
         if (!cancelled) setHtml(result);
       } catch {
@@ -39,16 +37,21 @@ function HighlightedCode({ code, language }: { code: string; language?: string }
     return (
       <div
         dangerouslySetInnerHTML={{ __html: html }}
-        className="overflow-auto"
-        style={{ fontFamily: 'inherit', fontSize: '14px' }}
+        style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)' }}
       />
     );
   }
 
   return (
     <pre
-      className="whitespace-pre-wrap overflow-auto"
-      style={{ color: 'var(--foreground)', fontFamily: 'var(--font-mono, monospace)', fontSize: '14px', lineHeight: 1.65 }}
+      style={{
+        color: 'var(--text)',
+        fontFamily: 'var(--font)',
+        fontSize: 'var(--fs-xs)',
+        lineHeight: 1.7,
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-all',
+      }}
     >
       {code}
     </pre>
@@ -89,92 +92,107 @@ function OutputTab({ output }: { output: ToolOutput }) {
   };
 
   return (
-    <div
-      className="flex flex-col rounded-xl overflow-hidden animate-fade-in"
-      style={{ border: '1.5px solid var(--border)', boxShadow: 'var(--shadow-md)', background: 'var(--surface)' }}
-    >
-      {/* Output header bar */}
+    <div className="flex flex-col animate-fade-in" style={{ height: '100%' }}>
+      {/* Output sub-header */}
       <div
-        className="flex items-center justify-between gap-3 px-4 py-3"
-        style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-2)' }}
+        className="flex items-center shrink-0"
+        style={{
+          gap: '8px',
+          padding: '5px 10px',
+          borderBottom: '1px solid #141414',
+        }}
       >
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-2.5 h-2.5 rounded-full shrink-0"
-            style={{ background: output.result.error ? 'var(--error)' : 'var(--success)' }}
-          />
-          <span style={{ color: 'var(--foreground)', fontSize: '14px', fontWeight: 600 }}>
-            {output.toolName}
-          </span>
-          {output.result.outputLanguage && (
-            <span
-              className="px-2.5 py-0.5 rounded-md font-mono"
-              style={{
-                background: 'var(--surface-3)',
-                color: 'var(--muted)',
-                border: '1px solid var(--border)',
-                fontSize: '11px',
-              }}
-            >
-              {output.result.outputLanguage}
-            </span>
-          )}
-          {output.aiAssisted && (
-            <span
-              className="px-2.5 py-0.5 rounded-full font-medium"
-              style={{
-                background: 'rgba(139,92,246,0.12)',
-                color: '#a78bfa',
-                border: '1px solid rgba(139,92,246,0.25)',
-                fontSize: '11px',
-              }}
-            >
-              ✦ AI
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={handleCopy}
-            className="px-3 py-1.5 rounded-lg font-medium transition-all hover:opacity-90"
+        <div
+          style={{
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            background: output.result.error ? 'var(--error)' : 'var(--green)',
+            flexShrink: 0,
+          }}
+        />
+        <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--text2)' }}>
+          {output.toolName}
+        </span>
+        {output.result.outputLanguage && (
+          <span
             style={{
-              background: copied ? 'var(--success-muted)' : 'var(--surface-3)',
-              color: copied ? 'var(--success)' : 'var(--muted)',
-              border: `1px solid ${copied ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
-              fontSize: '13px',
+              fontSize: 'var(--fs-2xs)',
+              color: 'var(--text3)',
+              border: '1px solid var(--border)',
+              borderRadius: '3px',
+              padding: '1px 6px',
+              background: 'var(--bg2)',
             }}
           >
-            {copied ? '✓ Copied' : 'Copy'}
+            {output.result.outputLanguage}
+          </span>
+        )}
+        {output.aiAssisted && (
+          <span
+            style={{
+              fontSize: 'var(--fs-2xs)',
+              color: 'var(--purple)',
+              border: '1px solid rgba(167,139,250,0.25)',
+              borderRadius: '3px',
+              padding: '1px 6px',
+              background: 'rgba(167,139,250,0.08)',
+            }}
+          >
+            ✦ AI
+          </span>
+        )}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <button
+            onClick={handleCopy}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
+              fontSize: 'var(--fs-xs)', color: copied ? 'var(--green)' : 'var(--text3)',
+              background: 'none', border: `1px solid ${copied ? 'var(--green-dim)' : 'transparent'}`,
+              borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)',
+              padding: '4px 10px',
+            }}
+            onMouseEnter={e => { if (!copied) { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg2)'; } }}
+            onMouseLeave={e => { if (!copied) { (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLElement).style.background = 'none'; } }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            {copied ? 'copied!' : 'copy'}
           </button>
           <button
             onClick={handleDownload}
-            className="px-3 py-1.5 rounded-lg font-medium transition-all hover:opacity-80"
             style={{
-              background: 'var(--surface-3)',
-              color: 'var(--muted)',
-              border: '1px solid var(--border)',
-              fontSize: '13px',
+              display: 'flex', alignItems: 'center', gap: '5px',
+              fontSize: 'var(--fs-xs)', color: 'var(--text3)',
+              background: 'none', border: '1px solid transparent', borderRadius: '5px',
+              cursor: 'pointer', fontFamily: 'var(--font)', padding: '4px 10px',
             }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg2)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLElement).style.background = 'none'; }}
           >
-            ↓ Download
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            save
           </button>
         </div>
       </div>
 
       {/* Output content */}
-      <div className="overflow-auto px-4 py-4" style={{ maxHeight: '440px', background: 'var(--surface)' }}>
+      <div className="flex-1 overflow-auto" style={{ padding: '14px' }}>
         {output.result.error ? (
           <div
-            className="flex items-start gap-2 px-4 py-3 rounded-lg"
             style={{
-              background: 'var(--error-muted)',
+              padding: '8px 12px',
+              background: 'rgba(248,113,113,0.08)',
               color: 'var(--error)',
-              border: '1px solid rgba(244,63,94,0.2)',
-              fontSize: '14px',
+              border: '1px solid rgba(248,113,113,0.2)',
+              borderRadius: '4px',
+              fontSize: 'var(--fs-xs)',
             }}
           >
-            <span>✕</span>
-            <span>{output.result.error}</span>
+            ✕ {output.result.error}
           </div>
         ) : (
           <HighlightedCode code={output.result.output} language={output.result.outputLanguage} />
@@ -195,38 +213,50 @@ export function OutputPanel() {
   if (outputs.length === 0) {
     return (
       <div
-        className="flex flex-col items-center justify-center gap-3 rounded-xl"
+        className="flex flex-col items-center justify-center gap-2"
         style={{
-          height: '160px',
-          background: 'var(--surface)',
-          border: '2px dashed var(--border)',
-          color: 'var(--muted)',
+          height: '100%',
+          minHeight: '120px',
+          color: 'var(--text4)',
+          fontSize: 'var(--fs-xs)',
         }}
       >
-        <span style={{ fontSize: '30px', opacity: 0.25 }}>⬡</span>
-        <span style={{ fontSize: '14px' }}>Output will appear here</span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+        </svg>
+        <span>output will appear here</span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col h-full">
       {/* Tab bar */}
       {outputs.length > 1 && (
         <div
-          className="flex items-center gap-1 overflow-x-auto rounded-xl p-1"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+          className="flex items-center shrink-0 overflow-x-auto"
+          style={{
+            borderBottom: '1px solid var(--border)',
+            padding: '0 6px',
+            gap: '2px',
+          }}
         >
           {outputs.map((o, i) => (
             <button
               key={`${o.toolId}-${i}`}
               onClick={() => setActiveTab(i)}
-              className="px-4 py-2 rounded-lg whitespace-nowrap font-medium transition-all"
               style={{
-                background: activeTab === i ? 'var(--primary-muted)' : 'transparent',
-                color: activeTab === i ? 'var(--primary)' : 'var(--muted)',
-                border: activeTab === i ? '1px solid rgba(99,102,241,0.25)' : '1px solid transparent',
-                fontSize: '13px',
+                padding: '5px 12px',
+                fontSize: 'var(--fs-xs)',
+                color: activeTab === i ? 'var(--green)' : 'var(--text3)',
+                background: activeTab === i ? 'var(--green-bg)' : 'transparent',
+                borderBottom: activeTab === i ? '1px solid var(--green)' : '1px solid transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                cursor: 'pointer',
+                fontFamily: 'var(--font)',
+                whiteSpace: 'nowrap',
+                transition: 'color .12s',
               }}
             >
               {o.toolName}
@@ -234,14 +264,24 @@ export function OutputPanel() {
           ))}
           <button
             onClick={clearOutputs}
-            className="ml-auto px-3 py-2 rounded-lg transition-all hover:opacity-80"
-            style={{ color: 'var(--error)', background: 'var(--error-muted)', fontSize: '13px' }}
+            style={{
+              marginLeft: 'auto',
+              padding: '4px 10px',
+              fontSize: 'var(--fs-2xs)',
+              color: 'var(--error)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'var(--font)',
+            }}
           >
-            Clear all
+            clear all
           </button>
         </div>
       )}
-      <OutputTab output={outputs[activeTab] ?? outputs[outputs.length - 1]} />
+      <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+        <OutputTab output={outputs[activeTab] ?? outputs[outputs.length - 1]} />
+      </div>
     </div>
   );
 }

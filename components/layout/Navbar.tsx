@@ -7,63 +7,91 @@ export function Navbar() {
 
   return (
     <header
-      className="flex items-center justify-between px-5 shrink-0"
+      className="flex items-center shrink-0"
       style={{
-        height: '60px',
-        background: 'var(--surface)',
+        height: '40px',
+        background: 'var(--bg1)',
         borderBottom: '1px solid var(--border)',
-        boxShadow: 'var(--shadow-sm)',
+        padding: '0 16px',
+        gap: '12px',
+        userSelect: 'none',
       }}
     >
-      {/* Logo + Name */}
-      <div className="flex items-center gap-3">
+      {/* macOS-style traffic light dots */}
+      <div className="flex items-center" style={{ gap: '7px' }}>
         <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold shrink-0"
-          style={{
-            background: 'var(--gradient-brand)',
-            boxShadow: '0 2px 10px var(--primary-glow)',
-            fontSize: '16px',
-          }}
-        >
-          D
-        </div>
-        <div className="flex items-center gap-2.5">
-          <span
-            className="font-bold tracking-tight"
-            style={{ color: 'var(--foreground)', fontSize: '17px' }}
-          >
-            DevBox
-          </span>
-          <span
-            className="px-2.5 py-1 rounded-full font-medium"
-            style={{
-              background: 'var(--primary-muted)',
-              color: 'var(--primary)',
-              border: '1px solid rgba(99,102,241,0.2)',
-              fontSize: '12px',
-            }}
-          >
-            developer tools
-          </span>
-        </div>
+          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f57', cursor: 'pointer', transition: 'opacity .15s' }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+        />
+        <div
+          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#febc2e', cursor: 'pointer', transition: 'opacity .15s' }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+        />
+        <div
+          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#28c840', cursor: 'pointer', transition: 'opacity .15s' }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+        />
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2">
+      {/* Logo */}
+      <div className="flex items-center" style={{ gap: '8px', marginLeft: '8px' }}>
+        <div
+          style={{
+            width: '22px',
+            height: '22px',
+            background: 'var(--green)',
+            borderRadius: '5px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 'var(--fs-xs)',
+            fontWeight: 700,
+            color: '#0a0a0a',
+            flexShrink: 0,
+          }}
+        >
+          &gt;_
+        </div>
+        <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--text)' }}>
+          smart<span style={{ color: 'var(--green)' }}>dev</span>box
+        </span>
+      </div>
+
+      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text3)' }}>
+        Paste anything. We figure out the rest.
+      </span>
+
+      {/* Right actions */}
+      <div className="flex items-center" style={{ marginLeft: 'auto', gap: '6px' }}>
+        {/* Theme toggle */}
         <button
           onClick={toggleTheme}
-          className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:scale-105"
+          className="flex items-center justify-center"
           style={{
-            background: 'var(--surface-2)',
-            color: 'var(--muted)',
+            fontSize: 'var(--fs-xs)',
+            color: 'var(--text3)',
+            background: 'none',
             border: '1px solid var(--border)',
-            fontSize: '16px',
+            borderRadius: '4px',
+            padding: '3px 10px',
+            cursor: 'pointer',
+            fontFamily: 'var(--font)',
+            transition: 'color .15s, border-color .15s',
           }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text2)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
           title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           aria-label="Toggle theme"
         >
-          {isDark ? '☀' : '◑'}
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
         </button>
+
+
       </div>
     </header>
   );

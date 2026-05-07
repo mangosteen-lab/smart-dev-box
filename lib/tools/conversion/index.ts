@@ -1,4 +1,5 @@
 import { registerTool } from '../registry';
+import { normalizeSingleQuoteJson } from '../formatting';
 
 // ── JSON → CSV ───────────────────────────────────────────────────────────────
 
@@ -50,7 +51,8 @@ function jsonToDelimited(input: string, delimiter: string): string {
 function detectJson(input: string): number {
   const t = input.trim();
   if ((t.startsWith('[') || t.startsWith('{')) && (t.endsWith(']') || t.endsWith('}'))) {
-    try { JSON.parse(t); return 0.7; } catch { return 0; }
+    try { JSON.parse(t); return 0.7; } catch { /* fall through */ }
+    if (normalizeSingleQuoteJson(t) !== null) return 0.65;
   }
   return 0;
 }

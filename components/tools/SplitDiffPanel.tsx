@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { executeTool, runDetection, getAllTools } from '@/lib/tools';
+import { useDevboxStore } from '@/store/devbox';
 import * as Diff from 'diff';
 
 // ── Numeric detection & logic operators ──────────────────────────────────────
@@ -189,11 +190,15 @@ function EditorPane({
   state,
   onChange,
   onRun,
+  onboardTextarea,
+  onboardRunButton,
 }: {
   label: string;
   state: PaneState;
   onChange: (value: string) => void;
   onRun: (toolId: string) => void;
+  onboardTextarea?: boolean;
+  onboardRunButton?: boolean;
 }) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -246,6 +251,7 @@ function EditorPane({
 
       {/* Input area */}
       <textarea
+        {...(onboardTextarea ? { 'data-onboard-split-input': true } : {})}
         value={state.input}
         onChange={(e) => handleInput(e.target.value)}
         placeholder={`Paste text here…`}
@@ -271,6 +277,7 @@ function EditorPane({
               {significant.slice(0, 4).map((r) => (
                 <button
                   key={r.toolId}
+                  {...(onboardRunButton && r === significant[0] ? { 'data-onboard-split-run': true } : {})}
                   onClick={() => onRun(r.toolId)}
                   disabled={state.isRunning}
                   className="text-xs px-2.5 py-0.5 rounded-full transition-opacity hover:opacity-80 disabled:opacity-40"
@@ -375,19 +382,26 @@ export function SplitDiffPanel({
   initialOutput,
   initialOutputLanguage,
   initialToolId,
+  initialInputRight,
+  onPaneChange,
 }: {
   onClose: () => void;
   initialInput?: string;
   initialOutput?: string;
   initialOutputLanguage?: string;
   initialToolId?: string | null;
+  initialInputRight?: string;
+  onPaneChange?: (leftInput: string, rightInput: string) => void;
 }) {
+  const { onboardingStep, advanceOnboardingStep } = useDevboxStore();
   const [left, setLeft] = useState<PaneState>(() =>
     initialInput
       ? makePane(initialInput, initialOutput ?? '', initialOutputLanguage, initialToolId)
       : emptyPane()
   );
-  const [right, setRight] = useState<PaneState>(emptyPane());
+  const [right, setRight] = useState<PaneState>(() =>
+    initialInputRight ? makePane(initialInputRight, '') : emptyPane()
+  );
   const [diffVisible, setDiffVisible] = useState(false);
 
   // Detect numeric inputs for logic operator bar
@@ -404,13 +418,13 @@ export function SplitDiffPanel({
         .map((r) => ({ toolId: r.toolId, toolName: r.toolName, confidence: r.confidence }));
 
       if (side === 'left') {
-        setLeft((p) => ({ ...p, input: value, detectedTools, output: '', error: undefined, activeToolId: null }));
+        setLeft((p) => { onPaneChange?.(value, right.input); return { ...p, input: value, detectedTools, output: '', error: undefined, activeToolId: null }; });
       } else {
-        setRight((p) => ({ ...p, input: value, detectedTools, output: '', error: undefined, activeToolId: null }));
+        setRight((p) => { onPaneChange?.(left.input, value); return { ...p, input: value, detectedTools, output: '', error: undefined, activeToolId: null }; });
       }
       setDiffVisible(false);
     },
-    []
+    [left.input, right.input, onPaneChange]
   );
 
   // Run a tool on a pane
@@ -436,7 +450,9 @@ export function SplitDiffPanel({
       }));
     }
     setDiffVisible(false);
-  }, [left, right]);
+    // Step 5 (index 4): advance when the right pane runs a tool
+    if (side === 'right' && onboardingStep === 4) advanceOnboardingStep();
+  }, [left, right, onboardingStep, advanceOnboardingStep]);
 
   // Determine what to diff: prefer formatted output, fall back to raw input
   const leftText = left.output || left.input;
@@ -446,17 +462,10 @@ export function SplitDiffPanel({
   return (
     <div className="flex flex-col gap-3 w-full">
       {/* Header bar */}
-      <div className="flex items-center justify-between shrink-0">
+      <div className="flex items-center shrink-0">
         <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
           Split &amp; Diff
         </span>
-        <button
-          onClick={onClose}
-          className="text-xs px-2.5 py-1 rounded hover:opacity-70"
-          style={{ color: 'var(--muted)', border: '1px solid var(--border)' }}
-        >
-          ✕ Close
-        </button>
       </div>
 
       {/* Two panes side by side */}
@@ -472,6 +481,8 @@ export function SplitDiffPanel({
           state={right}
           onChange={(v) => handleChange('right', v)}
           onRun={(id) => handleRun('right', id)}
+          onboardTextarea
+          onboardRunButton
         />
       </div>
 
@@ -483,7 +494,12 @@ export function SplitDiffPanel({
       {/* Diff action row */}
       <div className="flex items-center gap-3 shrink-0">
         <button
-          onClick={() => setDiffVisible((v) => !v)}
+          data-onboard-split-diff
+          onClick={() => {
+            setDiffVisible((v) => !v);
+            // Step 6 (index 5): advance when Compare Diff is clicked
+            if (onboardingStep === 5) advanceOnboardingStep();
+          }}
           disabled={!canDiff}
           className="text-xs px-4 py-1.5 rounded font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity"
           style={{ background: 'var(--primary)', color: '#fff' }}

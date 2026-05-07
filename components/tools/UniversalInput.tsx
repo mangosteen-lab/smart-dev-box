@@ -4,43 +4,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDevboxStore } from '@/store/devbox';
 import { runDetection, executeTool } from '@/lib/tools';
 
-// Ensure tools are registered when this component loads
 import '@/lib/tools';
 
 const PLACEHOLDER = `Paste anything here — JSON, Base64, XML, timestamps, JWT tokens, UUIDs, URLs...`;
-
-const MIN_HEIGHT = 200;
-const MAX_HEIGHT = 1200;
 
 export function UniversalInput() {
   const { input, setInput, setDetectionResults, addOutput, activeToolId, setIsAiLoading, aiEnabled } =
     useDevboxStore();
   const [command, setCommand] = useState('');
   const [isDragging, setIsDragging] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const [textareaHeight, setTextareaHeight] = useState(200);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const resizeDragRef = useRef<{ startY: number; startHeight: number } | null>(null);
-
-  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    resizeDragRef.current = { startY: e.clientY, startHeight: textareaHeight };
-
-    const onMouseMove = (ev: MouseEvent) => {
-      if (!resizeDragRef.current) return;
-      const delta = ev.clientY - resizeDragRef.current.startY;
-      const newHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, resizeDragRef.current.startHeight + delta));
-      setTextareaHeight(newHeight);
-    };
-    const onMouseUp = () => {
-      resizeDragRef.current = null;
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  }, [textareaHeight]);
 
   const inputBytes = new TextEncoder().encode(input).length;
   const isLarge = inputBytes > 1_048_576;
@@ -63,12 +37,7 @@ export function UniversalInput() {
         e.preventDefault();
         if (activeToolId && input.trim()) {
           const result = await executeTool(activeToolId, input);
-          addOutput({
-            toolId: activeToolId,
-            toolName: activeToolId,
-            result,
-            timestamp: Date.now(),
-          });
+          addOutput({ toolId: activeToolId, toolName: activeToolId, result, timestamp: Date.now() });
         }
       }
     };
@@ -83,6 +52,32 @@ export function UniversalInput() {
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (!file) return;
+    if (file.size > 1024 * 1024) {
+      alert(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please upload a file smaller than 1 MB.`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => handleInputChange(ev.target?.result as string);
+    reader.readAsText(file);
+  };
+
+  const handleCopy = () => {
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(input);
+  };
+
+  const handleClear = () => {
+    setInput('');
+    setDetectionResults([]);
+  };
+
+  const handleFileLoad = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      alert(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please upload a file smaller than 1 MB.`);
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => handleInputChange(ev.target?.result as string);
     reader.readAsText(file);
@@ -118,36 +113,30 @@ export function UniversalInput() {
     }
   };
 
-
   return (
-    <div className="flex flex-col gap-3">
-      {/* Large input warning */}
+    <div className="flex flex-col h-full">
       {isLarge && (
         <div
-          className="px-4 py-2.5 rounded-lg flex items-center gap-2"
           style={{
+            margin: '8px 10px 0',
+            padding: '6px 10px',
             background: 'var(--warning-muted)',
-            color: 'var(--warning)',
-            border: '1px solid rgba(245,158,11,0.25)',
-            fontSize: '13px',
+            color: 'var(--amber)',
+            border: '1px solid rgba(251,191,36,0.25)',
+            borderRadius: '4px',
+            fontSize: 'var(--fs-xs)',
           }}
         >
-          <span>⚠</span>
-          Large input ({(inputBytes / 1024 / 1024).toFixed(1)}MB) — performance may be affected
+          ⚠ Large input ({(inputBytes / 1024 / 1024).toFixed(1)} MB) — performance may be affected
         </div>
       )}
 
-      {/* Main textarea card */}
+      {/* Textarea */}
       <div
-        className="relative rounded-xl overflow-hidden transition-all duration-150"
+        className="relative flex-1"
         style={{
-          border: isDragging
-            ? '2px solid var(--primary)'
-            : isFocused
-            ? '2px solid var(--primary)'
-            : '2px solid var(--border)',
-          background: 'var(--surface-2)',
-          boxShadow: isFocused ? '0 0 0 4px var(--primary-glow)' : 'var(--shadow-sm)',
+          border: isDragging ? '1px solid var(--green)' : 'none',
+          background: isDragging ? 'rgba(74,222,128,0.04)' : 'transparent',
         }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -157,126 +146,135 @@ export function UniversalInput() {
           ref={textareaRef}
           value={input}
           onChange={(e) => handleInputChange(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
           placeholder={PLACEHOLDER}
-          className="code-input w-full resize-none leading-relaxed outline-none px-4 pt-4 pb-3"
+          className="w-full h-full resize-none outline-none"
           style={{
-            color: 'var(--input-text)',
+            color: 'var(--text)',
             background: 'transparent',
-            fontSize: '14px',
-            height: `${textareaHeight}px`,
+            fontSize: 'var(--fs-xs)',
+            fontFamily: 'var(--font)',
+            lineHeight: '1.7',
+            caretColor: 'var(--green)',
+            padding: '14px',
           }}
           spellCheck={false}
         />
         {isDragging && (
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-2 font-medium"
-            style={{ background: 'rgba(99,102,241,0.08)', color: 'var(--primary)', fontSize: '15px' }}
+            className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+            style={{ color: 'var(--green)', fontSize: 'var(--fs-sm)', pointerEvents: 'none' }}
           >
-            <span style={{ fontSize: '28px' }}>↓</span>
+            <span style={{ fontSize: '24px' }}>↓</span>
             Drop file to load
           </div>
         )}
-        {/* Resize handle */}
-        <div
-          onMouseDown={handleResizeMouseDown}
-          className="flex items-center justify-center w-full border-t"
-          style={{
-            borderColor: 'var(--border-subtle)',
-            height: '10px',
-            cursor: 'ns-resize',
-            background: 'var(--surface-2)',
-            userSelect: 'none',
-          }}
-          title="Drag to resize"
-        >
-          <div
-            style={{
-              width: '32px',
-              height: '3px',
-              borderRadius: '2px',
-              background: 'var(--border)',
-            }}
-          />
-        </div>
-        {/* Footer bar */}
-        <div
-          className="flex items-center justify-between px-4 py-2 border-t"
-          style={{ borderColor: 'var(--border-subtle)', color: 'var(--muted)', fontSize: '12px' }}
-        >
-          <div className="flex items-center gap-3">
-            <span>{input.length.toLocaleString()} chars</span>
-            <span style={{ color: 'var(--border)' }}>·</span>
-            <span>{(inputBytes / 1024).toFixed(1)} KB</span>
-          </div>
-          {activeToolId && (
-            <span
-              className="px-2.5 py-0.5 rounded-md font-medium"
-              style={{
-                background: 'var(--primary-muted)',
-                color: 'var(--primary)',
-                fontSize: '11px',
-              }}
-            >
-              ⌘↵ to run
-            </span>
-          )}
-        </div>
       </div>
 
-      {/* How-it-works hints */}
+      {/* Hints bar */}
       <div
-        className="flex flex-wrap gap-x-5 gap-y-1.5 px-1"
-        style={{ fontSize: '12px', color: 'var(--muted)' }}
+        className="flex items-center flex-wrap shrink-0"
+        style={{
+          gap: '12px',
+          padding: '5px 10px',
+          borderTop: '1px solid #111',
+          fontSize: 'var(--fs-2xs)',
+          color: 'var(--text4)',
+        }}
       >
-        {[
-          { icon: '⌨', text: 'Paste or type — format is auto-detected' },
-          { icon: '⚡', text: 'Click a detected format chip to transform' },
-          { icon: '⌘↵', text: 'Re-run the active tool' },
-          { icon: '↓', text: 'Drop a file to load its contents' },
-          { icon: '⇔', text: 'Split view to compare two inputs side-by-side' },
-        ].map(({ icon, text }) => (
-          <span key={text} className="flex items-center gap-1.5">
-            <span style={{ fontFamily: 'var(--font-mono, monospace)', opacity: 0.7 }}>{icon}</span>
-            {text}
+        <span className="flex items-center" style={{ gap: '4px' }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+          format auto-detected
+        </span>
+        <span className="flex items-center" style={{ gap: '4px' }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+          </svg>
+          click chip to transform
+        </span>
+        <span className="flex items-center" style={{ gap: '4px' }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/>
+          </svg>
+          ⌘↵ re-run tool
+        </span>
+        <span className="flex items-center" style={{ gap: '4px' }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+          drop file to load
+        </span>
+        {/* Actions */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <span style={{ color: 'var(--text4)', fontSize: 'var(--fs-2xs)', paddingRight: '6px' }}>
+            {input.length.toLocaleString()} chars &nbsp;·&nbsp; {(inputBytes / 1024).toFixed(1)} KB
           </span>
-        ))}
+          <button onClick={handleCopy} style={{ color: 'var(--text3)', background: 'none', border: '1px solid transparent', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.background = 'var(--bg2)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text3)'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'none'; }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            copy
+          </button>
+          <button onClick={handleClear} style={{ color: 'var(--text3)', background: 'none', border: '1px solid transparent', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.background = 'var(--bg2)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text3)'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'none'; }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            clear
+          </button>
+          <label style={{ color: 'var(--text3)', background: 'none', border: '1px solid transparent', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.background = 'var(--bg2)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text3)'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'none'; }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            upload
+            <input type="file" style={{ display: 'none' }} onChange={handleFileLoad} />
+          </label>
+        </div>
       </div>
 
       {/* AI command bar */}
       {aiEnabled && (
         <div
-          className="flex gap-2 rounded-xl overflow-hidden"
+          className="flex shrink-0"
           style={{
-            background: 'var(--surface)',
-            border: '1.5px solid var(--border)',
-            boxShadow: 'var(--shadow-sm)',
+            borderTop: '1px solid var(--border)',
+            background: 'var(--bg2)',
           }}
         >
-          <div
-            className="flex items-center px-3.5 shrink-0"
-            style={{ color: 'var(--accent)', fontSize: '16px' }}
-          >
-            ✦
-          </div>
+          <div className="flex items-center px-3" style={{ color: 'var(--purple)', fontSize: 'var(--fs-md)' }}>✦</div>
           <input
             type="text"
             value={command}
             onChange={(e) => setCommand(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleRunCommand()}
-            placeholder='Ask AI, e.g. "format as JSON" or "decode this base64"'
-            className="flex-1 py-3 outline-none bg-transparent"
-            style={{ color: 'var(--foreground)', fontSize: '14px' }}
+            placeholder='Ask AI — e.g. "format as JSON" or "decode this base64"'
+            className="flex-1 py-2 outline-none"
+            style={{
+              background: 'transparent',
+              color: 'var(--text)',
+              fontSize: 'var(--fs-xs)',
+              fontFamily: 'var(--font)',
+            }}
           />
           <button
             onClick={handleRunCommand}
-            className="font-semibold shrink-0 transition-all hover:opacity-90 m-1.5 px-5 py-2 rounded-lg"
             style={{
-              background: 'var(--gradient-brand)',
-              color: 'white',
-              boxShadow: '0 2px 8px var(--primary-glow)',
-              fontSize: '13px',
+              margin: '5px 6px',
+              padding: '3px 12px',
+              background: 'var(--purple-dim)',
+              color: 'var(--purple)',
+              border: '1px solid rgba(167,139,250,0.3)',
+              borderRadius: '4px',
+              fontSize: 'var(--fs-xs)',
+              fontFamily: 'var(--font)',
+              cursor: 'pointer',
+              fontWeight: 600,
             }}
           >
             Run AI

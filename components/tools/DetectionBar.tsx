@@ -5,34 +5,27 @@ import { useDevboxStore } from '@/store/devbox';
 import { executeTool, getAllTools } from '@/lib/tools';
 
 export function DetectionBar() {
-  const { detectionResults, input, activeToolId, setActiveToolId, addOutput } = useDevboxStore();
+  const { detectionResults, input, activeToolId, setActiveToolId, addOutput, onboardingStep, advanceOnboardingStep } = useDevboxStore();
   const [showAll, setShowAll] = useState(false);
 
   if (!input.trim()) return null;
 
-  const runTool = async (toolId: string) => {
+  const runTool = async (toolId: string, isPrimary = false) => {
     setActiveToolId(toolId);
     const result = await executeTool(toolId, input);
     const toolName = getAllTools().find((t) => t.id === toolId)?.name ?? toolId;
     addOutput({ toolId, toolName, result, timestamp: Date.now() });
+    // Step 2 (index 1): advance when the primary recommended tool is run
+    if (isPrimary && onboardingStep === 1) advanceOnboardingStep();
   };
 
   const significant = detectionResults.filter((r) => r.confidence >= 0.3);
 
   if (significant.length === 0) {
     return (
-      <div
-        className="flex items-center gap-2 px-4 py-2.5 rounded-lg"
-        style={{
-          background: 'var(--surface-2)',
-          color: 'var(--muted)',
-          border: '1px solid var(--border)',
-          fontSize: '13px',
-        }}
-      >
-        <span style={{ opacity: 0.6 }}>○</span>
-        Unrecognized input — select a tool from the sidebar
-      </div>
+      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)' }}>
+        unrecognized — pick a tool
+      </span>
     );
   }
 
@@ -41,36 +34,24 @@ export function DetectionBar() {
   const overflow = significant.slice(4);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {/* Detected label */}
-      <span style={{ color: 'var(--muted)', fontSize: '12px', fontWeight: 500 }}>
-        Detected:
-      </span>
+    <div className="flex flex-wrap items-center" style={{ gap: '6px' }}>
+      <span style={{ color: 'var(--text3)', fontSize: 'var(--fs-2xs)' }}>detected:</span>
 
-      {/* Primary action chip */}
+      {/* Primary chip */}
       <button
-        onClick={() => runTool(primary.toolId)}
-        className="flex items-center gap-2 px-4 py-1.5 rounded-full font-semibold transition-all hover:scale-105"
+        onClick={() => runTool(primary.toolId, true)}
         style={{
-          background: activeToolId === primary.toolId
-            ? 'var(--gradient-brand)'
-            : 'var(--primary-muted)',
-          color: activeToolId === primary.toolId ? 'white' : 'var(--primary)',
-          border: '1px solid rgba(99,102,241,0.3)',
-          boxShadow: activeToolId === primary.toolId ? '0 2px 8px var(--primary-glow)' : 'none',
-          fontSize: '13px',
+          display: 'flex', alignItems: 'center', gap: '5px',
+          fontSize: 'var(--fs-2xs)', padding: '2px 8px', borderRadius: '3px',
+          border: `1px solid ${activeToolId === primary.toolId ? 'var(--green)' : 'var(--green-dim)'}`,
+          color: activeToolId === primary.toolId ? 'var(--green)' : '#4ade80cc',
+          background: activeToolId === primary.toolId ? 'var(--green-bg)' : 'transparent',
+          cursor: 'pointer', fontFamily: 'var(--font)',
+          transition: 'all .12s',
         }}
       >
-        <span style={{ fontSize: '11px' }}>▶</span>
-        {primary.toolName}
-        <span
-          className="px-1.5 py-0.5 rounded-full"
-          style={{
-            background: 'rgba(255,255,255,0.2)',
-            fontSize: '11px',
-            fontWeight: 700,
-          }}
-        >
+        ▶ {primary.toolName}
+        <span style={{ opacity: 0.6, fontSize: 'var(--fs-2xs)' }}>
           {Math.round(primary.confidence * 100)}%
         </span>
       </button>
@@ -80,16 +61,17 @@ export function DetectionBar() {
         <button
           key={r.toolId}
           onClick={() => runTool(r.toolId)}
-          className="px-3 py-1.5 rounded-full transition-all hover:opacity-80"
           style={{
-            background: activeToolId === r.toolId ? 'var(--surface-3)' : 'var(--surface-2)',
-            color: activeToolId === r.toolId ? 'var(--foreground)' : 'var(--muted)',
+            fontSize: 'var(--fs-2xs)', padding: '2px 8px', borderRadius: '3px',
             border: '1px solid var(--border)',
-            fontSize: '13px',
+            color: activeToolId === r.toolId ? 'var(--text2)' : 'var(--text3)',
+            background: activeToolId === r.toolId ? 'var(--bg3)' : 'transparent',
+            cursor: 'pointer', fontFamily: 'var(--font)',
+            transition: 'all .12s',
           }}
         >
           {r.toolName}
-          <span style={{ opacity: 0.5, marginLeft: '5px', fontSize: '11px' }}>
+          <span style={{ opacity: 0.4, marginLeft: '4px', fontSize: 'var(--fs-2xs)' }}>
             {Math.round(r.confidence * 100)}%
           </span>
         </button>
@@ -98,12 +80,10 @@ export function DetectionBar() {
       {overflow.length > 0 && (
         <button
           onClick={() => setShowAll(!showAll)}
-          className="px-3 py-1.5 rounded-full transition-colors hover:opacity-80"
           style={{
-            color: 'var(--muted)',
-            border: '1px solid var(--border)',
-            background: 'transparent',
-            fontSize: '13px',
+            fontSize: 'var(--fs-2xs)', padding: '2px 8px', borderRadius: '3px',
+            color: 'var(--text3)', border: '1px solid var(--border)',
+            background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font)',
           }}
         >
           +{overflow.length} more
@@ -115,12 +95,10 @@ export function DetectionBar() {
           <button
             key={r.toolId}
             onClick={() => { runTool(r.toolId); setShowAll(false); }}
-            className="px-3 py-1.5 rounded-full transition-all hover:opacity-80"
             style={{
-              color: 'var(--muted)',
-              border: '1px solid var(--border)',
-              background: 'transparent',
-              fontSize: '13px',
+              fontSize: 'var(--fs-2xs)', padding: '2px 8px', borderRadius: '3px',
+              color: 'var(--text3)', border: '1px solid var(--border)',
+              background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font)',
             }}
           >
             {r.toolName}
