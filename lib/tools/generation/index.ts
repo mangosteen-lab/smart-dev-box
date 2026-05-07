@@ -288,3 +288,117 @@ registerTool({
   },
   execute: (input) => ({ output: input, outputLanguage: 'text' }),
 });
+
+// ── Random Number Generator ───────────────────────────────────────────────────
+
+registerTool({
+  id: 'random-number',
+  name: 'Random Number Generator',
+  category: 'Generation',
+  description: 'Generate random integers or decimal numbers within a range',
+  keywords: ['random', 'number', 'generate', 'integer', 'range'],
+  outputExtension: 'txt',
+  detect: () => 0,
+  execute: (_input, options) => {
+    const min = typeof options?.min === 'number' ? options.min : 1;
+    const max = typeof options?.max === 'number' ? options.max : 100;
+    const count = typeof options?.count === 'number' ? Math.min(Math.max(options.count, 1), 1000) : 1;
+    const decimals = typeof options?.decimals === 'number' ? options.decimals : 0;
+    if (min > max) return { output: '', error: 'min must be less than or equal to max' };
+    const results: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const val = min + Math.random() * (max - min);
+      results.push(decimals > 0 ? val.toFixed(decimals) : String(Math.floor(val)));
+    }
+    const lines = [
+      `Range:  ${min} – ${max}`,
+      `Count:  ${count}`,
+      '',
+      ...results,
+    ];
+    return { output: lines.join('\n'), outputLanguage: 'text' };
+  },
+});
+
+// ── Random Password Generator ─────────────────────────────────────────────────
+
+registerTool({
+  id: 'random-password',
+  name: 'Random Password Generator',
+  category: 'Generation',
+  description: 'Generate secure random passwords with configurable options',
+  keywords: ['random', 'password', 'generate', 'secure', 'strong', 'credentials'],
+  outputExtension: 'txt',
+  detect: () => 0,
+  execute: (_input, options) => {
+    const length = typeof options?.length === 'number' ? Math.min(Math.max(options.length, 4), 256) : 20;
+    const count = typeof options?.count === 'number' ? Math.min(Math.max(options.count, 1), 100) : 1;
+    const useUpper = options?.uppercase !== false;
+    const useLower = options?.lowercase !== false;
+    const useDigits = options?.digits !== false;
+    const useSymbols = options?.symbols !== false;
+
+    let chars = '';
+    if (useUpper) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (useLower) chars += 'abcdefghijklmnopqrstuvwxyz';
+    if (useDigits) chars += '0123456789';
+    if (useSymbols) chars += '!@#$%^&*()-_=+[]{}|;:,.<>?';
+    if (!chars) chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+    const results: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const bytes = crypto.getRandomValues(new Uint8Array(length));
+      results.push(Array.from(bytes, (b) => chars[b % chars.length]).join(''));
+    }
+    const lines = [
+      `Length:    ${length}`,
+      `Count:     ${count}`,
+      `Charset:   ${[useUpper && 'A-Z', useLower && 'a-z', useDigits && '0-9', useSymbols && 'symbols'].filter(Boolean).join(', ')}`,
+      '',
+      ...results,
+    ];
+    return { output: lines.join('\n'), outputLanguage: 'text' };
+  },
+});
+
+// ── Random IP / MAC Generator ─────────────────────────────────────────────────
+
+registerTool({
+  id: 'random-ip',
+  name: 'Random IP Generator',
+  category: 'Generation',
+  description: 'Generate random IPv4 addresses',
+  keywords: ['random', 'ip', 'ipv4', 'generate', 'address', 'network'],
+  outputExtension: 'txt',
+  detect: () => 0,
+  execute: (_input, options) => {
+    const count = typeof options?.count === 'number' ? Math.min(Math.max(options.count, 1), 1000) : 1;
+    const results: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const bytes = crypto.getRandomValues(new Uint8Array(4));
+      results.push(Array.from(bytes).join('.'));
+    }
+    return { output: results.join('\n'), outputLanguage: 'text' };
+  },
+});
+
+registerTool({
+  id: 'random-mac',
+  name: 'Random MAC Generator',
+  category: 'Generation',
+  description: 'Generate random MAC addresses',
+  keywords: ['random', 'mac', 'address', 'network', 'generate', 'hardware'],
+  outputExtension: 'txt',
+  detect: () => 0,
+  execute: (_input, options) => {
+    const count = typeof options?.count === 'number' ? Math.min(Math.max(options.count, 1), 1000) : 1;
+    const results: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const bytes = crypto.getRandomValues(new Uint8Array(6));
+      // Set the locally administered bit and clear the multicast bit on the first octet
+      bytes[0] = (bytes[0] & 0xfe) | 0x02;
+      results.push(Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(':'));
+    }
+    return { output: results.join('\n'), outputLanguage: 'text' };
+  },
+});

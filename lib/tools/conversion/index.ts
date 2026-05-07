@@ -614,6 +614,358 @@ registerTool({
   },
 });
 
+// ── JSON Escape / Unescape ────────────────────────────────────────────────────
+
+registerTool({
+  id: 'json-escape',
+  name: 'JSON Escape',
+  category: 'Conversion',
+  description: 'Escape a string so it can be safely embedded inside a JSON value',
+  keywords: ['json', 'escape', 'encode', 'string', 'serialize'],
+  outputExtension: 'txt',
+  detect: () => 0,
+  execute: (input) => ({
+    output: JSON.stringify(input).slice(1, -1),
+    outputLanguage: 'text',
+  }),
+});
+
+registerTool({
+  id: 'json-unescape',
+  name: 'JSON Unescape',
+  category: 'Conversion',
+  description: 'Unescape a JSON-escaped string back to normal text',
+  keywords: ['json', 'unescape', 'decode', 'string', 'deserialize'],
+  outputExtension: 'txt',
+  detect: (input) => /\\["\\/bfnrtu]/.test(input) ? 0.7 : 0,
+  execute: (input) => {
+    try {
+      return { output: JSON.parse(`"${input}"`), outputLanguage: 'text' };
+    } catch {
+      return { output: '', error: 'Invalid JSON-escaped string' };
+    }
+  },
+});
+
+// ── XML ↔ JSON ────────────────────────────────────────────────────────────────
+
+function xmlToJson(xml: string): unknown {
+  // Simple recursive XML-to-JSON parser (handles attributes and text nodes)
+  const parseNode = (node: Element): unknown => {
+    const obj: Record<string, unknown> = {};
+    // Attributes
+    for (const attr of Array.from(node.attributes)) {
+      obj[`@${attr.name}`] = attr.value;
+    }
+    let text = '';
+    const children: Record<string, unknown[]> = {};
+    for (const child of Array.from(node.childNodes)) {
+      if (child.nodeType === 3) {
+        text += child.nodeValue ?? '';
+      } else if (child.nodeType === 1) {
+        const el = child as Element;
+        if (!children[el.tagName]) children[el.tagName] = [];
+        children[el.tagName].push(parseNode(el));
+      }
+    }
+    const trimmedText = text.trim();
+    const hasChildren = Object.keys(children).length > 0;
+    const hasAttrs = Object.keys(obj).length > 0;
+    if (!hasChildren && !hasAttrs) return trimmedText || null;
+    if (trimmedText) obj['#text'] = trimmedText;
+    for (const [tag, nodes] of Object.entries(children)) {
+      obj[tag] = nodes.length === 1 ? nodes[0] : nodes;
+    }
+    return obj;
+  };
+
+  if (typeof DOMParser === 'undefined') {
+    throw new Error('DOMParser not available in this environment');
+  }
+  const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  const parseError = doc.querySelector('parsererror');
+  if (parseError) throw new Error('XML parse error: ' + (parseError.textContent?.split('\n')[0] ?? 'invalid XML'));
+  const root = doc.documentElement;
+  return { [root.tagName]: parseNode(root) };
+}
+
+registerTool({
+  id: 'xml-to-json',
+  name: 'XML → JSON',
+  category: 'Conversion',
+  description: 'Convert XML to JSON format',
+  keywords: ['xml', 'json', 'convert', 'parse'],
+  outputExtension: 'json',
+  detect: (input) => {
+    const t = input.trim();
+    if (t.startsWith('<') && t.includes('</')) return 0.8;
+    return 0;
+  },
+  execute: (input) => {
+    try {
+      const result = xmlToJson(input.trim());
+      return { output: JSON.stringify(result, null, 2), outputLanguage: 'json' };
+    } catch (err) {
+      return { output: '', error: err instanceof Error ? err.message : 'XML parse failed' };
+    }
+  },
+});
+
+function jsonToXml(value: unknown, tagName: string, indent: number): string {
+  const pad = '  '.repeat(indent);
+  if (value === null || value === undefined) return `${pad}<${tagName}/>`;
+  if (typeof value !== 'object') return `${pad}<${tagName}>${String(value)}</${tagName}>`;
+  if (Array.isArray(value)) {
+    return value.map((item) => jsonToXml(item, tagName, indent)).join('\n');
+  }
+  const obj = value as Record<string, unknown>;
+  const attrs = Object.entries(obj)
+    .filter(([k]) => k.startsWith('@'))
+    .map(([k, v]) => ` ${k.slice(1)}="${v}"`)
+    .join('');
+  const children = Object.entries(obj).filter(([k]) => !k.startsWith('@'));
+  if (children.length === 0) return `${pad}<${tagName}${attrs}/>`;
+  if (children.length === 1 && children[0][0] === '#text') {
+    return `${pad}<${tagName}${attrs}>${children[0][1]}</${tagName}>`;
+  }
+  const inner = children
+    .flatMap(([k, v]) => {
+      if (k === '#text') return [`${pad}  ${v}`];
+      if (Array.isArray(v)) return (v as unknown[]).map((item) => jsonToXml(item, k, indent + 1));
+      return [jsonToXml(v, k, indent + 1)];
+    })
+    .join('\n');
+  return `${pad}<${tagName}${attrs}>\n${inner}\n${pad}</${tagName}>`;
+}
+
+registerTool({
+  id: 'json-to-xml',
+  name: 'JSON → XML',
+  category: 'Conversion',
+  description: 'Convert JSON to XML format',
+  keywords: ['json', 'xml', 'convert', 'serialize'],
+  outputExtension: 'xml',
+  detect: detectJson,
+  execute: (input) => {
+    try {
+      const parsed = JSON.parse(input.trim());
+      let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        const keys = Object.keys(parsed);
+        if (keys.length === 1) {
+          xml += jsonToXml((parsed as Record<string, unknown>)[keys[0]], keys[0], 0);
+        } else {
+          xml += jsonToXml(parsed, 'root', 0);
+        }
+      } else {
+        xml += jsonToXml(parsed, 'root', 0);
+      }
+      return { output: xml, outputLanguage: 'xml' };
+    } catch (err) {
+      return { output: '', error: err instanceof Error ? err.message : 'Conversion failed' };
+    }
+  },
+});
+
+// ── Markdown → HTML ───────────────────────────────────────────────────────────
+
+registerTool({
+  id: 'markdown-to-html',
+  name: 'Markdown → HTML',
+  category: 'Conversion',
+  description: 'Convert Markdown text to HTML',
+  keywords: ['markdown', 'md', 'html', 'convert', 'render'],
+  outputExtension: 'html',
+  detect: (input) => {
+    const t = input.trim();
+    const hasMarkdown = /^#{1,6} /m.test(t) || /\*\*/.test(t) || /\[.+\]\(.+\)/.test(t) || /^[-*] /m.test(t) || /^```/.test(t);
+    return hasMarkdown ? 0.65 : 0;
+  },
+  execute: (input) => {
+    // Lightweight Markdown-to-HTML converter
+    let html = input
+      // Headings
+      .replace(/^###### (.+)$/gm, '<h6>$1</h6>')
+      .replace(/^##### (.+)$/gm, '<h5>$1</h5>')
+      .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      // Code blocks
+      .replace(/```[\w]*\n([\s\S]*?)```/gm, '<pre><code>$1</code></pre>')
+      // Inline code
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      // Bold
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+      // Italic
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/_([^_]+)_/g, '<em>$1</em>')
+      // Links
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+      // Images
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2" />')
+      // Blockquote
+      .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+      // Unordered list items
+      .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+      // Ordered list items
+      .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+      // Horizontal rule
+      .replace(/^---+$/gm, '<hr />')
+      // Paragraphs (double newline)
+      .replace(/\n\n(?!<[hlu]|<pre|<block)/g, '</p>\n<p>')
+      .replace(/\n(?!<)/g, '<br />\n');
+
+    html = `<p>${html}</p>`;
+    // Clean up: wrap consecutive <li> in <ul>
+    html = html.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, (m) => `<ul>\n${m}</ul>\n`);
+    return { output: html, outputLanguage: 'html' };
+  },
+});
+
+// ── HTML → Plain Text (Strip HTML) ───────────────────────────────────────────
+
+registerTool({
+  id: 'html-to-text',
+  name: 'HTML → Text',
+  category: 'Conversion',
+  description: 'Strip HTML tags and extract plain text content',
+  keywords: ['html', 'text', 'strip', 'plain', 'convert', 'extract'],
+  outputExtension: 'txt',
+  detect: (input) => {
+    const t = input.trim();
+    return /<[a-z][\s\S]*>/i.test(t) ? 0.7 : 0;
+  },
+  execute: (input) => {
+    try {
+      const text = input
+        // Replace block elements with newlines
+        .replace(/<\/?(p|div|br|h[1-6]|li|tr|td|th|blockquote|pre|section|article|header|footer)[^>]*>/gi, '\n')
+        // Remove all remaining tags
+        .replace(/<[^>]+>/g, '')
+        // Decode common HTML entities
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+        // Collapse multiple blank lines
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      return { output: text, outputLanguage: 'text' };
+    } catch (err) {
+      return { output: '', error: err instanceof Error ? err.message : 'Conversion failed' };
+    }
+  },
+});
+
+// ── Seconds ↔ H:M:S ───────────────────────────────────────────────────────────
+
+registerTool({
+  id: 'seconds-to-hms',
+  name: 'Seconds → H:M:S',
+  category: 'Conversion',
+  description: 'Convert a number of seconds to hours:minutes:seconds format',
+  keywords: ['seconds', 'time', 'hms', 'hours', 'minutes', 'convert', 'duration'],
+  outputExtension: 'txt',
+  detect: (input) => {
+    const t = input.trim();
+    return /^\d+$/.test(t) && parseInt(t) >= 60 ? 0.3 : 0;
+  },
+  execute: (input) => {
+    const t = input.trim();
+    const totalSeconds = parseInt(t);
+    if (isNaN(totalSeconds) || totalSeconds < 0) return { output: '', error: 'Input must be a non-negative integer (seconds)' };
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    const hms = `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    const human = [
+      h > 0 ? `${h} hour${h !== 1 ? 's' : ''}` : '',
+      m > 0 ? `${m} minute${m !== 1 ? 's' : ''}` : '',
+      s > 0 ? `${s} second${s !== 1 ? 's' : ''}` : '',
+    ].filter(Boolean).join(', ') || '0 seconds';
+    const lines = [
+      `Input:   ${totalSeconds} seconds`,
+      `H:M:S:   ${hms}`,
+      `Human:   ${human}`,
+      `Days:    ${(totalSeconds / 86400).toFixed(4)}`,
+    ];
+    return { output: lines.join('\n'), outputLanguage: 'text' };
+  },
+});
+
+registerTool({
+  id: 'hms-to-seconds',
+  name: 'H:M:S → Seconds',
+  category: 'Conversion',
+  description: 'Convert hours:minutes:seconds to total seconds',
+  keywords: ['hms', 'hours', 'minutes', 'seconds', 'time', 'convert', 'duration'],
+  outputExtension: 'txt',
+  detect: (input) => /^\d+:\d{2}:\d{2}$/.test(input.trim()) ? 0.9 : 0,
+  execute: (input) => {
+    const t = input.trim();
+    const match = t.match(/^(\d+):(\d{2}):(\d{2})$/);
+    if (!match) return { output: '', error: 'Input must be in H:M:S format (e.g. 1:23:45)' };
+    const [, hh, mm, ss] = match.map(Number);
+    if (mm >= 60 || ss >= 60) return { output: '', error: 'Minutes and seconds must be 0-59' };
+    const total = hh * 3600 + mm * 60 + ss;
+    const lines = [
+      `Input:   ${t}`,
+      `Seconds: ${total}`,
+      `Minutes: ${(total / 60).toFixed(4)}`,
+      `Hours:   ${(total / 3600).toFixed(4)}`,
+    ];
+    return { output: lines.join('\n'), outputLanguage: 'text' };
+  },
+});
+
+// ── Roman Numerals ────────────────────────────────────────────────────────────
+
+registerTool({
+  id: 'decimal-to-roman',
+  name: 'Decimal → Roman',
+  category: 'Conversion',
+  description: 'Convert a decimal integer to Roman numerals',
+  keywords: ['roman', 'numeral', 'decimal', 'convert', 'number'],
+  outputExtension: 'txt',
+  detect: (input) => {
+    const n = parseInt(input.trim());
+    return !isNaN(n) && n >= 1 && n <= 3999 && /^\d+$/.test(input.trim()) ? 0.2 : 0;
+  },
+  execute: (input) => {
+    const n = parseInt(input.trim());
+    if (isNaN(n) || n < 1 || n > 3999) return { output: '', error: 'Input must be an integer between 1 and 3999' };
+    const vals = [1000,900,500,400,100,90,50,40,10,9,5,4,1];
+    const syms = ['M','CM','D','CD','C','XC','L','XL','X','IX','V','IV','I'];
+    let num = n, result = '';
+    for (let i = 0; i < vals.length; i++) {
+      while (num >= vals[i]) { result += syms[i]; num -= vals[i]; }
+    }
+    return { output: result, outputLanguage: 'text' };
+  },
+});
+
+registerTool({
+  id: 'roman-to-decimal',
+  name: 'Roman → Decimal',
+  category: 'Conversion',
+  description: 'Convert Roman numerals to a decimal integer',
+  keywords: ['roman', 'numeral', 'decimal', 'convert', 'number'],
+  outputExtension: 'txt',
+  detect: (input) => /^[IVXLCDM]+$/i.test(input.trim()) && input.trim().length <= 15 ? 0.7 : 0,
+  execute: (input) => {
+    const t = input.trim().toUpperCase();
+    if (!/^[IVXLCDM]+$/.test(t)) return { output: '', error: 'Input must contain only Roman numeral characters (I, V, X, L, C, D, M)' };
+    const map: Record<string, number> = { I:1, V:5, X:10, L:50, C:100, D:500, M:1000 };
+    let result = 0;
+    for (let i = 0; i < t.length; i++) {
+      const curr = map[t[i]];
+      const next = map[t[i+1]];
+      if (next && curr < next) result -= curr;
+      else result += curr;
+    }
+    return { output: String(result), outputLanguage: 'text' };
+  },
+});
+
 // ── UUID ↔ Hex UUID ──────────────────────────────────────────────────────────
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

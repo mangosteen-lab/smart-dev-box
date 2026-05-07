@@ -214,3 +214,116 @@ registerTool({
   },
   execute: (input) => ({ output: input, outputLanguage: 'markdown' }),
 });
+
+// ── JSON Validate ─────────────────────────────────────────────────────────────
+
+registerTool({
+  id: 'json-validate',
+  name: 'JSON Validate',
+  category: 'Formatting',
+  description: 'Validate JSON and report errors with line/column information',
+  keywords: ['json', 'validate', 'lint', 'check', 'verify', 'error'],
+  outputExtension: 'txt',
+  detect: (input) => {
+    const t = input.trim();
+    if ((t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))) return 0.6;
+    return 0;
+  },
+  execute: (input) => {
+    try {
+      JSON.parse(input);
+      const size = new TextEncoder().encode(input).length;
+      return {
+        output: `✓ Valid JSON\n\nSize: ${size} bytes\nLength: ${input.length} characters`,
+        outputLanguage: 'text',
+      };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Invalid JSON';
+      return { output: `✗ Invalid JSON\n\n${msg}`, outputLanguage: 'text' };
+    }
+  },
+});
+
+// ── JS Validate ───────────────────────────────────────────────────────────────
+
+registerTool({
+  id: 'js-validate',
+  name: 'JS Validate',
+  category: 'Formatting',
+  description: 'Validate JavaScript syntax and report errors',
+  keywords: ['javascript', 'js', 'validate', 'syntax', 'lint', 'check'],
+  outputExtension: 'txt',
+  detect: (input) => {
+    const t = input.trim();
+    if (/\b(function|const|let|var|=>|import|export|class|return)\b/.test(t) && !t.startsWith('<')) return 0.3;
+    return 0;
+  },
+  execute: (input) => {
+    try {
+      // Use the Function constructor as a lightweight syntax check
+      // eslint-disable-next-line no-new-func
+      new Function(input);
+      return {
+        output: `✓ Valid JavaScript syntax\n\nSize: ${input.length} characters`,
+        outputLanguage: 'text',
+      };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Syntax error';
+      return { output: `✗ JavaScript syntax error\n\n${msg}`, outputLanguage: 'text' };
+    }
+  },
+});
+
+// ── XML Minify ────────────────────────────────────────────────────────────────
+
+registerTool({
+  id: 'xml-minify',
+  name: 'XML Minify',
+  category: 'Formatting',
+  description: 'Minify XML by removing whitespace between tags',
+  keywords: ['xml', 'minify', 'compress', 'minimize', 'whitespace'],
+  outputExtension: 'xml',
+  detect: () => 0,
+  execute: (input) => {
+    try {
+      const t = input.trim();
+      if (!t.startsWith('<')) return { output: '', error: 'Input does not appear to be XML' };
+      const minified = t
+        .replace(/>\s+</g, '><')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/\n/g, '');
+      return { output: minified, outputLanguage: 'xml' };
+    } catch (err) {
+      return { output: '', error: err instanceof Error ? err.message : 'XML minify failed' };
+    }
+  },
+});
+
+// ── CSS Minify ────────────────────────────────────────────────────────────────
+
+registerTool({
+  id: 'css-minify',
+  name: 'CSS Minify',
+  category: 'Formatting',
+  description: 'Minify CSS by removing whitespace and comments',
+  keywords: ['css', 'minify', 'compress', 'minimize', 'stylesheet'],
+  outputExtension: 'min.css',
+  detect: () => 0,
+  execute: (input) => {
+    try {
+      const minified = input
+        // Remove comments
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        // Collapse whitespace
+        .replace(/\s+/g, ' ')
+        // Remove spaces around punctuation
+        .replace(/\s*([{};:,>~+])\s*/g, '$1')
+        // Remove last semicolon before closing brace
+        .replace(/;}/g, '}')
+        .trim();
+      return { output: minified, outputLanguage: 'css' };
+    } catch (err) {
+      return { output: '', error: err instanceof Error ? err.message : 'CSS minify failed' };
+    }
+  },
+});

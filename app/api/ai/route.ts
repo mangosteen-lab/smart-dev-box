@@ -9,23 +9,41 @@ Given a text input and a user's natural language command, identify:
 
 Available tool IDs:
 - base64-encode, base64-decode
-- url-encode, url-decode
+- base32-encode, base32-decode
+- url-encode, url-decode, url-parser
+- rot13, rot47
 - jwt-inspector
 - html-encode, html-decode
-- json-formatter
-- xml-formatter
+- backslash-escape, backslash-unescape
+- json-formatter, json-validate
+- json-escape, json-unescape
+- xml-formatter, xml-minify, xml-to-json, json-to-xml
 - sql-formatter
-- css-beautifier
+- css-beautifier, css-minify
 - html-beautifier
+- js-beautifier, js-minifier, js-validate
+- markdown-preview, markdown-to-html
+- html-to-text
 - unix-timestamp
 - color-converter
 - number-base-converter
 - uuid-generator
 - hash-generator
 - lorem-ipsum
+- random-number, random-password, random-ip, random-mac
 - regex-tester
-- text-diff
 - jsonpath-evaluator
+- word-count, text-reverse, text-trim
+- remove-empty-lines, number-lines, prefix-lines, suffix-lines
+- join-lines, extract-emails, extract-urls, extract-numbers
+- invert-case
+- line-sort, line-dedupe, line-reverse
+- lowercase, uppercase, title-case
+- camel-case, pascal-case, snake-case, kebab-case, constant-case
+- json-to-csv, json-to-tsv, json-to-yaml, yaml-to-json, csv-to-json
+- decimal-to-roman, roman-to-decimal
+- seconds-to-hms, hms-to-seconds
+- html-to-jsx, uuid-hex-converter
 
 Respond ONLY with a JSON object in this exact format:
 {

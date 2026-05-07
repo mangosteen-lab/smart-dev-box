@@ -333,6 +333,141 @@ registerTool({
   },
 });
 
+// ── ROT13 / ROT47 ────────────────────────────────────────────────────────────
+
+registerTool({
+  id: 'rot13',
+  name: 'ROT13',
+  category: 'Encoding / Decoding',
+  description: 'Encode/decode text using ROT13 cipher (rotate letters by 13)',
+  keywords: ['rot13', 'cipher', 'encode', 'decode', 'rotate', 'caesar'],
+  outputExtension: 'txt',
+  detect: () => 0,
+  execute: (input) => ({
+    output: input.replace(/[a-zA-Z]/g, (c) => {
+      const base = c <= 'Z' ? 65 : 97;
+      return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
+    }),
+    outputLanguage: 'text',
+  }),
+});
+
+registerTool({
+  id: 'rot47',
+  name: 'ROT47',
+  category: 'Encoding / Decoding',
+  description: 'Encode/decode text using ROT47 cipher (rotate printable ASCII by 47)',
+  keywords: ['rot47', 'cipher', 'encode', 'decode', 'rotate'],
+  outputExtension: 'txt',
+  detect: () => 0,
+  execute: (input) => ({
+    output: input.replace(/[\x21-\x7E]/g, (c) =>
+      String.fromCharCode(((c.charCodeAt(0) - 33 + 47) % 94) + 33)
+    ),
+    outputLanguage: 'text',
+  }),
+});
+
+// ── Base32 Encode / Decode ────────────────────────────────────────────────────
+
+const BASE32_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+registerTool({
+  id: 'base32-encode',
+  name: 'Base32 Encode',
+  category: 'Encoding / Decoding',
+  description: 'Encode text to Base32',
+  keywords: ['base32', 'encode', 'b32'],
+  outputExtension: 'txt',
+  detect: () => 0,
+  execute: (input) => {
+    const bytes = new TextEncoder().encode(input);
+    let bits = 0, value = 0, output = '';
+    for (const byte of bytes) {
+      value = (value << 8) | byte;
+      bits += 8;
+      while (bits >= 5) {
+        output += BASE32_CHARS[(value >>> (bits - 5)) & 31];
+        bits -= 5;
+      }
+    }
+    if (bits > 0) output += BASE32_CHARS[(value << (5 - bits)) & 31];
+    while (output.length % 8) output += '=';
+    return { output, outputLanguage: 'text' };
+  },
+});
+
+registerTool({
+  id: 'base32-decode',
+  name: 'Base32 Decode',
+  category: 'Encoding / Decoding',
+  description: 'Decode a Base32 string back to text',
+  keywords: ['base32', 'decode', 'b32'],
+  outputExtension: 'txt',
+  detect: (input) => {
+    const clean = input.trim().replace(/=+$/, '').toUpperCase();
+    return /^[A-Z2-7]+$/.test(clean) && clean.length > 4 && !(/^[A-Za-z0-9+/]+=*$/.test(input.trim())) ? 0.7 : 0;
+  },
+  execute: (input) => {
+    try {
+      const clean = input.trim().replace(/=+$/, '').toUpperCase();
+      if (!/^[A-Z2-7]*$/.test(clean)) return { output: '', error: 'Invalid Base32 string' };
+      const bytes: number[] = [];
+      let bits = 0, value = 0;
+      for (const ch of clean) {
+        const idx = BASE32_CHARS.indexOf(ch);
+        if (idx === -1) return { output: '', error: `Invalid Base32 character: ${ch}` };
+        value = (value << 5) | idx;
+        bits += 5;
+        if (bits >= 8) { bytes.push((value >>> (bits - 8)) & 255); bits -= 8; }
+      }
+      return { output: new TextDecoder().decode(new Uint8Array(bytes)), outputLanguage: 'text' };
+    } catch (err) {
+      return { output: '', error: err instanceof Error ? err.message : 'Base32 decode failed' };
+    }
+  },
+});
+
+// ── URL Parser ────────────────────────────────────────────────────────────────
+
+registerTool({
+  id: 'url-parser',
+  name: 'URL Parser',
+  category: 'Encoding / Decoding',
+  description: 'Parse a URL into its components: protocol, host, path, query params, hash',
+  keywords: ['url', 'parse', 'uri', 'query', 'protocol', 'hostname', 'path'],
+  outputExtension: 'txt',
+  detect: (input) => {
+    const t = input.trim();
+    return /^https?:\/\/\S+/.test(t) ? 0.92 : /^(ftp|mailto|ws|wss):\/\//.test(t) ? 0.85 : 0;
+  },
+  execute: (input) => {
+    try {
+      const url = new URL(input.trim());
+      const params: string[] = [];
+      url.searchParams.forEach((v, k) => params.push(`  ${k} = ${v}`));
+      const lines = [
+        `Protocol:  ${url.protocol}`,
+        `Host:      ${url.host}`,
+        `Hostname:  ${url.hostname}`,
+        `Port:      ${url.port || '(default)'}`,
+        `Pathname:  ${url.pathname}`,
+        `Search:    ${url.search || '(none)'}`,
+        `Hash:      ${url.hash || '(none)'}`,
+        `Origin:    ${url.origin}`,
+        `Href:      ${url.href}`,
+      ];
+      if (params.length > 0) {
+        lines.push('', 'Query Parameters:');
+        lines.push(...params);
+      }
+      return { output: lines.join('\n'), outputLanguage: 'text' };
+    } catch (err) {
+      return { output: '', error: err instanceof Error ? err.message : 'Invalid URL' };
+    }
+  },
+});
+
 // ── Base64 Image Encode/Decode ────────────────────────────────────────────────
 
 registerTool({

@@ -7,9 +7,10 @@ import { runDetection, executeTool } from '@/lib/tools';
 // Ensure tools are registered when this component loads
 import '@/lib/tools';
 
-const PLACEHOLDER = `Paste anything here — JSON, Base64, XML, timestamps, JWT tokens, URLs...
+const PLACEHOLDER = `Paste anything here — JSON, Base64, XML, timestamps, JWT tokens, UUIDs, URLs...`;
 
-Or just describe what you want in the command bar below.`;
+const MIN_HEIGHT = 200;
+const MAX_HEIGHT = 1200;
 
 export function UniversalInput() {
   const { input, setInput, setDetectionResults, addOutput, activeToolId, setIsAiLoading, aiEnabled } =
@@ -17,8 +18,29 @@ export function UniversalInput() {
   const [command, setCommand] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [textareaHeight, setTextareaHeight] = useState(200);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resizeDragRef = useRef<{ startY: number; startHeight: number } | null>(null);
+
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    resizeDragRef.current = { startY: e.clientY, startHeight: textareaHeight };
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!resizeDragRef.current) return;
+      const delta = ev.clientY - resizeDragRef.current.startY;
+      const newHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, resizeDragRef.current.startHeight + delta));
+      setTextareaHeight(newHeight);
+    };
+    const onMouseUp = () => {
+      resizeDragRef.current = null;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [textareaHeight]);
 
   const inputBytes = new TextEncoder().encode(input).length;
   const isLarge = inputBytes > 1_048_576;
@@ -143,8 +165,7 @@ export function UniversalInput() {
             color: 'var(--input-text)',
             background: 'transparent',
             fontSize: '14px',
-            minHeight: '200px',
-            maxHeight: '440px',
+            height: `${textareaHeight}px`,
           }}
           spellCheck={false}
         />
@@ -157,6 +178,28 @@ export function UniversalInput() {
             Drop file to load
           </div>
         )}
+        {/* Resize handle */}
+        <div
+          onMouseDown={handleResizeMouseDown}
+          className="flex items-center justify-center w-full border-t"
+          style={{
+            borderColor: 'var(--border-subtle)',
+            height: '10px',
+            cursor: 'ns-resize',
+            background: 'var(--surface-2)',
+            userSelect: 'none',
+          }}
+          title="Drag to resize"
+        >
+          <div
+            style={{
+              width: '32px',
+              height: '3px',
+              borderRadius: '2px',
+              background: 'var(--border)',
+            }}
+          />
+        </div>
         {/* Footer bar */}
         <div
           className="flex items-center justify-between px-4 py-2 border-t"
@@ -182,6 +225,25 @@ export function UniversalInput() {
         </div>
       </div>
 
+      {/* How-it-works hints */}
+      <div
+        className="flex flex-wrap gap-x-5 gap-y-1.5 px-1"
+        style={{ fontSize: '12px', color: 'var(--muted)' }}
+      >
+        {[
+          { icon: '⌨', text: 'Paste or type — format is auto-detected' },
+          { icon: '⚡', text: 'Click a detected format chip to transform' },
+          { icon: '⌘↵', text: 'Re-run the active tool' },
+          { icon: '↓', text: 'Drop a file to load its contents' },
+          { icon: '⇔', text: 'Split view to compare two inputs side-by-side' },
+        ].map(({ icon, text }) => (
+          <span key={text} className="flex items-center gap-1.5">
+            <span style={{ fontFamily: 'var(--font-mono, monospace)', opacity: 0.7 }}>{icon}</span>
+            {text}
+          </span>
+        ))}
+      </div>
+
       {/* AI command bar */}
       {aiEnabled && (
         <div
@@ -203,7 +265,7 @@ export function UniversalInput() {
             value={command}
             onChange={(e) => setCommand(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleRunCommand()}
-            placeholder='Describe what you want, e.g. "format this as JSON" or "decode base64"'
+            placeholder='Ask AI, e.g. "format as JSON" or "decode this base64"'
             className="flex-1 py-3 outline-none bg-transparent"
             style={{ color: 'var(--foreground)', fontSize: '14px' }}
           />
