@@ -33,7 +33,7 @@ registerTool({
   },
   execute: async (input) => {
     try {
-      const clean = input.trim();
+      const clean = input.trim().replace(/\s/g, '');
       // Validate base64 before decoding
       if (!/^[A-Za-z0-9+/]*={0,2}$/.test(clean)) {
         return { output: '', error: 'Invalid Base64 string: contains non-Base64 characters' };

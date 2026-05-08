@@ -54,10 +54,16 @@ export default function DevboxApp() {
   const splitPaneInputs = useRef<{ left: string; right: string }>({ left: '', right: '' });
   const [lastRun, setLastRun] = useState<string>('—');
 
-  // Register all tools after hydration — keeps the initial JS bundle small
+  // Register all tools after hydration — keeps the initial JS bundle small.
+  // After registration, re-run detection in case the user already typed input.
   useEffect(() => {
-    import('@/lib/tools');
-  }, []);
+    import('@/lib/tools').then(() => {
+      const currentInput = useDevboxStore.getState().input;
+      if (currentInput.trim()) {
+        setDetectionResults(runDetection(currentInput));
+      }
+    });
+  }, [setDetectionResults]);
 
   useEffect(() => {
     fetch('/api/config')
