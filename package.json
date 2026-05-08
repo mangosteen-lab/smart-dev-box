@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
+    "build:cloudflare": "opennextjs-cloudflare build",
     "start": "next start -H 0.0.0.0",
     "lint": "next lint"
   },
@@ -26,6 +27,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1",
     "@types/diff": "^7.0.2",
     "@types/he": "^1.2.3",
     "@types/jest": "^30.0.0",
