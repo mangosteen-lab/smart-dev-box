@@ -53,11 +53,10 @@ export default function DevboxApp() {
   // Preserve both pane inputs across view switches
   const splitPaneInputs = useRef<{ left: string; right: string }>({ left: '', right: '' });
   const [lastRun, setLastRun] = useState<string>('—');
-  const [toolsReady, setToolsReady] = useState(false);
 
   // Register all tools after hydration — keeps the initial JS bundle small
   useEffect(() => {
-    import('@/lib/tools').then(() => setToolsReady(true));
+    import('@/lib/tools');
   }, []);
 
   useEffect(() => {
