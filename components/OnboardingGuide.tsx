@@ -79,7 +79,7 @@ function getRect(attr: string): Rect | null {
 }
 
 export function OnboardingGuide() {
-  const { setInput, setDetectionResults, setOnboardingSplitInput, setOnboardingStep, advanceOnboardingStep, onboardingStep } = useDevboxStore();
+  const { setInput, setDetectionResults, setOnboardingSplitInput, setOnboardingStep, onboardingStep } = useDevboxStore();
   const [step, setStep] = useState(0);
   const [visible, setVisible] = useState(false);
   const [rect, setRect] = useState<Rect | null>(null);

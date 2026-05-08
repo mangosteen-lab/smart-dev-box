@@ -377,7 +377,7 @@ function makePane(input: string, output: string, outputLanguage?: string, active
 }
 
 export function SplitDiffPanel({
-  onClose,
+  onClose: _onClose,
   initialInput,
   initialOutput,
   initialOutputLanguage,
@@ -385,7 +385,7 @@ export function SplitDiffPanel({
   initialInputRight,
   onPaneChange,
 }: {
-  onClose: () => void;
+  onClose?: () => void;
   initialInput?: string;
   initialOutput?: string;
   initialOutputLanguage?: string;
