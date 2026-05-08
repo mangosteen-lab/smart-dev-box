@@ -1,5 +1,4 @@
 import { registerTool } from '../registry';
-import { fromBase64, toBase64 } from 'js-base64';
 
 registerTool({
   id: 'base64-encode',
@@ -14,10 +13,10 @@ registerTool({
     // Prefer encode for short non-base64 strings
     return isBase64 ? 0 : 0.1;
   },
-  execute: (input) => ({
-    output: toBase64(input),
-    outputLanguage: 'text',
-  }),
+  execute: async (input) => {
+    const { toBase64 } = await import('js-base64');
+    return { output: toBase64(input), outputLanguage: 'text' };
+  },
 });
 
 registerTool({
@@ -30,15 +29,16 @@ registerTool({
   detect: (input) => {
     const clean = input.trim().replace(/\s/g, '');
     const isBase64 = /^[A-Za-z0-9+/]+=*$/.test(clean) && clean.length % 4 === 0;
-    return isBase64 && clean.length > 8 ? 0.85 : 0;
+    return isBase64 && clean.length >= 8 ? 0.85 : 0;
   },
-  execute: (input) => {
+  execute: async (input) => {
     try {
       const clean = input.trim();
       // Validate base64 before decoding
       if (!/^[A-Za-z0-9+/]*={0,2}$/.test(clean)) {
         return { output: '', error: 'Invalid Base64 string: contains non-Base64 characters' };
       }
+      const { fromBase64 } = await import('js-base64');
       const decoded = fromBase64(clean);
       return { output: decoded, outputLanguage: 'text' };
     } catch {
@@ -93,10 +93,11 @@ registerTool({
     const parts = input.trim().split('.');
     return parts.length === 3 ? 0.95 : 0;
   },
-  execute: (input) => {
+  execute: async (input) => {
     try {
       const parts = input.trim().split('.');
       if (parts.length !== 3) throw new Error('Not a valid JWT (expected 3 parts)');
+      const { fromBase64 } = await import('js-base64');
       const decode = (b64: string) =>
         JSON.parse(fromBase64(b64.replace(/-/g, '+').replace(/_/g, '/')));
       const header = decode(parts[0]);

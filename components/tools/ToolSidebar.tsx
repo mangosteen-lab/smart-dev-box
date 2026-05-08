@@ -15,12 +15,12 @@ const CATEGORY_ORDER: Category[] = [
 
 // Map categories to the reference's color scheme
 const CATEGORY_COLORS: Record<Category, { color: string; dim: string }> = {
-  'Encoding / Decoding': { color: '#4ade80', dim: '#2d6b2d' },
-  'Formatting':          { color: '#a78bfa', dim: '#534ab7' },
-  'Conversion':          { color: '#fbbf24', dim: '#854f0b' },
-  'Generation':          { color: '#fbbf24', dim: '#854f0b' },
-  'Text':                { color: '#60a5fa', dim: '#185fa5' },
-  'Inspection':          { color: '#60a5fa', dim: '#185fa5' },
+  'Encoding / Decoding': { color: 'var(--green)',  dim: 'var(--green-dim)' },
+  'Formatting':          { color: 'var(--purple)', dim: 'var(--purple-dim)' },
+  'Conversion':          { color: 'var(--amber)',  dim: 'var(--amber-dim)' },
+  'Generation':          { color: 'var(--amber)',  dim: 'var(--amber-dim)' },
+  'Text':                { color: 'var(--blue)',   dim: 'var(--blue-dim)' },
+  'Inspection':          { color: 'var(--blue)',   dim: 'var(--blue-dim)' },
 };
 
 export function ToolSidebar() {
@@ -63,7 +63,7 @@ export function ToolSidebar() {
       className="flex flex-col shrink-0 overflow-hidden"
       style={{
         width: '190px',
-        background: '#080808',
+        background: 'var(--bg)',
         borderRight: '1px solid var(--border)',
       }}
     >
@@ -198,7 +198,7 @@ function ToolItem({
       onMouseEnter={e => {
         if (!isActive) {
           (e.currentTarget as HTMLElement).style.color = 'var(--text2)';
-          (e.currentTarget as HTMLElement).style.background = '#0f0f0f';
+          (e.currentTarget as HTMLElement).style.background = 'var(--bg2)';
         }
       }}
       onMouseLeave={e => {

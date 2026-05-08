@@ -2,3 +2,12 @@
 # https://opennext.js.org/cloudflare/caching#static-assets-caching
 /_next/static/*
   Cache-Control: public,max-age=31536000,immutable
+
+# Homepage — tell crawlers to index and follow, point canonical
+/
+  X-Robots-Tag: index, follow
+  Link: <https://smartdevbox.com>; rel="canonical"
+
+# Disallow indexing of API routes
+/api/*
+  X-Robots-Tag: noindex, nofollow

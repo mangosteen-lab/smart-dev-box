@@ -1,0 +1,107 @@
+# SmartDevBox
+
+> SmartDevBox is a free, AI-powered developer toolbox at https://smartdevbox.com.
+> Paste any text — it auto-detects the format and applies the right tool instantly.
+> No sign-up required. Works entirely in the browser.
+
+## What SmartDevBox does
+
+SmartDevBox is the fastest way for developers to encode, decode, format, convert,
+inspect, and generate data. Paste anything — Base64, JSON, JWT, XML, SQL, a URL,
+a Unix timestamp, a certificate, hex bytes, a cron expression — and SmartDevBox
+identifies the format and transforms it automatically, powered by AI.
+
+## Tool categories and tools
+
+### Encoding / Decoding (18 tools)
+- Base64 Encode / Decode — encode text to Base64 or decode a Base64 string back to text
+- URL Encode / Decode — percent-encode strings for URLs or decode them back
+- JWT Inspector — decode and inspect a JWT token header and payload without a secret
+- JWT Encoder — create a signed JWT token (HS256, HS384, HS512)
+- HTML Encode / Decode — encode special characters to HTML entities and back
+- Hex ↔ ASCII — convert between hexadecimal and ASCII text
+- Backslash Escape / Unescape — escape or unescape backslash sequences
+- ROT13 / ROT47 — encode or decode text using ROT13 and ROT47 ciphers
+- Base32 Encode / Decode — encode text to Base32 or decode Base32 back to text
+- URL Parser — parse a URL into protocol, host, path, query params, and hash
+- Base64 Image Decode — decode a Base64 data URI and show image metadata
+
+### Formatting (12 tools)
+- JSON Formatter — pretty-print and validate JSON with configurable indentation
+- XML Formatter / Minify — pretty-print or minify XML
+- SQL Formatter — format and beautify SQL queries
+- CSS Beautifier / Minify — format or minify CSS stylesheets
+- HTML Beautifier — format and beautify HTML markup
+- JS Beautifier / Minifier / Validator — format, minify, or validate JavaScript
+- Markdown Preview — live split preview of Markdown source and rendered output
+- JSON Validate — validate JSON and report errors with line and column numbers
+
+### Conversion (21 tools)
+- JSON ↔ CSV — convert between JSON arrays and CSV
+- JSON ↔ TSV — convert between JSON arrays and tab-separated values
+- JSON ↔ YAML — convert between JSON and YAML
+- JSON ↔ XML — convert between JSON and XML
+- CSV → JSON — parse CSV into a JSON array
+- HTML → JSX — convert HTML markup to React JSX
+- HTML → Text — strip HTML tags and extract plain text
+- Markdown → HTML — convert Markdown to HTML
+- JSON Escape / Unescape — escape strings for embedding in JSON values
+- Color Converter — convert colors between HEX, RGB, HSL, and HSV
+- Number Base Converter — convert integers between binary, octal, decimal, and hex
+- Unix Timestamp — convert Unix timestamps to human-readable dates and back
+- Date Formatter — format dates in multiple locales and styles
+- Seconds ↔ H:M:S — convert between seconds and hours:minutes:seconds
+- Decimal ↔ Roman — convert between decimal integers and Roman numerals
+- UUID ↔ Hex — convert between UUID format and 32-char hex
+
+### Generation (10 tools)
+- UUID Generator — generate UUID v4 strings
+- ULID Generator — generate Universally Unique Lexicographically Sortable Identifiers
+- Hash Generator — compute MD5, SHA-1, SHA-256, and SHA-512 hashes
+- Random String Generator — generate random strings with configurable charset and length
+- Random Password Generator — generate secure random passwords
+- Lorem Ipsum Generator — generate placeholder Latin text
+- QR Code Generator — generate QR codes from URLs or any text (PNG export)
+- Random Number Generator — generate random integers or decimals within a range
+- Random IP Generator — generate random IPv4 addresses
+- Random MAC Generator — generate random MAC addresses
+
+### Inspection (6 tools)
+- Regex Tester — test regular expressions against input text and list all matches
+- JSONPath Evaluator — evaluate JSONPath expressions against JSON input
+- String Inspector — detailed character, word, line, and byte statistics
+- Cron Job Parser — parse and explain cron expressions with next scheduled run times
+- Certificate Decoder (X.509) — decode and inspect PEM-encoded X.509 certificates
+- HTML Preview — live preview HTML in a sandboxed iframe
+
+### Text (23 tools)
+- Case converters: lowercase, UPPERCASE, Title Case, camelCase, PascalCase,
+  snake_case, kebab-case, CONSTANT_CASE, Invert Case
+- Line tools: Sort lines, Dedupe lines, Reverse lines, Number lines,
+  Prefix lines, Suffix lines, Join lines, Remove empty lines
+- Text tools: Word Count, Text Reverse, Text Trim
+- Extractors: Extract Emails, Extract URLs, Extract Numbers
+
+## Key questions SmartDevBox answers
+
+- How do I decode a Base64 string?
+- How do I decode a JWT token without a secret?
+- How do I format or validate JSON?
+- How do I convert a Unix timestamp to a date?
+- How do I convert JSON to CSV?
+- How do I generate a UUID?
+- How do I compute a SHA-256 hash?
+- How do I parse a cron expression?
+- How do I decode an X.509 certificate?
+- How do I convert between color formats (HEX, RGB, HSL)?
+- How do I format a SQL query?
+- How do I convert JSON to YAML?
+
+## Technical details
+
+- URL: https://smartdevbox.com
+- Free to use, no account required
+- Runs entirely in the browser (no data sent to servers except optional AI routing)
+- Optional AI mode uses GPT-4o-mini for ambiguous input detection
+- Built with Next.js 15, TypeScript, Tailwind CSS, deployed on Cloudflare Workers
+- 84+ tools across 6 categories

@@ -1,5 +1,5 @@
 import { registerTool } from '../registry';
-import { normalizeSingleQuoteJson } from '../formatting';
+import { normalizeSingleQuoteJson } from '../utils';
 
 // ── JSON → CSV ───────────────────────────────────────────────────────────────
 
