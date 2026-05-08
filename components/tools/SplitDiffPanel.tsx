@@ -377,7 +377,8 @@ function makePane(input: string, output: string, outputLanguage?: string, active
 }
 
 export function SplitDiffPanel({
-  onClose: _onClose,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onClose,
   initialInput,
   initialOutput,
   initialOutputLanguage,
