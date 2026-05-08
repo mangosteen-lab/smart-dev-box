@@ -20,12 +20,26 @@ function HighlightedCode({ code, language }: { code: string; language?: string }
     let cancelled = false;
     (async () => {
       try {
-        const { codeToHtml } = await import('shiki');
-        const result = await codeToHtml(code, {
-          lang: language ?? 'text',
-          theme: 'github-dark',
+        const { createHighlighterCore } = await import('@shikijs/core');
+        const { createOnigurumaEngine } = await import('shiki/engine/oniguruma');
+        const highlighter = await createHighlighterCore({
+          themes: [import('shiki/themes/github-dark.mjs')],
+          langs: [
+            import('shiki/langs/json.mjs'),
+            import('shiki/langs/xml.mjs'),
+            import('shiki/langs/sql.mjs'),
+            import('shiki/langs/css.mjs'),
+            import('shiki/langs/html.mjs'),
+            import('shiki/langs/diff.mjs'),
+          ],
+          engine: createOnigurumaEngine(),
         });
-        if (!cancelled) setHtml(result);
+        const supportedLangs = ['json', 'xml', 'sql', 'css', 'html', 'diff'];
+        const lang = supportedLangs.includes(language ?? '') ? (language ?? 'text') : 'text';
+        const result = lang === 'text'
+          ? null
+          : highlighter.codeToHtml(code, { lang, theme: 'github-dark' });
+        if (!cancelled) setHtml(result ?? null);
       } catch {
         setHtml(null);
       }
