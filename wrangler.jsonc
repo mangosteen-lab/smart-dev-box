@@ -13,7 +13,7 @@
 	},
 	"routes": [
 		{
-			"pattern": "smartdevbox.com/*",
+			"pattern": "smartdevbox.com",
 			"custom_domain": true
 		}
 	],
