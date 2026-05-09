@@ -93,6 +93,36 @@ export function Navbar() {
 
       {/* Right actions */}
       <div className="flex items-center" style={{ marginLeft: 'auto', gap: '6px' }}>
+        {/* Contact / report issue */}
+        <a
+          href="mailto:support@smartdevbox.com"
+          title="Contact us or report an issue"
+          className="flex items-center justify-center"
+          style={{
+            height: '36px',
+            padding: '0 10px',
+            fontSize: 'var(--fs-xs)',
+            color: 'var(--text3)',
+            background: 'none',
+            border: '1px solid var(--border)',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontFamily: 'var(--font)',
+            textDecoration: 'none',
+            gap: '6px',
+            transition: 'color .15s, border-color .15s',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text2)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+          <span className="hidden md:inline">Contact</span>
+        </a>
+
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
