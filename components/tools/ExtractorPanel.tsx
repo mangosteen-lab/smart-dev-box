@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useDevboxStore } from '@/store/devbox';
-import { runDetection } from '@/lib/tools';
 import { extractSections, type ExtractedSection, type ExtractedSectionLanguage } from '@/lib/tools/text';
 
 // ── Language meta ────────────────────────────────────────────────────────────
@@ -308,7 +307,7 @@ export function SectionPickerPopup({
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function ExtractorPanel() {
-  const { input, setInput, setActiveToolId, setDetectionResults, clearOutputs } = useDevboxStore();
+  const { input, setInput, setActiveToolId, addOutput } = useDevboxStore();
   const [localInput, setLocalInput] = useState(input);
   const [sections, setSections] = useState<ExtractedSection[]>([]);
   const [showPopup, setShowPopup] = useState(false);
@@ -326,14 +325,17 @@ export function ExtractorPanel() {
     setInput(v);
   };
 
-  // User confirmed sections — set them as the global input, clear stale outputs,
-  // trigger detection, then exit the panel so the main view takes over.
+  // User confirmed sections — put the extracted content into the output area,
+  // keep the input unchanged, then exit the panel so the main view takes over.
   const handleConfirm = (picked: ExtractedSection[]) => {
     if (picked.length === 0) return;
     const joined = picked.map((s) => s.content).join('\n\n');
-    clearOutputs();
-    setInput(joined);
-    setDetectionResults(runDetection(joined));
+    addOutput({
+      toolId: 'extract-sections',
+      toolName: 'Extract Sections',
+      result: { output: joined },
+      timestamp: Date.now(),
+    });
     setActiveToolId(null);
     setShowPopup(false);
   };

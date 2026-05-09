@@ -5,18 +5,16 @@ import { useDevboxStore } from '@/store/devbox';
 import { executeTool, getAllTools } from '@/lib/tools';
 
 export function DetectionBar() {
-  const { detectionResults, input, activeToolId, setActiveToolId, addOutput, onboardingStep, advanceOnboardingStep } = useDevboxStore();
+  const { detectionResults, input, activeToolId, setActiveToolId, addOutput } = useDevboxStore();
   const [showAll, setShowAll] = useState(false);
 
   if (!input.trim()) return null;
 
-  const runTool = async (toolId: string, isPrimary = false) => {
+  const runTool = async (toolId: string) => {
     setActiveToolId(toolId);
     const result = await executeTool(toolId, input);
     const toolName = getAllTools().find((t) => t.id === toolId)?.name ?? toolId;
     addOutput({ toolId, toolName, result, timestamp: Date.now() });
-    // Step 2 (index 1): advance when the primary recommended tool is run
-    if (isPrimary && onboardingStep === 1) advanceOnboardingStep();
   };
 
   const significant = detectionResults.filter((r) => r.confidence >= 0.3 && r.toolId !== 'extract-sections');
@@ -39,7 +37,7 @@ export function DetectionBar() {
 
       {/* Primary chip — tool name as the action, matching original style */}
       <button
-        onClick={() => runTool(primary.toolId, true)}
+        onClick={() => runTool(primary.toolId)}
         style={{
           display: 'flex', alignItems: 'center', gap: '5px',
           fontSize: 'var(--fs-2xs)', padding: '5px 10px', borderRadius: '3px',

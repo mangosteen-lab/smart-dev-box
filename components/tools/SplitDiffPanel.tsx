@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { executeTool, runDetection, getAllTools } from '@/lib/tools';
-import { useDevboxStore } from '@/store/devbox';
 import { extractSections, type ExtractedSection } from '@/lib/tools/text';
 import { SectionPickerPopup } from '@/components/tools/ExtractorPanel';
 import { ResizablePanels } from '@/components/ResizablePanels';
@@ -554,7 +553,6 @@ export function SplitDiffPanel({
   initialInputRight?: string;
   onPaneChange?: (leftInput: string, rightInput: string) => void;
 }) {
-  const { onboardingStep, advanceOnboardingStep } = useDevboxStore();
   const [left, setLeft] = useState<PaneState>(() =>
     initialInput
       ? makePane(initialInput, initialOutput ?? '', initialOutputLanguage, initialToolId)
@@ -577,9 +575,10 @@ export function SplitDiffPanel({
   const handleExtractConfirm = useCallback((picked: ExtractedSection[]) => {
     if (!extractPane || picked.length === 0) return;
     const joined = picked.map((s) => s.content).join('\n\n');
-    handleChange(extractPane, joined);
+    const setter = extractPane === 'left' ? setLeft : setRight;
+    setter((p) => ({ ...p, output: joined, outputLanguage: undefined, error: undefined }));
     setExtractPane(null);
-  }, [extractPane]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [extractPane]);
 
   // Detect numeric inputs for logic operator bar
   const leftNumVal = parseNumericInput(left.input);
@@ -627,9 +626,7 @@ export function SplitDiffPanel({
       }));
     }
     setDiffVisible(false);
-    // Step 5 (index 4): advance when the right pane runs a tool
-    if (side === 'right' && onboardingStep === 4) advanceOnboardingStep();
-  }, [left, right, onboardingStep, advanceOnboardingStep]);
+  }, [left, right]);
 
   // Use output as new input for a pane
   const handleUseAsInput = useCallback((side: 'left' | 'right', text: string) => {
@@ -676,7 +673,6 @@ export function SplitDiffPanel({
           data-onboard-split-diff
           onClick={() => {
             setDiffVisible((v) => !v);
-            if (onboardingStep === 5) advanceOnboardingStep();
           }}
           disabled={!canDiff}
           className="text-xs px-4 py-1.5 rounded font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity"

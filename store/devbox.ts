@@ -16,8 +16,6 @@ interface DevboxState {
   isDark: boolean;
   isAiLoading: boolean;
   aiEnabled: boolean;
-  onboardingSplitInput: string | null;
-  onboardingStep: number;   // -1 = guide not active
   recentToolIds: string[];   // last N unique tool ids used
   pinnedToolIds: string[];   // user-pinned tool ids
 
@@ -37,9 +35,6 @@ interface DevboxState {
   setIsAiLoading: (loading: boolean) => void;
   setAiEnabled: (enabled: boolean) => void;
   clearHistory: () => void;
-  setOnboardingSplitInput: (input: string | null) => void;
-  setOnboardingStep: (step: number) => void;
-  advanceOnboardingStep: () => void;
   addRecentTool: (toolId: string) => void;
   togglePinnedTool: (toolId: string) => void;
 }
@@ -58,8 +53,6 @@ export const useDevboxStore = create<DevboxState>()(
       isDark: true,
       isAiLoading: false,
       aiEnabled: false,
-      onboardingSplitInput: null,
-      onboardingStep: -1,
       recentToolIds: [],
       pinnedToolIds: [],
 
@@ -89,9 +82,6 @@ export const useDevboxStore = create<DevboxState>()(
       setIsAiLoading: (loading) => set({ isAiLoading: loading }),
       setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
       clearHistory: () => set({ history: [] }),
-      setOnboardingSplitInput: (input) => set({ onboardingSplitInput: input }),
-      setOnboardingStep: (step) => set({ onboardingStep: step }),
-      advanceOnboardingStep: () => set((state) => ({ onboardingStep: state.onboardingStep + 1 })),
       addRecentTool: (toolId) =>
         set((state) => ({
           recentToolIds: [toolId, ...state.recentToolIds.filter((id) => id !== toolId)].slice(0, 10),

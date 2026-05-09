@@ -10,7 +10,6 @@ import { DetectionBar } from '@/components/tools/DetectionBar';
 import { OutputPanel } from '@/components/tools/OutputPanel';
 import { ResizablePanels } from '@/components/ResizablePanels';
 import { GeneratorBar } from '@/components/tools/GeneratorBar';
-import { OnboardingGuide } from '@/components/OnboardingGuide';
 import { CommandPalette } from '@/components/CommandPalette';
 
 // Lazily loaded — only fetched when the panel is first activated
@@ -50,7 +49,7 @@ const CUSTOM_PANELS: Record<string, { title: string; badge?: string; component: 
 };
 
 export default function DevboxApp() {
-  const { setAiEnabled, activeToolId, setActiveToolId, input, outputs, onboardingSplitInput, onboardingStep, advanceOnboardingStep, setInput, setDetectionResults } = useDevboxStore();
+  const { setAiEnabled, activeToolId, setActiveToolId, input, outputs, setInput, setDetectionResults } = useDevboxStore();
   const [splitMode, setSplitMode] = useState(false);
   const [splitSnapshot, setSplitSnapshot] = useState<{
     input: string;
@@ -98,15 +97,12 @@ export default function DevboxApp() {
       toolId: latestOutput?.toolId ?? activeToolId,
     });
     setSplitMode(true);
-    // Step 4 (index 3): advance when dual view is opened
-    if (onboardingStep === 3) advanceOnboardingStep();
   };
 
   const customPanel = activeToolId ? CUSTOM_PANELS[activeToolId] ?? null : null;
 
   return (
     <div className="flex w-full h-full overflow-hidden">
-      <OnboardingGuide />
       <CommandPalette />
       <ToolSidebar />
 
@@ -231,7 +227,7 @@ export default function DevboxApp() {
                 initialOutput={splitSnapshot?.output}
                 initialOutputLanguage={splitSnapshot?.outputLanguage}
                 initialToolId={splitSnapshot?.toolId}
-                initialInputRight={splitPaneInputs.current.right || onboardingSplitInput || undefined}
+                initialInputRight={splitPaneInputs.current.right || undefined}
                 onPaneChange={(l, r) => { splitPaneInputs.current = { left: l, right: r }; }}
               />
             </section>
