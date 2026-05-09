@@ -167,6 +167,26 @@ html, body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
+}
+
+/* Prevent double-tap zoom on interactive elements on iOS */
+button, a, label, input, textarea, select {
+  touch-action: manipulation;
+}
+
+/* Momentum scrolling for overflow containers on iOS */
+.overflow-y-auto, .overflow-auto, .overflow-hidden {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* On mobile: allow workspace to scroll vertically */
+@media (max-width: 767px) {
+  .workspace-scroll {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */

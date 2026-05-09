@@ -115,6 +115,7 @@ export default function DevboxApp() {
           }}
         >
           <GeneratorBar />
+          {/* Split view — desktop only */}
           <button
             data-onboard-split
             onClick={() => {
@@ -127,7 +128,7 @@ export default function DevboxApp() {
                 handleEnterSplit();
               }
             }}
-            className="flex items-center"
+            className="hidden md:flex items-center"
             style={{
               marginLeft: 'auto',
               gap: '6px',
@@ -174,10 +175,10 @@ export default function DevboxApp() {
           </button>
         </div>
 
-        {/* Workspace */}
+        {/* Workspace — desktop: fixed height flex column; mobile: scrollable */}
         <div
-          className="flex-1 flex flex-col overflow-hidden"
-          style={{ padding: '10px', gap: '8px', display: 'flex' }}
+          className="flex-1 overflow-y-auto md:overflow-hidden"
+          style={{ padding: '10px', gap: '8px', display: 'flex', flexDirection: 'column' }}
         >
           {customPanel ? (
             <section className="flex flex-col gap-3 animate-fade-in flex-1 overflow-hidden">
@@ -237,12 +238,12 @@ export default function DevboxApp() {
                   background: 'var(--bg1)',
                   overflow: 'hidden',
                   flex: '1.3',
-                  minHeight: 0,
+                  minHeight: '220px',
                 }}
               >
                 {/* Pane header */}
                 <div
-                  className="flex items-center shrink-0"
+                  className="flex items-center shrink-0 flex-wrap"
                   style={{
                     gap: '8px',
                     padding: '6px 10px',
@@ -254,7 +255,7 @@ export default function DevboxApp() {
                     <line x1="12" y1="19" x2="20" y2="19"/>
                   </svg>
                   <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--green-dim)' }}>input</span>
-                  <div className="flex items-center" data-onboard-detection style={{ marginLeft: 'auto', gap: '10px' }}>
+                  <div className="flex items-center flex-wrap" data-onboard-detection style={{ marginLeft: 'auto', gap: '10px' }}>
                     <DetectionBar />
                   </div>
                 </div>
@@ -274,7 +275,7 @@ export default function DevboxApp() {
                   background: 'var(--bg1)',
                   overflow: 'hidden',
                   flex: '1',
-                  minHeight: 0,
+                  minHeight: '200px',
                 }}
               >
                 {/* Pane header */}
@@ -303,9 +304,9 @@ export default function DevboxApp() {
 
         {/* Status bar */}
         <div
-          className="flex items-center shrink-0"
+          className="flex items-center shrink-0 flex-wrap"
           style={{
-            gap: '14px',
+            gap: '8px',
             padding: '4px 14px',
             borderTop: '1px solid var(--border)',
             background: 'var(--bg)',
@@ -326,8 +327,8 @@ export default function DevboxApp() {
             </svg>
             {activeToolId ?? 'no tool selected'}
           </StatusPill>
-          <StatusDivider />
-          <StatusPill>
+          <StatusDivider className="hidden md:block" />
+          <StatusPill className="hidden md:flex">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2"/>
               <line x1="8" y1="21" x2="16" y2="21"/>
@@ -350,10 +351,10 @@ export default function DevboxApp() {
   );
 }
 
-function StatusPill({ children, on }: { children: React.ReactNode; on?: boolean }) {
+function StatusPill({ children, on, className }: { children: React.ReactNode; on?: boolean; className?: string }) {
   return (
     <div
-      className="flex items-center"
+      className={`flex items-center ${className ?? ''}`}
       style={{ gap: '5px', fontSize: 'var(--fs-2xs)', color: on ? 'var(--green-dim)' : 'var(--text4)' }}
     >
       {children}
@@ -361,6 +362,6 @@ function StatusPill({ children, on }: { children: React.ReactNode; on?: boolean 
   );
 }
 
-function StatusDivider() {
-  return <div style={{ width: '1px', height: '12px', background: 'var(--border)' }} />;
+function StatusDivider({ className }: { className?: string }) {
+  return <div className={className} style={{ width: '1px', height: '12px', background: 'var(--border)' }} />;
 }

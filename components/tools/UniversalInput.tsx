@@ -174,32 +174,33 @@ export function UniversalInput() {
       <div
         className="flex items-center flex-wrap shrink-0"
         style={{
-          gap: '12px',
+          gap: '8px',
           padding: '5px 10px',
           borderTop: '1px solid #111',
           fontSize: 'var(--fs-2xs)',
           color: 'var(--text4)',
         }}
       >
-        <span className="flex items-center" style={{ gap: '4px' }}>
+        {/* Hints — hidden on mobile to save space */}
+        <span className="hidden md:flex items-center" style={{ gap: '4px' }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
           </svg>
           format auto-detected
         </span>
-        <span className="flex items-center" style={{ gap: '4px' }}>
+        <span className="hidden md:flex items-center" style={{ gap: '4px' }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
           </svg>
           click chip to transform
         </span>
-        <span className="flex items-center" style={{ gap: '4px' }}>
+        <span className="hidden md:flex items-center" style={{ gap: '4px' }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/>
           </svg>
           ⌘↵ re-run tool
         </span>
-        <span className="flex items-center" style={{ gap: '4px' }}>
+        <span className="hidden md:flex items-center" style={{ gap: '4px' }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
           </svg>
@@ -207,10 +208,10 @@ export function UniversalInput() {
         </span>
         {/* Actions */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center' }}>
-          <span style={{ color: 'var(--text4)', fontSize: 'var(--fs-2xs)', paddingRight: '6px' }}>
+          <span className="hidden md:inline" style={{ color: 'var(--text4)', fontSize: 'var(--fs-2xs)', paddingRight: '6px' }}>
             {input.length.toLocaleString()} chars &nbsp;·&nbsp; {(inputBytes / 1024).toFixed(1)} KB
           </span>
-          <button onClick={handleCopy} style={{ color: 'var(--text3)', background: 'none', border: '1px solid transparent', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px' }}
+          <button onClick={handleCopy} style={{ color: 'var(--text3)', background: 'none', border: '1px solid transparent', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 10px', minHeight: '36px' }}
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.background = 'var(--bg2)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text3)'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'none'; }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -218,7 +219,7 @@ export function UniversalInput() {
             </svg>
             copy
           </button>
-          <button onClick={handleClear} style={{ color: 'var(--text3)', background: 'none', border: '1px solid transparent', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px' }}
+          <button onClick={handleClear} style={{ color: 'var(--text3)', background: 'none', border: '1px solid transparent', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 10px', minHeight: '36px' }}
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.background = 'var(--bg2)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text3)'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'none'; }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -226,7 +227,7 @@ export function UniversalInput() {
             </svg>
             clear
           </button>
-          <label style={{ color: 'var(--text3)', background: 'none', border: '1px solid transparent', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px' }}
+          <label style={{ color: 'var(--text3)', background: 'none', border: '1px solid transparent', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 10px', minHeight: '36px' }}
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.background = 'var(--bg2)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text3)'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'none'; }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

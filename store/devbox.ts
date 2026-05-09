@@ -11,6 +11,7 @@ interface DevboxState {
   outputs: ToolOutput[];
   history: Array<{ input: string; toolId: string; timestamp: number }>;
   sidebarOpen: boolean;
+  mobileSidebarOpen: boolean;
   isDark: boolean;
   isAiLoading: boolean;
   aiEnabled: boolean;
@@ -24,6 +25,8 @@ interface DevboxState {
   clearOutputs: () => void;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
+  setMobileSidebarOpen: (open: boolean) => void;
+  toggleMobileSidebar: () => void;
   setIsDark: (dark: boolean) => void;
   toggleTheme: () => void;
   setIsAiLoading: (loading: boolean) => void;
@@ -43,6 +46,7 @@ export const useDevboxStore = create<DevboxState>()(
       outputs: [],
       history: [],
       sidebarOpen: true,
+      mobileSidebarOpen: false,
       isDark: true,
       isAiLoading: false,
       aiEnabled: false,
@@ -66,6 +70,8 @@ export const useDevboxStore = create<DevboxState>()(
       clearOutputs: () => set({ outputs: [] }),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      setMobileSidebarOpen: (open) => set({ mobileSidebarOpen: open }),
+      toggleMobileSidebar: () => set((state) => ({ mobileSidebarOpen: !state.mobileSidebarOpen })),
       setIsDark: (dark) => set({ isDark: dark }),
       toggleTheme: () => set((state) => ({ isDark: !state.isDark })),
       setIsAiLoading: (loading) => set({ isAiLoading: loading }),

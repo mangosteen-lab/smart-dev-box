@@ -42,12 +42,12 @@ export function DetectionBar() {
         onClick={() => runTool(primary.toolId, true)}
         style={{
           display: 'flex', alignItems: 'center', gap: '5px',
-          fontSize: 'var(--fs-2xs)', padding: '2px 8px', borderRadius: '3px',
+          fontSize: 'var(--fs-2xs)', padding: '6px 10px', borderRadius: '3px',
           border: `1px solid ${activeToolId === primary.toolId ? 'var(--green)' : 'var(--green-dim)'}`,
           color: activeToolId === primary.toolId ? 'var(--green)' : '#4ade80cc',
           background: activeToolId === primary.toolId ? 'var(--green-bg)' : 'transparent',
           cursor: 'pointer', fontFamily: 'var(--font)',
-          transition: 'all .12s',
+          transition: 'all .12s', minHeight: '32px',
         }}
       >
         ▶ {primary.toolName}
@@ -62,12 +62,12 @@ export function DetectionBar() {
           key={r.toolId}
           onClick={() => runTool(r.toolId)}
           style={{
-            fontSize: 'var(--fs-2xs)', padding: '2px 8px', borderRadius: '3px',
+            fontSize: 'var(--fs-2xs)', padding: '6px 10px', borderRadius: '3px',
             border: '1px solid var(--border)',
             color: activeToolId === r.toolId ? 'var(--text2)' : 'var(--text3)',
             background: activeToolId === r.toolId ? 'var(--bg3)' : 'transparent',
             cursor: 'pointer', fontFamily: 'var(--font)',
-            transition: 'all .12s',
+            transition: 'all .12s', minHeight: '32px',
           }}
         >
           {r.toolName}
@@ -81,9 +81,10 @@ export function DetectionBar() {
         <button
           onClick={() => setShowAll(!showAll)}
           style={{
-            fontSize: 'var(--fs-2xs)', padding: '2px 8px', borderRadius: '3px',
+            fontSize: 'var(--fs-2xs)', padding: '6px 10px', borderRadius: '3px',
             color: 'var(--text3)', border: '1px solid var(--border)',
             background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font)',
+            minHeight: '32px',
           }}
         >
           +{overflow.length} more
@@ -96,9 +97,10 @@ export function DetectionBar() {
             key={r.toolId}
             onClick={() => { runTool(r.toolId); setShowAll(false); }}
             style={{
-              fontSize: 'var(--fs-2xs)', padding: '2px 8px', borderRadius: '3px',
+              fontSize: 'var(--fs-2xs)', padding: '6px 10px', borderRadius: '3px',
               color: 'var(--text3)', border: '1px solid var(--border)',
               background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font)',
+              minHeight: '32px',
             }}
           >
             {r.toolName}

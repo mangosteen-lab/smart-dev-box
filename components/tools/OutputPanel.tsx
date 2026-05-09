@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useDevboxStore } from '@/store/devbox';
+import { runDetection } from '@/lib/tools';
 import type { ToolOutput } from '@/lib/tools/types';
 
 function getExtensionForLanguage(lang?: string): string {
@@ -72,7 +73,7 @@ function HighlightedCode({ code, language }: { code: string; language?: string }
   );
 }
 
-function OutputTab({ output }: { output: ToolOutput }) {
+function OutputTab({ output, onUseAsInput }: { output: ToolOutput; onUseAsInput: (text: string) => void }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -109,9 +110,9 @@ function OutputTab({ output }: { output: ToolOutput }) {
     <div className="flex flex-col animate-fade-in" style={{ height: '100%' }}>
       {/* Output sub-header */}
       <div
-        className="flex items-center shrink-0"
+        className="flex items-center flex-wrap shrink-0"
         style={{
-          gap: '8px',
+          gap: '6px',
           padding: '5px 10px',
           borderBottom: '1px solid #141414',
         }}
@@ -156,7 +157,7 @@ function OutputTab({ output }: { output: ToolOutput }) {
             ✦ AI
           </span>
         )}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             onClick={handleCopy}
             style={{
@@ -164,7 +165,7 @@ function OutputTab({ output }: { output: ToolOutput }) {
               fontSize: 'var(--fs-xs)', color: copied ? 'var(--green)' : 'var(--text3)',
               background: 'none', border: `1px solid ${copied ? 'var(--green-dim)' : 'transparent'}`,
               borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)',
-              padding: '4px 10px',
+              padding: '8px 10px', minHeight: '36px',
             }}
             onMouseEnter={e => { if (!copied) { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg2)'; } }}
             onMouseLeave={e => { if (!copied) { (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLElement).style.background = 'none'; } }}
@@ -180,7 +181,7 @@ function OutputTab({ output }: { output: ToolOutput }) {
               display: 'flex', alignItems: 'center', gap: '5px',
               fontSize: 'var(--fs-xs)', color: 'var(--text3)',
               background: 'none', border: '1px solid transparent', borderRadius: '5px',
-              cursor: 'pointer', fontFamily: 'var(--font)', padding: '4px 10px',
+              cursor: 'pointer', fontFamily: 'var(--font)', padding: '8px 10px', minHeight: '36px',
             }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg2)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLElement).style.background = 'none'; }}
@@ -190,6 +191,26 @@ function OutputTab({ output }: { output: ToolOutput }) {
             </svg>
             save
           </button>
+          {!output.result.error && (
+            <button
+              onClick={() => onUseAsInput(output.result.output)}
+              title="Use output as input and re-detect"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                fontSize: 'var(--fs-xs)', color: 'var(--green)',
+                background: 'var(--green-bg)', border: '1px solid var(--green-dim)',
+                borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)',
+                padding: '8px 10px', fontWeight: 600, minHeight: '36px',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--green)'; (e.currentTarget as HTMLElement).style.background = 'rgba(74,222,128,0.12)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--green-dim)'; (e.currentTarget as HTMLElement).style.background = 'var(--green-bg)'; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+              </svg>
+              use as input
+            </button>
+          )}
         </div>
       </div>
 
@@ -217,8 +238,14 @@ function OutputTab({ output }: { output: ToolOutput }) {
 }
 
 export function OutputPanel() {
-  const { outputs, clearOutputs } = useDevboxStore();
+  const { outputs, clearOutputs, setInput, setDetectionResults } = useDevboxStore();
   const [activeTab, setActiveTab] = useState(0);
+
+  const handleUseAsInput = (text: string) => {
+    setInput(text);
+    clearOutputs();
+    setDetectionResults(runDetection(text));
+  };
 
   useEffect(() => {
     if (outputs.length > 0) setActiveTab(outputs.length - 1);
@@ -260,7 +287,7 @@ export function OutputPanel() {
               key={`${o.toolId}-${i}`}
               onClick={() => setActiveTab(i)}
               style={{
-                padding: '5px 12px',
+                padding: '8px 12px',
                 fontSize: 'var(--fs-xs)',
                 color: activeTab === i ? 'var(--green)' : 'var(--text3)',
                 background: activeTab === i ? 'var(--green-bg)' : 'transparent',
@@ -295,7 +322,7 @@ export function OutputPanel() {
         </div>
       )}
       <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-        <OutputTab output={outputs[activeTab] ?? outputs[outputs.length - 1]} />
+        <OutputTab output={outputs[activeTab] ?? outputs[outputs.length - 1]} onUseAsInput={handleUseAsInput} />
       </div>
     </div>
   );
