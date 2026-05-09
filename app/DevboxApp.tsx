@@ -123,8 +123,8 @@ export default function DevboxApp() {
           }}
         >
           <GeneratorBar />
-          {/* Dual view — desktop only */}
-          <button
+          {/* Dual view — desktop only; hidden when a custom panel manages its own dual view */}
+          {!customPanel && <button
             data-onboard-split
             onClick={() => {
               if (splitMode) {
@@ -180,7 +180,7 @@ export default function DevboxApp() {
                 Dual view
               </>
             )}
-          </button>
+          </button>}
         </div>
 
         {/* Workspace — desktop: fixed height flex column; mobile: scrollable */}
