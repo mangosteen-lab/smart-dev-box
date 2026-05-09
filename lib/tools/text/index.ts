@@ -429,192 +429,221 @@ registerTool({
   },
 });
 
-// ── Extract Sections (XML / JSON / SQL) ───────────────────────────────────────
+// ── Extract Sections ──────────────────────────────────────────────────────────
 
-/**
- * Shared extraction logic used by both the tool's detect/execute and the
- * ExtractorPanel component (which imports this helper directly).
- */
+export type ExtractedSectionLanguage = 'json' | 'xml' | 'html' | 'date' | 'url' | 'email' | 'number';
+
 export interface ExtractedSection {
-  language: 'json' | 'xml' | 'sql';
+  language: ExtractedSectionLanguage;
   content: string;
-  index: number; // 1-based position among all sections
+  start: number;   // byte offset in original input
+  end: number;
+  line: number;    // 1-based line where the section starts
+  col: number;     // 1-based column where the section starts
 }
 
+/**
+ * Scan `input` for all embedded JSON objects/arrays, XML/HTML elements,
+ * ISO dates, URLs, emails and numbers.  Returns every hit with full position
+ * metadata so the UI can show format · line · col · length.
+ * Each language group is de-nested: only the outermost span is kept when one
+ * span fully contains another of the same type.
+ */
 export function extractSections(input: string): ExtractedSection[] {
-  // Represents a raw candidate span before language tagging
-  interface Span { start: number; end: number; content: string; language: ExtractedSection['language'] }
+  // ── helpers ─────────────────────────────────────────────────────────────────
+  interface RawSpan { start: number; end: number; content: string; language: ExtractedSectionLanguage }
 
-  // Remove spans that are fully contained within another span of the same language.
-  // This ensures we keep only the outermost (largest) matches.
-  const keepOutermost = (spans: Span[]): Span[] => {
-    return spans.filter((s) =>
+  // Build a lookup: character index → { line, col } (both 1-based)
+  const lineColOf = (() => {
+    const cache = new Map<number, { line: number; col: number }>();
+    return (idx: number) => {
+      if (cache.has(idx)) return cache.get(idx)!;
+      let line = 1, col = 1;
+      for (let i = 0; i < idx && i < input.length; i++) {
+        if (input[i] === '\n') { line++; col = 1; } else { col++; }
+      }
+      const result = { line, col };
+      cache.set(idx, result);
+      return result;
+    };
+  })();
+
+  // Keep only outermost spans within a group (same language)
+  const keepOutermost = (spans: RawSpan[]): RawSpan[] =>
+    spans.filter((s) =>
       !spans.some(
-        (other) =>
-          other !== s &&
-          other.start <= s.start &&
-          other.end >= s.end &&
-          (other.end - other.start) > (s.end - s.start),
+        (o) => o !== s && o.start <= s.start && o.end >= s.end && (o.end - o.start) > (s.end - s.start),
       ),
     );
-  };
 
-  const allSpans: Span[] = [];
+  const all: RawSpan[] = [];
 
-  // ── XML ──────────────────────────────────────────────────────────────────────
-  // Walk the input character-by-character to find the outermost XML root elements.
-  // Strategy: find each top-level opening tag, then scan forward for its matching
-  // closing tag at depth 0. This naturally gives the largest possible XML block.
-  const xmlOpenRe = /<([A-Za-z_][A-Za-z0-9_:.-]*)(\s[^>]*)?(\/)?>/g;
-  let xm: RegExpExecArray | null;
-  while ((xm = xmlOpenRe.exec(input)) !== null) {
-    if (xm[3]) continue; // self-closing tag — skip
-    const tagName = xm[1];
-    const blockStart = xm.index;
-    // Scan forward finding matching close tag, tracking depth
-    const openRe = new RegExp(`<${tagName}(\\s[^>]*)?>`, 'g');
-    const closeRe = new RegExp(`</${tagName}>`, 'g');
-    openRe.lastIndex = xm.index + xm[0].length;
-    closeRe.lastIndex = xm.index + xm[0].length;
-    let depth = 1;
-    let blockEnd = -1;
-    while (depth > 0) {
-      const nextOpen = openRe.exec(input);
-      const nextClose = closeRe.exec(input);
-      if (!nextClose) break; // unbalanced
-      if (nextOpen && nextOpen.index < nextClose.index) {
-        depth++;
-        openRe.lastIndex = nextOpen.index + nextOpen[0].length;
-        closeRe.lastIndex = nextOpen.index + nextOpen[0].length;
-      } else {
-        depth--;
-        if (depth === 0) blockEnd = nextClose.index + nextClose[0].length;
-        openRe.lastIndex = nextClose.index + nextClose[0].length;
-        closeRe.lastIndex = nextClose.index + nextClose[0].length;
-      }
-    }
-    if (blockEnd > blockStart) {
-      const content = input.slice(blockStart, blockEnd).trim();
-      if (content.length > 5) {
-        allSpans.push({ start: blockStart, end: blockEnd, content, language: 'xml' });
-        // Skip past this entire block so we don't re-enter nested tags
-        xmlOpenRe.lastIndex = blockEnd;
-      }
-    }
-  }
-
-  // ── JSON ─────────────────────────────────────────────────────────────────────
-  // Walk the string once, recording every top-level balanced { } and [ ] span,
-  // then keep only those that are valid JSON. Inner spans are filtered out by
-  // keepOutermost — so {"a":{"b":1}} yields only the outer object.
-  const jsonRawSpans: Span[] = [];
+  // ── JSON objects & arrays ───────────────────────────────────────────────────
   for (const [open, close] of [['{', '}'], ['[', ']']] as const) {
-    let depth = 0;
-    let start = -1;
-    let inString = false;
-    let escape = false;
+    let depth = 0, start = -1, inStr = false, esc = false;
     for (let i = 0; i < input.length; i++) {
       const ch = input[i];
-      if (escape) { escape = false; continue; }
-      if (ch === '\\' && inString) { escape = true; continue; }
-      if (ch === '"') { inString = !inString; continue; }
-      if (inString) continue;
-      if (ch === open) {
-        if (depth === 0) start = i;
-        depth++;
-      } else if (ch === close) {
+      if (esc)            { esc = false; continue; }
+      if (ch === '\\' && inStr) { esc = true; continue; }
+      if (ch === '"')     { inStr = !inStr; continue; }
+      if (inStr)          continue;
+      if (ch === open)    { if (depth === 0) start = i; depth++; }
+      else if (ch === close) {
         depth--;
         if (depth === 0 && start !== -1) {
           const candidate = input.slice(start, i + 1);
           try {
             JSON.parse(candidate);
-            if (candidate.length > 2) {
-              jsonRawSpans.push({ start, end: i + 1, content: candidate, language: 'json' });
-            }
+            if (candidate.length > 2)
+              all.push({ start, end: i + 1, content: candidate, language: 'json' });
           } catch { /* not valid JSON */ }
           start = -1;
         }
       }
     }
   }
-  allSpans.push(...jsonRawSpans);
 
-  // ── SQL ───────────────────────────────────────────────────────────────────────
-  // Match each SQL keyword and extend greedily to the next semicolon (or end of
-  // string), so multi-clause statements are captured whole.
-  const sqlKeywords = /\b(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+(?:TABLE|INDEX|VIEW|DATABASE)|DROP\s+(?:TABLE|INDEX|VIEW|DATABASE)|ALTER\s+TABLE)\b/gi;
-  let sm: RegExpExecArray | null;
-  while ((sm = sqlKeywords.exec(input)) !== null) {
-    const blockStart = sm.index;
-    // Extend to the next semicolon; if none found, take to end of string
-    const semiPos = input.indexOf(';', blockStart);
-    const blockEnd = semiPos !== -1 ? semiPos + 1 : input.length;
-    const content = input.slice(blockStart, blockEnd).trim();
-    if (content.length > 5) {
-      allSpans.push({ start: blockStart, end: blockEnd, content, language: 'sql' });
-      // Advance past this block so overlapping SQL keywords aren't double-matched
-      sqlKeywords.lastIndex = blockEnd;
+  // ── XML / HTML elements ─────────────────────────────────────────────────────
+  // HTML: void elements that never have a closing tag
+  const VOID = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+  const openTagRe = /<([A-Za-z][A-Za-z0-9_:.-]*)(\s[^>]*)?(\/)?>/g;
+  let m: RegExpExecArray | null;
+  while ((m = openTagRe.exec(input)) !== null) {
+    if (m[3]) continue; // self-closing — skip
+    const tag = m[1].toLowerCase();
+    if (VOID.has(tag)) continue;
+    const blockStart = m.index;
+    const isHtml = /^(html|head|body|div|span|p|a|ul|ol|li|table|tr|td|th|thead|tbody|form|input|button|select|option|textarea|h[1-6]|header|footer|nav|main|section|article|aside|img|script|style|link|meta|title)$/i.test(m[1]);
+    const lang: ExtractedSectionLanguage = isHtml ? 'html' : 'xml';
+    // Balance open/close tags
+    const openRe  = new RegExp(`<${m[1]}(\\s[^>]*)?>`, 'gi');
+    const closeRe = new RegExp(`</${m[1]}>`, 'gi');
+    openRe.lastIndex  = m.index + m[0].length;
+    closeRe.lastIndex = m.index + m[0].length;
+    let depth = 1, blockEnd = -1;
+    while (depth > 0) {
+      const nOpen  = openRe.exec(input);
+      const nClose = closeRe.exec(input);
+      if (!nClose) break;
+      if (nOpen && nOpen.index < nClose.index) {
+        depth++;
+        openRe.lastIndex  = nOpen.index + nOpen[0].length;
+        closeRe.lastIndex = nOpen.index + nOpen[0].length;
+      } else {
+        depth--;
+        if (depth === 0) blockEnd = nClose.index + nClose[0].length;
+        openRe.lastIndex  = nClose.index + nClose[0].length;
+        closeRe.lastIndex = nClose.index + nClose[0].length;
+      }
+    }
+    if (blockEnd > blockStart) {
+      const content = input.slice(blockStart, blockEnd).trim();
+      if (content.length > 3)
+        all.push({ start: blockStart, end: blockEnd, content, language: lang });
+      openTagRe.lastIndex = blockEnd;
     }
   }
 
-  // ── Post-processing ───────────────────────────────────────────────────────────
-  // For each language separately, discard spans that are contained inside a larger
-  // same-language span (keeps only the outermost / biggest blocks).
-  const languages: ExtractedSection['language'][] = ['xml', 'json', 'sql'];
-  const filtered: Span[] = [];
-  for (const lang of languages) {
-    const group = allSpans.filter((s) => s.language === lang);
-    filtered.push(...keepOutermost(group));
+  // ── Dates ───────────────────────────────────────────────────────────────────
+  // Covers ISO 8601, common US/EU formats, unix timestamps (10/13 digits)
+  const datePatterns: RegExp[] = [
+    /\b\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?\b/g,
+    /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?\b/gi,
+    /\b(?:0?[1-9]|[12]\d|3[01])[\/\-.](?:0?[1-9]|1[0-2])[\/\-.](?:\d{2}|\d{4})\b/g,
+    /\b(?:0?[1-9]|1[0-2])[\/\-.](?:0?[1-9]|[12]\d|3[01])[\/\-.](?:\d{2}|\d{4})\b/g,
+    /\b1[3-9]\d{8}(?:\d{3})?\b/g,  // unix ms timestamps (13 digits starting 13x..19x)
+  ];
+  for (const re of datePatterns) {
+    re.lastIndex = 0;
+    let dm: RegExpExecArray | null;
+    while ((dm = re.exec(input)) !== null) {
+      const content = dm[0];
+      // Basic sanity: reject if it clearly doesn't parse as a date
+      if (content.length < 4) continue;
+      all.push({ start: dm.index, end: dm.index + content.length, content, language: 'date' });
+    }
   }
 
-  // Deduplicate by content then sort by position in the original input
+  // ── URLs ────────────────────────────────────────────────────────────────────
+  const urlRe = /https?:\/\/[^\s<>"')\]]+/g;
+  let um: RegExpExecArray | null;
+  while ((um = urlRe.exec(input)) !== null) {
+    all.push({ start: um.index, end: um.index + um[0].length, content: um[0], language: 'url' });
+  }
+
+  // ── Emails ──────────────────────────────────────────────────────────────────
+  const emailRe = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+  let em: RegExpExecArray | null;
+  while ((em = emailRe.exec(input)) !== null) {
+    all.push({ start: em.index, end: em.index + em[0].length, content: em[0], language: 'email' });
+  }
+
+  // ── Numbers ─────────────────────────────────────────────────────────────────
+  const numRe = /-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/g;
+  let nm: RegExpExecArray | null;
+  while ((nm = numRe.exec(input)) !== null) {
+    // Skip numbers that are part of already-found dates / timestamps
+    all.push({ start: nm.index, end: nm.index + nm[0].length, content: nm[0], language: 'number' });
+  }
+
+  // ── De-nest per language, deduplicate, sort ──────────────────────────────────
+  const langs: ExtractedSectionLanguage[] = ['json', 'xml', 'html', 'date', 'url', 'email', 'number'];
+  const filtered: RawSpan[] = [];
+  for (const lang of langs) {
+    filtered.push(...keepOutermost(all.filter((s) => s.language === lang)));
+  }
+
+  // Deduplicate by start+end position
   const seen = new Set<string>();
   const unique = filtered.filter((s) => {
-    const key = `${s.language}:${s.content}`;
+    const key = `${s.start}:${s.end}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+
   unique.sort((a, b) => a.start - b.start);
 
-  return unique.map((s, i) => ({ language: s.language, content: s.content, index: i + 1 }));
+  return unique.map((s) => {
+    const { line, col } = lineColOf(s.start);
+    return { language: s.language, content: s.content, start: s.start, end: s.end, line, col };
+  });
 }
 
 registerTool({
   id: 'extract-sections',
   name: 'Extract Sections',
   category: 'Text',
-  description: 'Extract all XML, JSON, and SQL sections from mixed text for individual inspection',
-  keywords: ['extract', 'xml', 'json', 'sql', 'sections', 'parse', 'find', 'mixed', 'log', 'text'],
+  description: 'Find and extract embedded JSON, XML, HTML, dates, URLs, emails and numbers from mixed text',
+  keywords: ['extract', 'json', 'xml', 'html', 'date', 'url', 'email', 'number', 'find', 'sections', 'mixed', 'parse'],
   outputExtension: 'txt',
   detect: (input) => {
     const t = input.trim();
     if (t.length < 10) return 0;
-    const hasXml = /<[A-Za-z_][^>]*>[\s\S]*?<\/[A-Za-z_]/.test(t);
-    const hasJson = /[\[{][\s\S]*?[\]}]/.test(t);
-    const hasSql = /\b(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\b/i.test(t);
-    const typeCount = (hasXml ? 1 : 0) + (hasJson ? 1 : 0) + (hasSql ? 1 : 0);
-    // Boost confidence if input is clearly mixed (multiple types or has surrounding prose)
-    if (typeCount >= 2) return 0.82;
-    if (typeCount === 1) {
-      // Only suggest if there's also surrounding plain text (not purely structured)
-      const surroundingText = t.replace(/<[\s\S]*?>|[\[{][\s\S]*?[\]}]/g, '').trim();
-      if (surroundingText.length > 20) return 0.72;
+    const scores = [
+      /[\[{][\s\S]{2,}[\]}]/.test(t) ? 0.5 : 0,
+      /<[A-Za-z][^>]*>[\s\S]*?<\/[A-Za-z]/.test(t) ? 0.5 : 0,
+      /\d{4}-\d{2}-\d{2}/.test(t) ? 0.3 : 0,
+      /https?:\/\//.test(t) ? 0.3 : 0,
+    ];
+    const best = Math.max(...scores);
+    // Only suggest if there's also surrounding text, not purely structured
+    if (best > 0) {
+      const stripped = t.replace(/<[^>]+>|[\[{][^}\]]*[\]}]/g, '').trim();
+      if (stripped.length > 10) return Math.min(best + 0.2, 0.82);
+      return best * 0.6;
     }
     return 0;
   },
   execute: (input) => {
     const sections = extractSections(input);
-    if (sections.length === 0) {
-      return { output: 'No XML, JSON, or SQL sections found.', outputLanguage: 'text' };
-    }
-    const summary = sections
-      .map((s) => `[${s.index}] ${s.language.toUpperCase()} (${s.content.length} chars)\n${s.content.slice(0, 120)}${s.content.length > 120 ? '…' : ''}`)
-      .join('\n\n---\n\n');
-    return {
-      output: `Found ${sections.length} section(s):\n\n${summary}`,
-      outputLanguage: 'text',
-    };
+    if (sections.length === 0)
+      return { output: 'No recognisable sections found.', outputLanguage: 'text' };
+    const lines = sections.map((s) =>
+      `[${s.language.toUpperCase()}] line ${s.line}, col ${s.col} · ${s.end - s.start} chars\n` +
+      `${s.content.slice(0, 120)}${s.content.length > 120 ? '…' : ''}`,
+    );
+    return { output: `Found ${sections.length} section(s):\n\n${lines.join('\n\n---\n\n')}`, outputLanguage: 'text' };
   },
 });
 

@@ -3,6 +3,9 @@
 import { useState, useCallback, useRef } from 'react';
 import { executeTool, runDetection, getAllTools } from '@/lib/tools';
 import { useDevboxStore } from '@/store/devbox';
+import { extractSections, type ExtractedSection } from '@/lib/tools/text';
+import { SectionPickerPopup } from '@/components/tools/ExtractorPanel';
+import { ResizablePanels } from '@/components/ResizablePanels';
 import * as Diff from 'diff';
 
 // ── Numeric detection & logic operators ──────────────────────────────────────
@@ -307,6 +310,7 @@ function EditorPane({
   onChange,
   onRun,
   onUseAsInput,
+  onExtract,
   onboardTextarea,
   onboardRunButton,
 }: {
@@ -315,6 +319,7 @@ function EditorPane({
   onChange: (value: string) => void;
   onRun: (toolId: string) => void;
   onUseAsInput: (text: string) => void;
+  onExtract?: () => void;
   onboardTextarea?: boolean;
   onboardRunButton?: boolean;
 }) {
@@ -331,7 +336,7 @@ function EditorPane({
     [onChange]
   );
 
-  const significant = state.detectedTools.filter((r) => r.confidence >= 0.3);
+  const significant = state.detectedTools.filter((r) => r.confidence >= 0.3 && r.toolId !== 'extract-sections');
 
   const textareaStyle: React.CSSProperties = {
     background: 'transparent',
@@ -360,11 +365,28 @@ function EditorPane({
         <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
           {label}
         </span>
-        {state.input.trim() && (
-          <span className="text-xs" style={{ color: 'var(--muted)' }}>
-            {state.input.length.toLocaleString()} chars
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {onExtract && state.input.trim() && (
+            <button
+              onClick={onExtract}
+              title="Extract sections from this pane"
+              className="text-xs px-2 py-0.5 rounded font-medium"
+              style={{
+                background: 'rgba(74,222,128,0.12)',
+                color: 'var(--green)',
+                border: '1px solid rgba(74,222,128,0.3)',
+                cursor: 'pointer',
+              }}
+            >
+              Extract
+            </button>
+          )}
+          {state.input.trim() && (
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>
+              {state.input.length.toLocaleString()} chars
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Input area */}
@@ -390,7 +412,7 @@ function EditorPane({
           ) : (
             <>
               <span className="text-xs" style={{ color: 'var(--muted)' }}>
-                Format:
+                Detect:
               </span>
               {significant.slice(0, 4).map((r) => (
                 <button
@@ -544,6 +566,21 @@ export function SplitDiffPanel({
   const [diffVisible, setDiffVisible] = useState(false);
   const [diffMode, setDiffMode] = useState<'unified' | 'split'>('unified');
 
+  // Extract popup state — which pane is being extracted
+  const [extractPane, setExtractPane] = useState<'left' | 'right' | null>(null);
+  const extractSectionsForPane = extractPane === 'left'
+    ? extractSections(left.input)
+    : extractPane === 'right'
+    ? extractSections(right.input)
+    : [];
+
+  const handleExtractConfirm = useCallback((picked: ExtractedSection[]) => {
+    if (!extractPane || picked.length === 0) return;
+    const joined = picked.map((s) => s.content).join('\n\n');
+    handleChange(extractPane, joined);
+    setExtractPane(null);
+  }, [extractPane]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Detect numeric inputs for logic operator bar
   const leftNumVal = parseNumericInput(left.input);
   const rightNumVal = parseNumericInput(right.input);
@@ -625,7 +662,7 @@ export function SplitDiffPanel({
   const canDiff = !!(leftText.trim() || rightText.trim());
 
   return (
-    <div className="flex flex-col gap-3 w-full">
+    <div className="flex flex-col gap-3 w-full" style={{ flex: 1, minHeight: 0 }}>
       {/* Header bar */}
       <div className="flex items-center shrink-0">
         <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
@@ -633,38 +670,12 @@ export function SplitDiffPanel({
         </span>
       </div>
 
-      {/* Two panes side by side */}
-      <div className="flex gap-3" style={{ minHeight: 0 }}>
-        <EditorPane
-          label="Left"
-          state={left}
-          onChange={(v) => handleChange('left', v)}
-          onRun={(id) => handleRun('left', id)}
-          onUseAsInput={(text) => handleUseAsInput('left', text)}
-        />
-        <EditorPane
-          label="Right"
-          state={right}
-          onChange={(v) => handleChange('right', v)}
-          onRun={(id) => handleRun('right', id)}
-          onUseAsInput={(text) => handleUseAsInput('right', text)}
-          onboardTextarea
-          onboardRunButton
-        />
-      </div>
-
-      {/* Logic operator bar — shown when both panes contain numeric values */}
-      {bothNumeric && leftNumVal !== null && rightNumVal !== null && (
-        <LogicOpBar leftVal={leftNumVal} rightVal={rightNumVal} />
-      )}
-
       {/* Diff action row */}
       <div className="flex items-center gap-3 shrink-0">
         <button
           data-onboard-split-diff
           onClick={() => {
             setDiffVisible((v) => !v);
-            // Step 6 (index 5): advance when Compare Diff is clicked
             if (onboardingStep === 5) advanceOnboardingStep();
           }}
           disabled={!canDiff}
@@ -674,7 +685,6 @@ export function SplitDiffPanel({
           {diffVisible ? 'Hide Diff' : 'Compare Diff'}
         </button>
 
-        {/* Diff mode toggle — only shown when diff is visible */}
         {diffVisible && (
           <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
             <button
@@ -722,26 +732,93 @@ export function SplitDiffPanel({
         )}
       </div>
 
-      {/* Diff result */}
-      {diffVisible && (
-        <div
-          className="rounded-lg overflow-auto"
-          style={{
-            border: '1px solid var(--border)',
-            background: 'var(--surface)',
-            maxHeight: '320px',
-          }}
-        >
-          {leftText.trim() === '' && rightText.trim() === '' ? (
-            <p className="text-xs p-4" style={{ color: 'var(--muted)' }}>
-              Both panes are empty.
-            </p>
-          ) : diffMode === 'unified' ? (
-            <UnifiedDiffView left={leftText} right={rightText} />
-          ) : (
-            <SplitDiffView left={leftText} right={rightText} />
+      {/* Panes + optional compare — resizable when diff is open */}
+      {diffVisible ? (
+        <ResizablePanels
+          initialTopFlex={1.5}
+          minTopPx={160}
+          minBottomPx={80}
+          top={
+            <div className="flex flex-col h-full" style={{ gap: 12 }}>
+              {/* Two panes side by side */}
+              <div className="flex gap-3 flex-1" style={{ minHeight: 0 }}>
+                <EditorPane
+                  label="Left"
+                  state={left}
+                  onChange={(v) => handleChange('left', v)}
+                  onRun={(id) => handleRun('left', id)}
+                  onUseAsInput={(text) => handleUseAsInput('left', text)}
+                  onExtract={() => setExtractPane('left')}
+                />
+                <EditorPane
+                  label="Right"
+                  state={right}
+                  onChange={(v) => handleChange('right', v)}
+                  onRun={(id) => handleRun('right', id)}
+                  onUseAsInput={(text) => handleUseAsInput('right', text)}
+                  onExtract={() => setExtractPane('right')}
+                  onboardTextarea
+                  onboardRunButton
+                />
+              </div>
+              {/* Logic operator bar */}
+              {bothNumeric && leftNumVal !== null && rightNumVal !== null && (
+                <LogicOpBar leftVal={leftNumVal} rightVal={rightNumVal} />
+              )}
+            </div>
+          }
+          bottom={
+            <div
+              className="rounded-lg overflow-auto h-full"
+              style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}
+            >
+              {leftText.trim() === '' && rightText.trim() === '' ? (
+                <p className="text-xs p-4" style={{ color: 'var(--muted)' }}>Both panes are empty.</p>
+              ) : diffMode === 'unified' ? (
+                <UnifiedDiffView left={leftText} right={rightText} />
+              ) : (
+                <SplitDiffView left={leftText} right={rightText} />
+              )}
+            </div>
+          }
+        />
+      ) : (
+        <div className="flex flex-col flex-1" style={{ gap: 12, minHeight: 0 }}>
+          {/* Two panes side by side */}
+          <div className="flex gap-3 flex-1" style={{ minHeight: 0 }}>
+            <EditorPane
+              label="Left"
+              state={left}
+              onChange={(v) => handleChange('left', v)}
+              onRun={(id) => handleRun('left', id)}
+              onUseAsInput={(text) => handleUseAsInput('left', text)}
+              onExtract={() => setExtractPane('left')}
+            />
+            <EditorPane
+              label="Right"
+              state={right}
+              onChange={(v) => handleChange('right', v)}
+              onRun={(id) => handleRun('right', id)}
+              onUseAsInput={(text) => handleUseAsInput('right', text)}
+              onExtract={() => setExtractPane('right')}
+              onboardTextarea
+              onboardRunButton
+            />
+          </div>
+          {/* Logic operator bar */}
+          {bothNumeric && leftNumVal !== null && rightNumVal !== null && (
+            <LogicOpBar leftVal={leftNumVal} rightVal={rightNumVal} />
           )}
         </div>
+      )}
+
+      {/* Section picker popup for pane extraction */}
+      {extractPane !== null && extractSectionsForPane.length > 0 && (
+        <SectionPickerPopup
+          sections={extractSectionsForPane}
+          onConfirm={handleExtractConfirm}
+          onClose={() => setExtractPane(null)}
+        />
       )}
     </div>
   );

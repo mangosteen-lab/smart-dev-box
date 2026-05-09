@@ -19,7 +19,7 @@ export function DetectionBar() {
     if (isPrimary && onboardingStep === 1) advanceOnboardingStep();
   };
 
-  const significant = detectionResults.filter((r) => r.confidence >= 0.3);
+  const significant = detectionResults.filter((r) => r.confidence >= 0.3 && r.toolId !== 'extract-sections');
 
   if (significant.length === 0) {
     return (

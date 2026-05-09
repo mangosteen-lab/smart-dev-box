@@ -8,6 +8,7 @@ import { ToolSidebar } from '@/components/tools/ToolSidebar';
 import { UniversalInput } from '@/components/tools/UniversalInput';
 import { DetectionBar } from '@/components/tools/DetectionBar';
 import { OutputPanel } from '@/components/tools/OutputPanel';
+import { ResizablePanels } from '@/components/ResizablePanels';
 import { GeneratorBar } from '@/components/tools/GeneratorBar';
 import { OnboardingGuide } from '@/components/OnboardingGuide';
 import { CommandPalette } from '@/components/CommandPalette';
@@ -43,13 +44,13 @@ const CUSTOM_PANELS: Record<string, { title: string; badge?: string; component: 
   },
   'extract-sections': {
     title: 'Extract Sections',
-    badge: 'XML · JSON · SQL',
+    badge: 'JSON · XML · HTML · DATE · URL · EMAIL',
     component: () => <ExtractorPanel />,
   },
 };
 
 export default function DevboxApp() {
-  const { setAiEnabled, activeToolId, input, outputs, onboardingSplitInput, onboardingStep, advanceOnboardingStep, setInput, setDetectionResults } = useDevboxStore();
+  const { setAiEnabled, activeToolId, setActiveToolId, input, outputs, onboardingSplitInput, onboardingStep, advanceOnboardingStep, setInput, setDetectionResults } = useDevboxStore();
   const [splitMode, setSplitMode] = useState(false);
   const [splitSnapshot, setSplitSnapshot] = useState<{
     input: string;
@@ -235,78 +236,98 @@ export default function DevboxApp() {
               />
             </section>
           ) : (
-            <>
-              {/* Input pane */}
-              <div
-                data-onboard-input
-                className="flex flex-col animate-fade-in"
-                style={{
-                  border: '1px solid var(--border)',
-                  borderRadius: '6px',
-                  background: 'var(--bg1)',
-                  overflow: 'hidden',
-                  flex: '1.3',
-                  minHeight: '220px',
-                }}
-              >
-                {/* Pane header */}
+            <ResizablePanels
+              initialTopFlex={1.3}
+              minTopPx={140}
+              minBottomPx={120}
+              className="animate-fade-in"
+              top={
+                /* Input pane */
                 <div
-                  className="flex items-center shrink-0 flex-wrap"
+                  data-onboard-input
+                  className="flex flex-col"
                   style={{
-                    gap: '8px',
-                    padding: '6px 10px',
-                    borderBottom: '1px solid var(--border)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    background: 'var(--bg1)',
+                    overflow: 'hidden',
+                    height: '100%',
                   }}
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text4)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="4 17 10 11 4 5"/>
-                    <line x1="12" y1="19" x2="20" y2="19"/>
-                  </svg>
-                  <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--green-dim)' }}>input</span>
-                  <div className="flex items-center flex-wrap" data-onboard-detection style={{ marginLeft: 'auto', gap: '10px' }}>
-                    <DetectionBar />
+                  {/* Pane header */}
+                  <div
+                    className="flex items-center shrink-0 flex-wrap"
+                    style={{
+                      gap: '8px',
+                      padding: '6px 10px',
+                      borderBottom: '1px solid var(--border)',
+                    }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text4)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="4 17 10 11 4 5"/>
+                      <line x1="12" y1="19" x2="20" y2="19"/>
+                    </svg>
+                    <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--green-dim)' }}>input</span>
+                    <div className="flex items-center flex-wrap" data-onboard-detection style={{ marginLeft: 'auto', gap: '10px' }}>
+                      <button
+                        onClick={() => setActiveToolId('extract-sections')}
+                        title="Extract embedded sections from input"
+                        style={{
+                          fontSize: 'var(--fs-2xs)', padding: '5px 10px', borderRadius: '3px',
+                          border: '1px solid rgba(74,222,128,0.3)',
+                          color: 'var(--green)',
+                          background: activeToolId === 'extract-sections' ? 'var(--green-bg)' : 'rgba(74,222,128,0.12)',
+                          cursor: 'pointer', fontFamily: 'var(--font)',
+                          transition: 'all .12s', minHeight: '28px', whiteSpace: 'nowrap',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Extract
+                      </button>
+                      <DetectionBar />
+                    </div>
+                  </div>
+                  {/* Pane body */}
+                  <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+                    <UniversalInput />
                   </div>
                 </div>
-                {/* Pane body */}
-                <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-                  <UniversalInput />
-                </div>
-              </div>
-
-              {/* Output pane */}
-              <div
-                data-onboard-output
-                className="flex flex-col animate-fade-in"
-                style={{
-                  border: '1px solid var(--border)',
-                  borderRadius: '6px',
-                  background: 'var(--bg1)',
-                  overflow: 'hidden',
-                  flex: '1',
-                  minHeight: '200px',
-                }}
-              >
-                {/* Pane header */}
+              }
+              bottom={
+                /* Output pane */
                 <div
-                  className="flex items-center shrink-0"
+                  data-onboard-output
+                  className="flex flex-col"
                   style={{
-                    gap: '8px',
-                    padding: '6px 10px',
-                    borderBottom: '1px solid var(--border)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    background: 'var(--bg1)',
+                    overflow: 'hidden',
+                    height: '100%',
                   }}
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text4)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="4 17 10 11 4 5"/>
-                    <line x1="12" y1="19" x2="20" y2="19"/>
-                  </svg>
-                  <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text3)' }}>output</span>
+                  {/* Pane header */}
+                  <div
+                    className="flex items-center shrink-0"
+                    style={{
+                      gap: '8px',
+                      padding: '6px 10px',
+                      borderBottom: '1px solid var(--border)',
+                    }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text4)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="4 17 10 11 4 5"/>
+                      <line x1="12" y1="19" x2="20" y2="19"/>
+                    </svg>
+                    <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text3)' }}>output</span>
+                  </div>
+                  {/* Pane body */}
+                  <div className="flex-1 overflow-auto" style={{ minHeight: 0 }}>
+                    <OutputPanel />
+                  </div>
                 </div>
-                {/* Pane body */}
-                <div className="flex-1 overflow-auto" style={{ minHeight: 0 }}>
-                  <OutputPanel />
-                </div>
-              </div>
-            </>
+              }
+            />
           )}
         </div>
 

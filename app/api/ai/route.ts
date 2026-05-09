@@ -36,6 +36,7 @@ Available tool IDs:
 - word-count, text-reverse, text-trim
 - remove-empty-lines, number-lines, prefix-lines, suffix-lines
 - join-lines, extract-emails, extract-urls, extract-numbers
+
 - invert-case
 - line-sort, line-dedupe, line-reverse
 - lowercase, uppercase, title-case
