@@ -29,14 +29,14 @@ const STEPS = [
     id: 'output',
     title: 'Step 3 of 6 — See the output',
     body: 'Your formatted result appears here. You can copy, save, or split-compare the output.',
-    cta: 'Try Split View →',
+    cta: 'Try Dual View →',
     targetAttr: 'data-onboard-output',
     tooltipSide: 'top' as const,
   },
   {
     id: 'split',
-    title: 'Step 4 of 6 — Open Split View',
-    body: 'Click the Split view button to open two side-by-side editors. We\'ve pre-filled the right pane with a slightly different JSON so you can compare them.',
+    title: 'Step 4 of 6 — Open Dual View',
+    body: 'Click the Dual view button to open two side-by-side editors. We\'ve pre-filled the right pane with a slightly different JSON so you can compare them.',
     cta: null,
     targetAttr: 'data-onboard-split',
     tooltipSide: 'bottom' as const,
@@ -130,7 +130,7 @@ export function OnboardingGuide() {
   };
 
   const advanceStep = (next: number) => {
-    // Step 4 (index 3) — seed the right pane before the split view opens
+    // Step 4 (index 3) — seed the right pane before the dual view opens
     if (next === 3) {
       setOnboardingSplitInput(SAMPLE_INPUT_RIGHT);
     }

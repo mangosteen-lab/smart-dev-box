@@ -17,6 +17,7 @@ const JwtEncoderPanel    = dynamic(() => import('@/components/tools/JwtEncoderPa
 const MarkdownPreviewPanel = dynamic(() => import('@/components/tools/MarkdownPreviewPanel').then(m => ({ default: m.MarkdownPreviewPanel })), { ssr: false });
 const HtmlPreviewPanel   = dynamic(() => import('@/components/tools/HtmlPreviewPanel').then(m => ({ default: m.HtmlPreviewPanel })), { ssr: false });
 const QrCodePanel        = dynamic(() => import('@/components/tools/QrCodePanel').then(m => ({ default: m.QrCodePanel })), { ssr: false });
+const ExtractorPanel     = dynamic(() => import('@/components/tools/ExtractorPanel').then(m => ({ default: m.ExtractorPanel })), { ssr: false });
 const SplitDiffPanel     = dynamic(() => import('@/components/tools/SplitDiffPanel').then(m => ({ default: m.SplitDiffPanel })), { ssr: false });
 
 const CUSTOM_PANELS: Record<string, { title: string; badge?: string; component: () => React.ReactNode }> = {
@@ -39,6 +40,11 @@ const CUSTOM_PANELS: Record<string, { title: string; badge?: string; component: 
     title: 'QR Code Generator',
     badge: 'PNG export',
     component: () => <QrCodePanel />,
+  },
+  'extract-sections': {
+    title: 'Extract Sections',
+    badge: 'XML · JSON · SQL',
+    component: () => <ExtractorPanel />,
   },
 };
 
@@ -91,7 +97,7 @@ export default function DevboxApp() {
       toolId: latestOutput?.toolId ?? activeToolId,
     });
     setSplitMode(true);
-    // Step 4 (index 3): advance when split view is opened
+    // Step 4 (index 3): advance when dual view is opened
     if (onboardingStep === 3) advanceOnboardingStep();
   };
 
@@ -117,7 +123,7 @@ export default function DevboxApp() {
           }}
         >
           <GeneratorBar />
-          {/* Split view — desktop only */}
+          {/* Dual view — desktop only */}
           <button
             data-onboard-split
             onClick={() => {
@@ -171,7 +177,7 @@ export default function DevboxApp() {
                   <rect x="3" y="3" width="18" height="18" rx="2"/>
                   <line x1="12" y1="3" x2="12" y2="21"/>
                 </svg>
-                Split view
+                Dual view
               </>
             )}
           </button>

@@ -132,9 +132,9 @@ function PlainOutput({ code }: { code: string; language?: string }) {
   );
 }
 
-// ── DiffView ──────────────────────────────────────────────────────────────────
+// ── DiffView (unified) ────────────────────────────────────────────────────────
 
-function DiffView({ left, right }: { left: string; right: string }) {
+function UnifiedDiffView({ left, right }: { left: string; right: string }) {
   const changes = Diff.diffLines(left, right);
   return (
     <pre
@@ -170,6 +170,122 @@ function DiffView({ left, right }: { left: string; right: string }) {
         </span>
       ))}
     </pre>
+  );
+}
+
+// ── DiffView (split / side-by-side) ───────────────────────────────────────────
+
+function SplitDiffView({ left, right }: { left: string; right: string }) {
+  const changes = Diff.diffLines(left, right);
+
+  // Pair removed/added hunks that appear consecutively into side-by-side rows.
+  type Row =
+    | { kind: 'same'; text: string }
+    | { kind: 'changed'; leftText: string; rightText: string }
+    | { kind: 'removed'; text: string }
+    | { kind: 'added'; text: string };
+
+  const rows: Row[] = [];
+  let i = 0;
+  while (i < changes.length) {
+    const part = changes[i];
+    if (!part.added && !part.removed) {
+      part.value.split('\n').filter(Boolean).forEach((line) => rows.push({ kind: 'same', text: line }));
+      i++;
+    } else if (part.removed) {
+      const next = changes[i + 1];
+      if (next?.added) {
+        // Pair line-by-line within the hunk
+        const leftLines = part.value.split('\n').filter(Boolean);
+        const rightLines = next.value.split('\n').filter(Boolean);
+        const len = Math.max(leftLines.length, rightLines.length);
+        for (let k = 0; k < len; k++) {
+          if (k < leftLines.length && k < rightLines.length) {
+            rows.push({ kind: 'changed', leftText: leftLines[k], rightText: rightLines[k] });
+          } else if (k < leftLines.length) {
+            rows.push({ kind: 'removed', text: leftLines[k] });
+          } else {
+            rows.push({ kind: 'added', text: rightLines[k] });
+          }
+        }
+        i += 2;
+      } else {
+        part.value.split('\n').filter(Boolean).forEach((line) => rows.push({ kind: 'removed', text: line }));
+        i++;
+      }
+    } else {
+      part.value.split('\n').filter(Boolean).forEach((line) => rows.push({ kind: 'added', text: line }));
+      i++;
+    }
+  }
+
+  const cellStyle = (bg: string, border: string): React.CSSProperties => ({
+    flex: 1, minWidth: 0, padding: '0 10px',
+    background: bg,
+    borderLeft: border,
+    fontFamily: 'monospace', fontSize: '12px', lineHeight: 1.7,
+    whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+    overflow: 'hidden',
+  });
+
+  return (
+    <div style={{ overflow: 'auto', width: '100%' }}>
+      {/* Column headers */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '4px 0' }}>
+        <div style={{ flex: 1, minWidth: 0, paddingLeft: '28px', fontSize: '11px', fontWeight: 600, color: 'var(--muted)' }}>Left</div>
+        <div style={{ width: '1px', background: 'var(--border)', flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0, paddingLeft: '28px', fontSize: '11px', fontWeight: 600, color: 'var(--muted)' }}>Right</div>
+      </div>
+      {rows.map((row, idx) => {
+        if (row.kind === 'same') {
+          return (
+            <div key={idx} style={{ display: 'flex' }}>
+              <div style={cellStyle('transparent', 'none')}>
+                <span style={{ color: 'var(--muted)', marginRight: 6, userSelect: 'none' }}>  </span>{row.text}
+              </div>
+              <div style={{ width: '1px', background: 'var(--border)', flexShrink: 0 }} />
+              <div style={cellStyle('transparent', 'none')}>
+                <span style={{ color: 'var(--muted)', marginRight: 6, userSelect: 'none' }}>  </span>{row.text}
+              </div>
+            </div>
+          );
+        }
+        if (row.kind === 'changed') {
+          return (
+            <div key={idx} style={{ display: 'flex' }}>
+              <div style={cellStyle('rgba(239,68,68,0.12)', '3px solid rgba(239,68,68,0.5)')}>
+                <span style={{ color: 'var(--error)', marginRight: 6, userSelect: 'none' }}>-</span>{row.leftText}
+              </div>
+              <div style={{ width: '1px', background: 'var(--border)', flexShrink: 0 }} />
+              <div style={cellStyle('rgba(34,197,94,0.12)', '3px solid rgba(34,197,94,0.5)')}>
+                <span style={{ color: 'var(--success)', marginRight: 6, userSelect: 'none' }}>+</span>{row.rightText}
+              </div>
+            </div>
+          );
+        }
+        if (row.kind === 'removed') {
+          return (
+            <div key={idx} style={{ display: 'flex' }}>
+              <div style={cellStyle('rgba(239,68,68,0.12)', '3px solid rgba(239,68,68,0.5)')}>
+                <span style={{ color: 'var(--error)', marginRight: 6, userSelect: 'none' }}>-</span>{row.text}
+              </div>
+              <div style={{ width: '1px', background: 'var(--border)', flexShrink: 0 }} />
+              <div style={cellStyle('transparent', 'none')} />
+            </div>
+          );
+        }
+        // added
+        return (
+          <div key={idx} style={{ display: 'flex' }}>
+            <div style={cellStyle('transparent', 'none')} />
+            <div style={{ width: '1px', background: 'var(--border)', flexShrink: 0 }} />
+            <div style={cellStyle('rgba(34,197,94,0.12)', '3px solid rgba(34,197,94,0.5)')}>
+              <span style={{ color: 'var(--success)', marginRight: 6, userSelect: 'none' }}>+</span>{row.text}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -426,6 +542,7 @@ export function SplitDiffPanel({
     initialInputRight ? makePane(initialInputRight, '') : emptyPane()
   );
   const [diffVisible, setDiffVisible] = useState(false);
+  const [diffMode, setDiffMode] = useState<'unified' | 'split'>('unified');
 
   // Detect numeric inputs for logic operator bar
   const leftNumVal = parseNumericInput(left.input);
@@ -556,6 +673,48 @@ export function SplitDiffPanel({
         >
           {diffVisible ? 'Hide Diff' : 'Compare Diff'}
         </button>
+
+        {/* Diff mode toggle — only shown when diff is visible */}
+        {diffVisible && (
+          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+            <button
+              onClick={() => setDiffMode('unified')}
+              title="Unified diff"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                fontSize: '11px', fontFamily: 'var(--font)', fontWeight: diffMode === 'unified' ? 700 : 400,
+                color: diffMode === 'unified' ? 'var(--green)' : 'var(--muted)',
+                background: diffMode === 'unified' ? 'var(--green-bg)' : 'none',
+                border: 'none', cursor: 'pointer', padding: '4px 9px',
+                transition: 'background .1s, color .1s',
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+              </svg>
+              Unified
+            </button>
+            <div style={{ width: '1px', background: 'var(--border)', alignSelf: 'stretch' }} />
+            <button
+              onClick={() => setDiffMode('split')}
+              title="Split diff"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                fontSize: '11px', fontFamily: 'var(--font)', fontWeight: diffMode === 'split' ? 700 : 400,
+                color: diffMode === 'split' ? 'var(--green)' : 'var(--muted)',
+                background: diffMode === 'split' ? 'var(--green-bg)' : 'none',
+                border: 'none', cursor: 'pointer', padding: '4px 9px',
+                transition: 'background .1s, color .1s',
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/>
+              </svg>
+              Split
+            </button>
+          </div>
+        )}
+
         {diffVisible && (
           <span className="text-xs" style={{ color: 'var(--muted)' }}>
             Comparing {left.output ? 'formatted' : 'raw'} left vs {right.output ? 'formatted' : 'raw'} right
@@ -577,8 +736,10 @@ export function SplitDiffPanel({
             <p className="text-xs p-4" style={{ color: 'var(--muted)' }}>
               Both panes are empty.
             </p>
+          ) : diffMode === 'unified' ? (
+            <UnifiedDiffView left={leftText} right={rightText} />
           ) : (
-            <DiffView left={leftText} right={rightText} />
+            <SplitDiffView left={leftText} right={rightText} />
           )}
         </div>
       )}
