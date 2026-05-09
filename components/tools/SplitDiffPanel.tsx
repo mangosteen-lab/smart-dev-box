@@ -190,6 +190,7 @@ function EditorPane({
   state,
   onChange,
   onRun,
+  onUseAsInput,
   onboardTextarea,
   onboardRunButton,
 }: {
@@ -197,6 +198,7 @@ function EditorPane({
   state: PaneState;
   onChange: (value: string) => void;
   onRun: (toolId: string) => void;
+  onUseAsInput: (text: string) => void;
   onboardTextarea?: boolean;
   onboardRunButton?: boolean;
 }) {
@@ -324,15 +326,35 @@ function EditorPane({
               )}
             </span>
             {state.output && (
-              <button
-                onClick={() => {
-                  navigator.clipboard?.writeText(state.output).catch(() => {});
-                }}
-                className="text-xs px-2 py-0.5 rounded"
-                style={{ color: 'var(--muted)', border: '1px solid var(--border)' }}
-              >
-                Copy
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => onUseAsInput(state.output)}
+                  title="Use output as input and re-detect"
+                  className="text-xs px-2 py-0.5 rounded flex items-center gap-1"
+                  style={{
+                    color: 'var(--green)',
+                    border: '1px solid var(--green-dim)',
+                    background: 'var(--green-bg)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font)',
+                  }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                  </svg>
+                  use as input
+                </button>
+                <button
+                  onClick={() => {
+                    navigator.clipboard?.writeText(state.output).catch(() => {});
+                  }}
+                  className="text-xs px-2 py-0.5 rounded"
+                  style={{ color: 'var(--muted)', border: '1px solid var(--border)', cursor: 'pointer' }}
+                >
+                  Copy
+                </button>
+              </div>
             )}
           </div>
           {state.error ? (
@@ -455,6 +477,31 @@ export function SplitDiffPanel({
     if (side === 'right' && onboardingStep === 4) advanceOnboardingStep();
   }, [left, right, onboardingStep, advanceOnboardingStep]);
 
+  // Use output as new input for a pane
+  const handleUseAsInput = useCallback((side: 'left' | 'right', text: string) => {
+    const detectionResults = runDetection(text);
+    const detectedTools = detectionResults
+      .filter((r) => r.confidence >= 0.1)
+      .map((r) => ({ toolId: r.toolId, toolName: r.toolName, confidence: r.confidence }));
+    const newPane: PaneState = {
+      input: text,
+      output: '',
+      outputLanguage: undefined,
+      error: undefined,
+      detectedTools,
+      activeToolId: null,
+      isRunning: false,
+    };
+    if (side === 'left') {
+      setLeft(newPane);
+      onPaneChange?.(text, right.input);
+    } else {
+      setRight(newPane);
+      onPaneChange?.(left.input, text);
+    }
+    setDiffVisible(false);
+  }, [left.input, right.input, onPaneChange]);
+
   // Determine what to diff: prefer formatted output, fall back to raw input
   const leftText = left.output || left.input;
   const rightText = right.output || right.input;
@@ -476,12 +523,14 @@ export function SplitDiffPanel({
           state={left}
           onChange={(v) => handleChange('left', v)}
           onRun={(id) => handleRun('left', id)}
+          onUseAsInput={(text) => handleUseAsInput('left', text)}
         />
         <EditorPane
           label="Right"
           state={right}
           onChange={(v) => handleChange('right', v)}
           onRun={(id) => handleRun('right', id)}
+          onUseAsInput={(text) => handleUseAsInput('right', text)}
           onboardTextarea
           onboardRunButton
         />
