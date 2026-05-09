@@ -6,15 +6,67 @@ import { runDetection, executeTool } from '@/lib/tools';
 
 import '@/lib/tools';
 
-const PLACEHOLDER = `Paste anything here — JSON, Base64, XML, timestamps, JWT tokens, UUIDs, URLs...`;
+const PLACEHOLDER = `Paste anything here — JSON, Base64, XML, timestamps, JWT tokens, UUIDs, URLs…`;
+
+// Rotating example snippets shown in empty state
+const EXAMPLES: { label: string; hint: string; value: string }[] = [
+  {
+    label: 'JSON',
+    hint: 'Format / inspect',
+    value: '{"user":{"id":42,"name":"Ada Lovelace","roles":["admin","editor"],"active":true}}',
+  },
+  {
+    label: 'Base64',
+    hint: 'Decode',
+    value: 'SGVsbG8gZnJvbSBTbWFydERldkJveA==',
+  },
+  {
+    label: 'JWT',
+    hint: 'Inspect claims',
+    value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
+  },
+  {
+    label: 'URL',
+    hint: 'Parse & inspect',
+    value: 'https://api.example.com/v2/users?page=1&limit=20&sort=created_at#results',
+  },
+  {
+    label: 'Timestamp',
+    hint: 'Convert to date',
+    value: '1716825600',
+  },
+  {
+    label: 'UUID',
+    hint: 'Inspect',
+    value: '550e8400-e29b-41d4-a716-446655440000',
+  },
+  {
+    label: 'SQL',
+    hint: 'Format',
+    value: 'SELECT u.id,u.name,COUNT(o.id) AS orders FROM users u LEFT JOIN orders o ON o.user_id=u.id WHERE u.active=1 GROUP BY u.id ORDER BY orders DESC LIMIT 10',
+  },
+  {
+    label: 'XML',
+    hint: 'Format',
+    value: '<catalog><book id="1"><title>Design Patterns</title><author>GoF</author><price>49.99</price></book></catalog>',
+  },
+];
 
 export function UniversalInput() {
   const { input, setInput, setDetectionResults, addOutput, activeToolId, setIsAiLoading, aiEnabled } =
     useDevboxStore();
   const [command, setCommand] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [exampleIdx, setExampleIdx] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Rotate example hint every 3 seconds when input is empty
+  useEffect(() => {
+    if (input) return;
+    const id = setInterval(() => setExampleIdx((i) => (i + 1) % EXAMPLES.length), 3000);
+    return () => clearInterval(id);
+  }, [input]);
 
   const inputBytes = new TextEncoder().encode(input).length;
   const isLarge = inputBytes > 1_048_576;
@@ -166,6 +218,43 @@ export function UniversalInput() {
           >
             <span style={{ fontSize: '24px' }}>↓</span>
             Drop file to load
+          </div>
+        )}
+        {/* Empty-state example snippets */}
+        {!input && !isDragging && (
+          <div
+            className="absolute"
+            style={{ bottom: '12px', left: '14px', right: '14px', pointerEvents: 'none' }}
+          >
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)', marginBottom: '6px' }}>
+              try an example:
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', pointerEvents: 'auto' }}>
+              {EXAMPLES.map((ex, i) => (
+                <button
+                  key={ex.label}
+                  onClick={() => {
+                    setInput(ex.value);
+                    setDetectionResults(runDetection(ex.value));
+                    textareaRef.current?.focus();
+                  }}
+                  style={{
+                    fontSize: 'var(--fs-2xs)',
+                    padding: '3px 9px',
+                    borderRadius: '3px',
+                    border: `1px solid ${i === exampleIdx ? 'var(--green-dim)' : 'var(--border)'}`,
+                    color: i === exampleIdx ? 'var(--green)' : 'var(--text3)',
+                    background: i === exampleIdx ? 'var(--green-bg)' : 'var(--bg2)',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font)',
+                    transition: 'all .15s',
+                  }}
+                >
+                  {ex.label}
+                  <span style={{ opacity: 0.55, marginLeft: '4px' }}>— {ex.hint}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

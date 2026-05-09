@@ -73,8 +73,70 @@ function HighlightedCode({ code, language }: { code: string; language?: string }
   );
 }
 
-function OutputTab({ output, onUseAsInput }: { output: ToolOutput; onUseAsInput: (text: string) => void }) {
+/** Side-by-side split diff view using unified-diff rendered inline */
+function DiffView({ before, after }: { before: string; after: string }) {
+  const [diffHtml, setDiffHtml] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { createPatch } = await import('diff');
+        const patch = createPatch('output', before, after, 'input', 'output');
+        const { createHighlighterCore } = await import('@shikijs/core');
+        const { createOnigurumaEngine } = await import('shiki/engine/oniguruma');
+        const hl = await createHighlighterCore({
+          themes: [import('shiki/themes/github-dark.mjs')],
+          langs: [import('shiki/langs/diff.mjs')],
+          engine: createOnigurumaEngine(),
+        });
+        const result = hl.codeToHtml(patch, { lang: 'diff', theme: 'github-dark' });
+        if (!cancelled) setDiffHtml(result);
+      } catch {
+        setDiffHtml(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [before, after]);
+
+  if (diffHtml) {
+    return (
+      <div
+        dangerouslySetInnerHTML={{ __html: diffHtml }}
+        style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)' }}
+      />
+    );
+  }
+
+  // Fallback plain split
+  const beforeLines = before.split('\n');
+  const afterLines = after.split('\n');
+  const maxLen = Math.max(beforeLines.length, afterLines.length);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)' }}>
+      <div style={{ borderRight: '1px solid var(--border)', padding: '0 8px' }}>
+        <div style={{ color: 'var(--text4)', fontSize: 'var(--fs-2xs)', marginBottom: '6px' }}>before (input)</div>
+        {Array.from({ length: maxLen }).map((_, i) => (
+          <div key={i} style={{ lineHeight: 1.7, color: beforeLines[i] !== afterLines[i] ? 'var(--error)' : 'var(--text3)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+            {beforeLines[i] ?? ''}
+          </div>
+        ))}
+      </div>
+      <div style={{ padding: '0 8px' }}>
+        <div style={{ color: 'var(--text4)', fontSize: 'var(--fs-2xs)', marginBottom: '6px' }}>after (output)</div>
+        {Array.from({ length: maxLen }).map((_, i) => (
+          <div key={i} style={{ lineHeight: 1.7, color: afterLines[i] !== beforeLines[i] ? 'var(--green)' : 'var(--text3)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+            {afterLines[i] ?? ''}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OutputTab({ output, onUseAsInput, inputSnapshot }: { output: ToolOutput; onUseAsInput: (text: string) => void; inputSnapshot: string }) {
   const [copied, setCopied] = useState(false);
+  const [showDiff, setShowDiff] = useState(false);
 
   const handleCopy = () => {
     const text = output.result.output;
@@ -158,6 +220,29 @@ function OutputTab({ output, onUseAsInput }: { output: ToolOutput; onUseAsInput:
           </span>
         )}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Diff toggle */}
+          {!output.result.error && inputSnapshot && (
+            <button
+              onClick={() => setShowDiff((d) => !d)}
+              title="Toggle before/after diff"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                fontSize: 'var(--fs-xs)',
+                color: showDiff ? 'var(--amber)' : 'var(--text3)',
+                background: showDiff ? 'rgba(251,191,36,0.08)' : 'none',
+                border: `1px solid ${showDiff ? 'rgba(251,191,36,0.3)' : 'transparent'}`,
+                borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)',
+                padding: '8px 10px', minHeight: '36px',
+              }}
+              onMouseEnter={e => { if (!showDiff) { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg2)'; } }}
+              onMouseLeave={e => { if (!showDiff) { (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLElement).style.background = 'none'; } }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+              diff
+            </button>
+          )}
           <button
             onClick={handleCopy}
             style={{
@@ -229,6 +314,8 @@ function OutputTab({ output, onUseAsInput }: { output: ToolOutput; onUseAsInput:
           >
             ✕ {output.result.error}
           </div>
+        ) : showDiff ? (
+          <DiffView before={inputSnapshot} after={output.result.output} />
         ) : (
           <HighlightedCode code={output.result.output} language={output.result.outputLanguage} />
         )}
@@ -238,8 +325,10 @@ function OutputTab({ output, onUseAsInput }: { output: ToolOutput; onUseAsInput:
 }
 
 export function OutputPanel() {
-  const { outputs, clearOutputs, setInput, setDetectionResults } = useDevboxStore();
+  const { outputs, clearOutputs, setInput, setDetectionResults, input } = useDevboxStore();
   const [activeTab, setActiveTab] = useState(0);
+  // Snapshot of input at run time so diff always compares what was actually processed
+  const [inputSnapshots, setInputSnapshots] = useState<Record<string, string>>({});
 
   const handleUseAsInput = (text: string) => {
     setInput(text);
@@ -248,7 +337,13 @@ export function OutputPanel() {
   };
 
   useEffect(() => {
-    if (outputs.length > 0) setActiveTab(outputs.length - 1);
+    if (outputs.length > 0) {
+      setActiveTab(outputs.length - 1);
+      // Record input snapshot for latest output
+      const latest = outputs[outputs.length - 1];
+      setInputSnapshots((prev) => ({ ...prev, [latest.toolId]: input }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outputs.length]);
 
   if (outputs.length === 0) {
@@ -322,7 +417,16 @@ export function OutputPanel() {
         </div>
       )}
       <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-        <OutputTab output={outputs[activeTab] ?? outputs[outputs.length - 1]} onUseAsInput={handleUseAsInput} />
+        {(() => {
+          const o = outputs[activeTab] ?? outputs[outputs.length - 1];
+          return (
+            <OutputTab
+              output={o}
+              onUseAsInput={handleUseAsInput}
+              inputSnapshot={inputSnapshots[o.toolId] ?? input}
+            />
+          );
+        })()}
       </div>
     </div>
   );
