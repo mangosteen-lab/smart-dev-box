@@ -44,10 +44,11 @@ export function ResizablePanels({
   const initPct = (initialTopFlex / (initialTopFlex + 1)) * 100;
   const [topPct, setTopPct] = useState(initPct);
 
-  const onMouseMove = useCallback((e: MouseEvent) => {
+  const onMouseMove = useCallback((e: MouseEvent | TouchEvent) => {
     if (!dragging.current || !containerRef.current) return;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     const containerH = containerRef.current.getBoundingClientRect().height;
-    const delta = e.clientY - startY.current;
+    const delta = clientY - startY.current;
     const newTopH = Math.min(
       containerH - minBottomPx - 6, // 6px = handle height
       Math.max(minTopPx, startTopH.current + delta)
@@ -64,16 +65,20 @@ export function ResizablePanels({
   useEffect(() => {
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('touchmove', onMouseMove, { passive: false });
+    window.addEventListener('touchend', onMouseUp);
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('touchmove', onMouseMove);
+      window.removeEventListener('touchend', onMouseUp);
     };
   }, [onMouseMove, onMouseUp]);
 
-  const onHandleMouseDown = useCallback((e: React.MouseEvent) => {
+  const onHandleMouseDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     dragging.current = true;
-    startY.current = e.clientY;
+    startY.current = 'touches' in e ? e.touches[0].clientY : e.clientY;
     startTopH.current = topRef.current?.getBoundingClientRect().height ?? 0;
     document.body.style.cursor = 'row-resize';
     document.body.style.userSelect = 'none';
@@ -96,25 +101,27 @@ export function ResizablePanels({
       {/* Drag handle */}
       <div
         onMouseDown={onHandleMouseDown}
+        onTouchStart={onHandleMouseDown}
         title="Drag to resize"
         style={{
-          height: '6px',
+          height: '10px',
           flexShrink: 0,
           cursor: 'row-resize',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 10,
+          touchAction: 'none',
         }}
       >
         {/* Visual grip dots */}
         <div
           style={{
-            width: 32,
-            height: 3,
+            width: 40,
+            height: 4,
             borderRadius: 2,
             background: 'var(--border2, var(--border))',
-            transition: 'background 0.15s',
+            transition: 'background 0.15s, width 0.15s',
           }}
           className="resize-handle-grip"
         />

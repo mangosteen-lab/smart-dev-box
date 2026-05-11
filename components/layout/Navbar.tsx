@@ -87,8 +87,32 @@ export function Navbar() {
       </div>
 
       {/* Tagline — hidden on mobile */}
-      <span className="hidden md:inline" style={{ fontSize: 'var(--fs-xs)', color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+      <span className="hidden lg:inline" style={{ fontSize: 'var(--fs-xs)', color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
         Paste anything. We figure out the rest.
+      </span>
+
+      {/* Always-visible search trigger */}
+      <button
+        className="hidden md:flex search-trigger"
+        onClick={() => {
+          // Trigger ⌘K
+          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }));
+        }}
+        title="Search tools (⌘K)"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <span style={{ flex: 1, textAlign: 'left' }}>Search tools…</span>
+        <kbd className="kbd-hint">⌘K</kbd>
+      </button>
+
+      {/* 100% Client-side trust badge */}
+      <span className="hidden lg:inline-flex trust-badge">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        100% client-side
       </span>
 
       {/* Tools toggle — desktop only */}
@@ -123,6 +147,31 @@ export function Navbar() {
 
       {/* Right actions */}
       <div className="flex items-center" style={{ marginLeft: 'auto', gap: '6px' }}>
+        {/* GitHub link */}
+        <a
+          href="https://github.com/mongosteen-lab/smart-dev-box"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="View on GitHub"
+          className="flex items-center justify-center"
+          style={{
+            width: '36px',
+            height: '36px',
+            fontSize: 'var(--fs-xs)',
+            color: 'var(--text3)',
+            background: 'none',
+            border: '1px solid var(--border)',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            transition: 'color .15s, border-color .15s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text2)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+        </a>
         {/* Contact / report issue */}
         <a
           href="mailto:support@smartdevbox.com"

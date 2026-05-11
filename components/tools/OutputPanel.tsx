@@ -304,15 +304,24 @@ function OutputTab({ output, onUseAsInput, inputSnapshot }: { output: ToolOutput
         {output.result.error ? (
           <div
             style={{
-              padding: '8px 12px',
+              padding: '12px 14px',
               background: 'rgba(248,113,113,0.08)',
               color: 'var(--error)',
               border: '1px solid rgba(248,113,113,0.2)',
-              borderRadius: '4px',
+              borderRadius: '6px',
               fontSize: 'var(--fs-xs)',
             }}
           >
-            ✕ {output.result.error}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', fontWeight: 600 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              Error
+            </div>
+            <div style={{ lineHeight: 1.6 }}>{output.result.error}</div>
+            <div style={{ marginTop: '8px', fontSize: 'var(--fs-2xs)', color: 'var(--text3)' }}>
+              💡 Check the input format and try again, or use ⌘K to search for a different tool.
+            </div>
           </div>
         ) : showDiff ? (
           <DiffView before={inputSnapshot} after={output.result.output} />
@@ -349,7 +358,7 @@ export function OutputPanel() {
   if (outputs.length === 0) {
     return (
       <div
-        className="flex flex-col items-center justify-center gap-2"
+        className="flex flex-col items-center justify-center gap-3"
         style={{
           height: '100%',
           minHeight: '120px',
@@ -357,10 +366,13 @@ export function OutputPanel() {
           fontSize: 'var(--fs-xs)',
         }}
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
           <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
         </svg>
-        <span>output will appear here</span>
+        <span>Output will appear here</span>
+        <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)', opacity: 0.7 }}>
+          Paste content above and click a detected format, or press ⌘↵ to run
+        </span>
       </div>
     );
   }

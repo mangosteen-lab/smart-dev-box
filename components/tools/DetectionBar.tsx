@@ -4,6 +4,23 @@ import { useState } from 'react';
 import { useDevboxStore } from '@/store/devbox';
 import { executeTool, getAllTools } from '@/lib/tools';
 
+// Color map for format-specific chip styling
+const FORMAT_COLORS: Record<string, { color: string; border: string; bg: string }> = {
+  json:      { color: 'var(--blue)',   border: 'var(--blue-dim)',   bg: 'rgba(96,165,250,0.10)' },
+  base64:    { color: 'var(--green)',  border: 'var(--green-dim)',  bg: 'var(--green-bg)' },
+  jwt:       { color: 'var(--purple)', border: 'var(--purple-dim)', bg: 'rgba(167,139,250,0.10)' },
+  xml:       { color: 'var(--amber)',  border: 'var(--amber-dim)',  bg: 'rgba(251,191,36,0.10)' },
+  url:       { color: 'var(--blue)',   border: 'var(--blue-dim)',   bg: 'rgba(96,165,250,0.10)' },
+  sql:       { color: 'var(--purple)', border: 'var(--purple-dim)', bg: 'rgba(167,139,250,0.10)' },
+  timestamp: { color: 'var(--amber)',  border: 'var(--amber-dim)',  bg: 'rgba(251,191,36,0.10)' },
+  uuid:      { color: 'var(--green)',  border: 'var(--green-dim)',  bg: 'var(--green-bg)' },
+};
+
+function getChipColors(toolId: string) {
+  const key = Object.keys(FORMAT_COLORS).find(k => toolId.toLowerCase().includes(k));
+  return key ? FORMAT_COLORS[key] : { color: 'var(--green)', border: 'var(--green-dim)', bg: 'transparent' };
+}
+
 export function DetectionBar() {
   const { detectionResults, input, activeToolId, setActiveToolId, addOutput } = useDevboxStore();
   const [showAll, setShowAll] = useState(false);
@@ -32,48 +49,61 @@ export function DetectionBar() {
   const overflow = significant.slice(4);
 
   return (
-    <div className="flex flex-wrap items-center" style={{ gap: '5px' }}>
-      <span style={{ color: 'var(--text3)', fontSize: 'var(--fs-2xs)' }}>detected:</span>
+    <div className="flex flex-wrap items-center" style={{ gap: '6px' }}>
+      <span style={{ color: 'var(--text3)', fontSize: 'var(--fs-2xs)', fontWeight: 600 }}>Detected:</span>
 
-      {/* Primary chip — tool name as the action, matching original style */}
+      {/* Primary chip — larger, color-coded with pulse animation */}
       <button
         onClick={() => runTool(primary.toolId)}
+        className="chip-pulse"
         style={{
-          display: 'flex', alignItems: 'center', gap: '5px',
-          fontSize: 'var(--fs-2xs)', padding: '5px 10px', borderRadius: '3px',
-          border: `1px solid ${activeToolId === primary.toolId ? 'var(--green)' : 'var(--green-dim)'}`,
-          color: activeToolId === primary.toolId ? 'var(--green)' : '#4ade80cc',
-          background: activeToolId === primary.toolId ? 'var(--green-bg)' : 'transparent',
+          display: 'flex', alignItems: 'center', gap: '6px',
+          fontSize: 'var(--fs-xs)', padding: '6px 14px', borderRadius: '5px',
+          border: `1px solid ${activeToolId === primary.toolId ? getChipColors(primary.toolId).color : getChipColors(primary.toolId).border}`,
+          color: getChipColors(primary.toolId).color,
+          background: getChipColors(primary.toolId).bg,
           cursor: 'pointer', fontFamily: 'var(--font)',
-          transition: 'all .12s', minHeight: '28px',
+          transition: 'all .15s', minHeight: '32px',
+          fontWeight: 600,
+          boxShadow: activeToolId === primary.toolId ? `0 0 10px ${getChipColors(primary.toolId).bg}` : 'none',
         }}
       >
         ▶ {primary.toolName}
-        <span style={{ opacity: 0.6 }}>
+        <span style={{
+          opacity: 0.7,
+          fontSize: 'var(--fs-2xs)',
+          background: 'rgba(255,255,255,0.08)',
+          padding: '1px 6px',
+          borderRadius: '3px',
+        }}>
           {Math.round(primary.confidence * 100)}%
         </span>
       </button>
 
-      {/* Secondary action chips */}
-      {secondary.map((r) => (
-        <button
-          key={r.toolId}
-          onClick={() => runTool(r.toolId)}
-          style={{
-            fontSize: 'var(--fs-2xs)', padding: '5px 9px', borderRadius: '3px',
-            border: '1px solid var(--border)',
-            color: activeToolId === r.toolId ? 'var(--text2)' : 'var(--text3)',
-            background: activeToolId === r.toolId ? 'var(--bg3)' : 'transparent',
-            cursor: 'pointer', fontFamily: 'var(--font)',
-            transition: 'all .12s', minHeight: '28px',
-          }}
-        >
-          {r.toolName}
-          <span style={{ opacity: 0.4, marginLeft: '4px' }}>
-            {Math.round(r.confidence * 100)}%
-          </span>
-        </button>
-      ))}
+      {/* Secondary action chips — color-coded */}
+      {secondary.map((r) => {
+        const colors = getChipColors(r.toolId);
+        return (
+          <button
+            key={r.toolId}
+            onClick={() => runTool(r.toolId)}
+            style={{
+              fontSize: 'var(--fs-2xs)', padding: '5px 11px', borderRadius: '4px',
+              border: `1px solid ${activeToolId === r.toolId ? colors.color : 'var(--border)'}`,
+              color: activeToolId === r.toolId ? colors.color : 'var(--text3)',
+              background: activeToolId === r.toolId ? colors.bg : 'transparent',
+              cursor: 'pointer', fontFamily: 'var(--font)',
+              transition: 'all .15s', minHeight: '30px',
+              fontWeight: 500,
+            }}
+          >
+            {r.toolName}
+            <span style={{ opacity: 0.4, marginLeft: '4px', fontSize: 'var(--fs-2xs)' }}>
+              {Math.round(r.confidence * 100)}%
+            </span>
+          </button>
+        );
+      })}
 
       {overflow.length > 0 && (
         <button

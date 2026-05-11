@@ -113,10 +113,6 @@ export function UniversalInput() {
     reader.readAsText(file);
   };
 
-  const handleCopy = () => {
-    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(input);
-  };
-
   const handleClear = () => {
     setInput('');
     setDetectionResults([]);
@@ -185,10 +181,9 @@ export function UniversalInput() {
 
       {/* Textarea */}
       <div
-        className="relative flex-1"
+        className={`relative flex-1 ${isDragging ? 'drop-zone-active' : 'drop-zone-idle'}`}
         style={{
-          border: isDragging ? '1px solid var(--green)' : 'none',
-          background: isDragging ? 'rgba(74,222,128,0.04)' : 'transparent',
+          borderRadius: '4px',
         }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -213,11 +208,23 @@ export function UniversalInput() {
         />
         {isDragging && (
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-2"
-            style={{ color: 'var(--green)', fontSize: 'var(--fs-sm)', pointerEvents: 'none' }}
+            className="absolute inset-0 flex flex-col items-center justify-center gap-3"
+            style={{
+              color: 'var(--green)',
+              fontSize: 'var(--fs-sm)',
+              pointerEvents: 'none',
+              background: 'rgba(10,10,10,0.7)',
+              backdropFilter: 'blur(2px)',
+              borderRadius: '4px',
+            }}
           >
-            <span style={{ fontSize: '24px' }}>↓</span>
-            Drop file to load
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span style={{ fontWeight: 600 }}>Drop file to load</span>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)' }}>Max 1 MB</span>
           </div>
         )}
         {/* Empty-state example snippets */}
@@ -226,8 +233,34 @@ export function UniversalInput() {
             className="absolute"
             style={{ bottom: '12px', left: '14px', right: '14px', pointerEvents: 'none' }}
           >
+            {/* Prominent Try button */}
+            <div style={{ pointerEvents: 'auto', marginBottom: '10px' }}>
+              <button
+                onClick={() => {
+                  const sample = EXAMPLES[0]; // JSON
+                  setInput(sample.value);
+                  setDetectionResults(runDetection(sample.value));
+                  textareaRef.current?.focus();
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '8px 16px', borderRadius: '6px',
+                  background: 'var(--green-bg)', border: '1px solid var(--green-dim)',
+                  color: 'var(--green)', cursor: 'pointer', fontFamily: 'var(--font)',
+                  fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  transition: 'all .15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--green)'; e.currentTarget.style.background = 'rgba(74,222,128,0.12)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--green-dim)'; e.currentTarget.style.background = 'var(--green-bg)'; }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Try with sample JSON
+              </button>
+            </div>
             <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)', marginBottom: '6px' }}>
-              try an example:
+              or try another format:
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', pointerEvents: 'auto' }}>
               {EXAMPLES.map((ex, i) => (
@@ -297,17 +330,9 @@ export function UniversalInput() {
         </span>
         {/* Actions */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center' }}>
-          <span className="hidden md:inline" style={{ color: 'var(--text4)', fontSize: 'var(--fs-2xs)', paddingRight: '6px' }}>
-            {input.length.toLocaleString()} chars &nbsp;·&nbsp; {(inputBytes / 1024).toFixed(1)} KB
+          <span style={{ color: inputBytes > 512_000 ? 'var(--amber)' : 'var(--text4)', fontSize: 'var(--fs-2xs)', paddingRight: '6px' }}>
+            {input.length.toLocaleString()} chars &nbsp;·&nbsp; {inputBytes > 1_048_576 ? (inputBytes / 1024 / 1024).toFixed(1) + ' MB' : (inputBytes / 1024).toFixed(1) + ' KB'}
           </span>
-          <button onClick={handleCopy} style={{ color: 'var(--text3)', background: 'none', border: '1px solid transparent', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 10px', minHeight: '36px' }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.background = 'var(--bg2)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text3)'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'none'; }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-            </svg>
-            copy
-          </button>
           <button onClick={handleClear} style={{ color: 'var(--text3)', background: 'none', border: '1px solid transparent', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 10px', minHeight: '36px' }}
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.background = 'var(--bg2)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text3)'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'none'; }}>

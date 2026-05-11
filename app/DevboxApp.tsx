@@ -269,15 +269,20 @@ export default function DevboxApp() {
                         onClick={() => setActiveToolId('extract-sections')}
                         title="Extract embedded sections from input"
                         style={{
-                          fontSize: 'var(--fs-2xs)', padding: '5px 10px', borderRadius: '3px',
+                          fontSize: 'var(--fs-2xs)', padding: '5px 12px', borderRadius: '4px',
                           border: '1px solid rgba(74,222,128,0.3)',
                           color: 'var(--green)',
                           background: activeToolId === 'extract-sections' ? 'var(--green-bg)' : 'rgba(74,222,128,0.12)',
                           cursor: 'pointer', fontFamily: 'var(--font)',
-                          transition: 'all .12s', minHeight: '28px', whiteSpace: 'nowrap',
+                          transition: 'all .12s', minHeight: '30px', whiteSpace: 'nowrap',
                           fontWeight: 600,
+                          display: 'flex', alignItems: 'center', gap: '6px',
                         }}
                       >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                        </svg>
                         Extract
                       </button>
                       <DetectionBar />
@@ -359,7 +364,7 @@ export default function DevboxApp() {
               <line x1="8" y1="21" x2="16" y2="21"/>
               <line x1="12" y1="17" x2="12" y2="21"/>
             </svg>
-            ⌘↵ to run
+            ⌘↵ run
           </StatusPill>
           <StatusDivider className="hidden md:block" />
           <StatusPill className="hidden md:flex">
@@ -391,6 +396,13 @@ export default function DevboxApp() {
             </svg>
             support@smartdevbox.com
           </a>
+          <StatusDivider className="hidden md:block" />
+          <span className="hidden md:flex items-center" style={{ gap: '4px', fontSize: 'var(--fs-2xs)', color: 'var(--green-dim)' }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            100% client-side · no data sent
+          </span>
         </div>
 
       </div>
