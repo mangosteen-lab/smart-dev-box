@@ -1,10 +1,12 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDevboxStore } from '@/store/devbox';
 import { compilePlugin, exportPluginsAsFile, loadPlugins, parsePluginBundle } from '@/lib/tools/plugin-registry';
 import { runDetection } from '@/lib/tools';
-import type { Category, PluginDefinition } from '@/lib/tools/types';
+import type { Category, PluginDefinition, StorePlugin } from '@/lib/tools/types';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const CATEGORIES: Category[] = [
   'Encoding / Decoding',
@@ -23,6 +25,8 @@ return 0;`;
 const EXECUTE_PLACEHOLDER = `// Return { output, outputLanguage?, error? }
 // 'output' is the string shown in the output panel.
 return { output: input, outputLanguage: 'text' };`;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function slugify(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -57,27 +61,101 @@ function fromEditorState(e: EditorState): PluginDefinition {
   };
 }
 
+// ── Shared style tokens ───────────────────────────────────────────────────────
+
+const overlay: React.CSSProperties = {
+  position: 'fixed', inset: 0, zIndex: 1000,
+  background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+const modal: React.CSSProperties = {
+  background: 'var(--bg1)', border: '1px solid var(--border)',
+  borderRadius: '8px', width: '92vw', maxWidth: '920px',
+  maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+  overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+};
+const inputStyle: React.CSSProperties = {
+  width: '100%', background: 'var(--bg2)', border: '1px solid var(--border)',
+  borderRadius: '4px', color: 'var(--text1)', padding: '6px 10px',
+  fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)',
+};
+const textareaStyle: React.CSSProperties = {
+  ...inputStyle, resize: 'vertical', fontFamily: 'monospace', fontSize: '12px', lineHeight: 1.5,
+};
+const labelStyle: React.CSSProperties = {
+  display: 'block', marginBottom: '4px',
+  fontSize: 'var(--fs-2xs)', color: 'var(--text3)', fontWeight: 600,
+  letterSpacing: '0.06em', textTransform: 'uppercase',
+};
+const btnPrimary: React.CSSProperties = {
+  padding: '6px 16px', background: 'var(--green-bg)', border: '1px solid var(--green-dim)',
+  color: 'var(--green)', borderRadius: '4px', cursor: 'pointer',
+  fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)', fontWeight: 600,
+  display: 'inline-flex', alignItems: 'center', gap: '5px',
+};
+const btnGhost: React.CSSProperties = {
+  padding: '6px 12px', background: 'transparent', border: '1px solid var(--border)',
+  color: 'var(--text3)', borderRadius: '4px', cursor: 'pointer',
+  fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)',
+  display: 'inline-flex', alignItems: 'center', gap: '5px',
+};
+const btnDanger: React.CSSProperties = {
+  ...btnGhost, border: '1px solid rgba(248,113,113,0.3)', color: 'rgba(248,113,113,0.8)',
+};
+const alertError: React.CSSProperties = {
+  padding: '8px 12px', background: 'rgba(248,113,113,0.08)',
+  border: '1px solid rgba(248,113,113,0.3)', borderRadius: '4px',
+  color: 'rgba(248,113,113,0.9)', fontSize: 'var(--fs-xs)', fontFamily: 'monospace',
+};
+const alertSuccess: React.CSSProperties = {
+  padding: '8px 12px', background: 'var(--green-bg)',
+  border: '1px solid var(--green-dim)', borderRadius: '4px',
+  color: 'var(--green)', fontSize: 'var(--fs-xs)',
+};
+const badge = (bg: string, color: string): React.CSSProperties => ({
+  fontSize: 'var(--fs-2xs)', borderRadius: '3px', padding: '1px 6px',
+  background: bg, color, border: `1px solid ${color}33`,
+});
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+type Tab = 'mine' | 'store';
+type EditView = 'list' | 'edit';
+
 interface PluginManagerProps { onClose: () => void; }
 
 export function PluginManager({ onClose }: PluginManagerProps) {
   const { userPlugins, savePlugin, deletePlugin, setDetectionResults, input } = useDevboxStore();
-  const [view, setView] = useState<'list' | 'edit'>('list');
+  const [tab, setTab] = useState<Tab>('mine');
+
+  // ── "My Plugins" tab state ─────────────────────────────────────────────────
+  const [view, setView] = useState<EditView>('list');
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [compileError, setCompileError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-
-  // Import state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importErrors, setImportErrors] = useState<Record<string, string>>({});
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  // ── "Store" tab state ──────────────────────────────────────────────────────
+  const [storePlugins, setStorePlugins] = useState<StorePlugin[]>([]);
+  const [storeQuery, setStoreQuery] = useState('');
+  const [storeLoading, setStoreLoading] = useState(false);
+  const [storeError, setStoreError] = useState<string | null>(null);
+  const [installing, setInstalling] = useState<string | null>(null);
+  const [installed, setInstalled] = useState<Set<string>>(new Set());
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const storeFetched = useRef(false);
+
+  // ── Shared helpers ─────────────────────────────────────────────────────────
 
   const reloadAndDetect = useCallback((plugins: PluginDefinition[]) => {
     loadPlugins(plugins);
     if (input.trim()) setDetectionResults(runDetection(input));
   }, [input, setDetectionResults]);
+
+  // ── "My Plugins" handlers ──────────────────────────────────────────────────
 
   const openNew = () => {
     setEditor({
@@ -118,33 +196,23 @@ export function PluginManager({ onClose }: PluginManagerProps) {
     setDeleteConfirm(null);
   };
 
-  // ── Export ────────────────────────────────────────────────────────────────
-
   const handleExportOne = (p: PluginDefinition) => exportPluginsAsFile([p]);
-
   const handleExportAll = () => exportPluginsAsFile(userPlugins, 'smartdevbox-plugins');
-
-  // ── Import ────────────────────────────────────────────────────────────────
 
   const processImport = useCallback((raw: string) => {
     setImportErrors({});
     setImportSuccess(null);
     const result = parsePluginBundle(raw);
-    if (result.fatalError) {
-      setImportErrors({ '': result.fatalError });
-      return;
-    }
+    if (result.fatalError) { setImportErrors({ '': result.fatalError }); return; }
     if (result.imported.length === 0) {
       setImportErrors(Object.keys(result.errors).length ? result.errors : { '': 'No valid plugins found in file.' });
       return;
     }
-    // Merge: existing plugins win on ID clash (user must delete manually to replace)
     const existingIds = new Set(userPlugins.map((p) => p.id));
     const newPlugins = result.imported.filter((p) => !existingIds.has(p.id));
     const skipped = result.imported.length - newPlugins.length;
     newPlugins.forEach(savePlugin);
     reloadAndDetect([...userPlugins, ...newPlugins]);
-
     const parts = [`Imported ${newPlugins.length} plugin${newPlugins.length !== 1 ? 's' : ''}.`];
     if (skipped > 0) parts.push(`${skipped} skipped (ID already exists).`);
     if (Object.keys(result.errors).length) parts.push(`${Object.keys(result.errors).length} failed to compile.`);
@@ -158,297 +226,379 @@ export function PluginManager({ onClose }: PluginManagerProps) {
     const reader = new FileReader();
     reader.onload = (ev) => processImport(ev.target?.result as string);
     reader.readAsText(file);
-    // Reset so same file can be re-imported
     e.target.value = '';
   };
 
   const field = (key: keyof EditorState, value: string) =>
     setEditor((e) => e ? { ...e, [key]: value } : e);
 
-  // ── Styles ────────────────────────────────────────────────────────────────
+  // ── "Store" handlers ───────────────────────────────────────────────────────
 
-  const overlay: React.CSSProperties = {
-    position: 'fixed', inset: 0, zIndex: 1000,
-    background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  };
-  const modal: React.CSSProperties = {
-    background: 'var(--bg1)', border: '1px solid var(--border)',
-    borderRadius: '8px', width: '90vw', maxWidth: '880px',
-    maxHeight: '90vh', display: 'flex', flexDirection: 'column',
-    overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
-  };
-  const hdr: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: '8px',
-    padding: '12px 16px', borderBottom: '1px solid var(--border)',
-    background: 'var(--bg)', flexShrink: 0,
-  };
-  const body: React.CSSProperties = { flex: 1, overflowY: 'auto', padding: '16px' };
-  const inputStyle: React.CSSProperties = {
-    width: '100%', background: 'var(--bg2)', border: '1px solid var(--border)',
-    borderRadius: '4px', color: 'var(--text1)', padding: '6px 10px',
-    fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)',
-  };
-  const textareaStyle: React.CSSProperties = {
-    ...inputStyle, resize: 'vertical', fontFamily: 'monospace', fontSize: '12px', lineHeight: 1.5,
-  };
-  const labelStyle: React.CSSProperties = {
-    display: 'block', marginBottom: '4px',
-    fontSize: 'var(--fs-2xs)', color: 'var(--text3)', fontWeight: 600,
-    letterSpacing: '0.06em', textTransform: 'uppercase',
-  };
-  const btnPrimary: React.CSSProperties = {
-    padding: '6px 16px', background: 'var(--green-bg)', border: '1px solid var(--green-dim)',
-    color: 'var(--green)', borderRadius: '4px', cursor: 'pointer',
-    fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)', fontWeight: 600,
-    display: 'inline-flex', alignItems: 'center', gap: '5px',
-  };
-  const btnGhost: React.CSSProperties = {
-    padding: '6px 12px', background: 'transparent', border: '1px solid var(--border)',
-    color: 'var(--text3)', borderRadius: '4px', cursor: 'pointer',
-    fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)',
-    display: 'inline-flex', alignItems: 'center', gap: '5px',
-  };
-  const btnDanger: React.CSSProperties = {
-    ...btnGhost, border: '1px solid rgba(248,113,113,0.3)', color: 'rgba(248,113,113,0.8)',
-  };
-  const alertError: React.CSSProperties = {
-    padding: '8px 12px', background: 'rgba(248,113,113,0.08)',
-    border: '1px solid rgba(248,113,113,0.3)', borderRadius: '4px',
-    color: 'rgba(248,113,113,0.9)', fontSize: 'var(--fs-xs)', fontFamily: 'monospace',
-  };
-  const alertSuccess: React.CSSProperties = {
-    padding: '8px 12px', background: 'var(--green-bg)',
-    border: '1px solid var(--green-dim)', borderRadius: '4px',
-    color: 'var(--green)', fontSize: 'var(--fs-xs)',
+  useEffect(() => {
+    setInstalled(new Set(userPlugins.map((p) => p.id)));
+  }, [userPlugins]);
+
+  const fetchStore = useCallback(async (q: string) => {
+    setStoreLoading(true);
+    setStoreError(null);
+    try {
+      const url = q.trim() ? `/api/plugins?q=${encodeURIComponent(q.trim())}` : '/api/plugins';
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed to load plugins');
+      setStorePlugins(data.plugins ?? []);
+    } catch (e: unknown) {
+      setStoreError((e as Error).message);
+    } finally {
+      setStoreLoading(false);
+    }
+  }, []);
+
+  // Fetch store lazily — only when the Store tab is first opened
+  useEffect(() => {
+    if (tab === 'store' && !storeFetched.current) {
+      storeFetched.current = true;
+      fetchStore('');
+    }
+  }, [tab, fetchStore]);
+
+  const handleStoreSearch = (q: string) => {
+    setStoreQuery(q);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => fetchStore(q), 350);
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  const handleInstall = (plugin: StorePlugin) => {
+    setInstalling(plugin.id);
+    if (!userPlugins.some((p) => p.id === plugin.id)) {
+      savePlugin(plugin);
+      loadPlugins([...useDevboxStore.getState().userPlugins]);
+      if (input.trim()) setDetectionResults(runDetection(input));
+    }
+    setInstalled((prev) => new Set([...prev, plugin.id]));
+    setInstalling(null);
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  // When in edit view, hide the tab bar and show a back-to-list header instead
+  const showTabs = view === 'list';
 
   return (
     <div style={overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div style={modal}>
 
         {/* ── Header ── */}
-        <div style={hdr}>
-          {view === 'edit' && (
-            <button style={btnGhost} onClick={() => setView('list')}>← Back</button>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '8px',
+          padding: '0 16px', borderBottom: '1px solid var(--border)',
+          background: 'var(--bg)', flexShrink: 0, minHeight: '44px',
+        }}>
+          {/* Back button (edit view only) */}
+          {!showTabs && (
+            <button style={{ ...btnGhost, padding: '4px 10px' }} onClick={() => setView('list')}>← Back</button>
           )}
-          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--green-dim)', letterSpacing: '0.08em' }}>
-            {view === 'list'
-              ? 'PLUGIN MANAGER'
-              : editor?.id ? `EDIT · ${editor.name || editor.id}` : 'NEW PLUGIN'}
-          </span>
-          <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-2xs)', color: 'var(--text4)' }}>
-            User-defined tools · stored locally
-          </span>
-          <button style={{ ...btnGhost, padding: '4px 8px', marginLeft: '8px' }} onClick={onClose} aria-label="Close">✕</button>
+
+          {/* Tab bar */}
+          {showTabs && (
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, height: '44px' }}>
+              {([['mine', 'My Plugins'], ['store', 'Store']] as [Tab, string][]).map(([t, label]) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: tab === t ? '2px solid var(--green)' : '2px solid transparent',
+                    color: tab === t ? 'var(--green-dim)' : 'var(--text3)',
+                    fontFamily: 'var(--font)',
+                    fontSize: 'var(--fs-xs)',
+                    fontWeight: tab === t ? 700 : 400,
+                    letterSpacing: '0.06em',
+                    padding: '0 16px',
+                    cursor: 'pointer',
+                    transition: 'color .12s, border-color .12s',
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                  }}
+                >
+                  {label}
+                  {t === 'mine' && userPlugins.length > 0 && (
+                    <span style={{
+                      background: 'var(--green-bg)', border: '1px solid var(--green-dim)',
+                      color: 'var(--green)', borderRadius: '10px',
+                      padding: '0 6px', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                    }}>{userPlugins.length}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Edit-view title */}
+          {!showTabs && (
+            <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--green-dim)', letterSpacing: '0.08em' }}>
+              {editor?.id ? `EDIT · ${editor.name || editor.id}` : 'NEW PLUGIN'}
+            </span>
+          )}
+
+          <span style={{ marginLeft: 'auto' }} />
+
+          {/* Store: submit link */}
+          {showTabs && tab === 'store' && (
+            <a
+              href="https://github.com/mongosteen-lab/smart-dev-box-plugin"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ ...btnGhost, textDecoration: 'none', fontSize: 'var(--fs-xs)' }}
+            >
+              + Submit a Plugin
+            </a>
+          )}
+
+          <button style={{ ...btnGhost, padding: '4px 8px' }} onClick={onClose} aria-label="Close">✕</button>
         </div>
 
         {/* ── Body ── */}
-        <div style={body}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
 
-          {/* ════════════ LIST VIEW ════════════ */}
-          {view === 'list' && (
+          {/* ══════════════ TAB: MY PLUGINS ══════════════ */}
+          {tab === 'mine' && (
+
             <>
-              {/* Toolbar row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
-                <button style={btnPrimary} onClick={openNew}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  New Plugin
-                </button>
-
-                {/* Import from file */}
-                <button style={btnGhost} onClick={() => fileInputRef.current?.click()}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  Import .json
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".json,application/json"
-                  style={{ display: 'none' }}
-                  onChange={handleFileImport}
-                />
-
-                {/* Export all */}
-                {userPlugins.length > 0 && (
-                  <button style={btnGhost} onClick={handleExportAll}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Export all ({userPlugins.length})
-                  </button>
-                )}
-
-                <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-2xs)', color: 'var(--text4)' }}>
-                  Share plugins as <code style={{ color: 'var(--text3)' }}>.plugin.json</code> files
-                </span>
-              </div>
-
-              {/* Import feedback */}
-              {importSuccess && (
-                <div style={{ ...alertSuccess, marginBottom: '10px' }}>{importSuccess}</div>
-              )}
-              {Object.keys(importErrors).length > 0 && (
-                <div style={{ ...alertError, marginBottom: '10px' }}>
-                  {Object.entries(importErrors).map(([id, msg]) => (
-                    <div key={id}>{id ? <><strong>{id}:</strong> {msg}</> : msg}</div>
-                  ))}
-                </div>
-              )}
-
-              {/* Plugin list */}
-              {userPlugins.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text4)', fontSize: 'var(--fs-xs)' }}>
-                  No plugins yet.{' '}
-                  <button style={{ ...btnGhost, display: 'inline-flex' }} onClick={openNew}>Create one</button>
-                  {' '}or{' '}
-                  <button style={{ ...btnGhost, display: 'inline-flex' }} onClick={() => fileInputRef.current?.click()}>import a .json file</button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {userPlugins.map((p) => (
-                    <div
-                      key={p.id}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '8px',
-                        padding: '10px 14px', background: 'var(--bg2)',
-                        border: '1px solid var(--border)', borderRadius: '6px',
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 700, fontSize: 'var(--fs-xs)', color: 'var(--text1)' }}>{p.name}</span>
-                          <span style={{
-                            fontSize: 'var(--fs-2xs)', color: 'var(--text4)',
-                            border: '1px solid var(--border)', borderRadius: '3px',
-                            padding: '1px 6px', background: 'var(--bg)',
-                          }}>{p.category}</span>
-                          <code style={{ fontSize: 'var(--fs-2xs)', color: 'var(--green-dim)' }}>{p.id}</code>
-                        </div>
-                        {p.description && (
-                          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', marginTop: '2px' }}>{p.description}</div>
-                        )}
-                      </div>
-
-                      {/* Per-plugin actions */}
-                      <button style={btnGhost} title="Export this plugin as .plugin.json" onClick={() => handleExportOne(p)}>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Export
+              {/* ── List view ── */}
+              {view === 'list' && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                    <button style={btnPrimary} onClick={openNew}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      New Plugin
+                    </button>
+                    <button style={btnGhost} onClick={() => fileInputRef.current?.click()}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                      Import .json
+                    </button>
+                    <input ref={fileInputRef} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={handleFileImport} />
+                    {userPlugins.length > 0 && (
+                      <button style={btnGhost} onClick={handleExportAll}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export all ({userPlugins.length})
                       </button>
-                      <button style={btnGhost} onClick={() => openEdit(p)}>Edit</button>
-                      {deleteConfirm === p.id ? (
-                        <>
-                          <button style={btnDanger} onClick={() => handleDelete(p.id)}>Confirm</button>
-                          <button style={btnGhost} onClick={() => setDeleteConfirm(null)}>Cancel</button>
-                        </>
-                      ) : (
-                        <button style={btnDanger} onClick={() => setDeleteConfirm(p.id)}>Delete</button>
-                      )}
+                    )}
+                    <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-2xs)', color: 'var(--text4)' }}>
+                      Stored locally · share as <code style={{ color: 'var(--text3)' }}>.plugin.json</code>
+                    </span>
+                  </div>
+
+                  {importSuccess && <div style={{ ...alertSuccess, marginBottom: '10px' }}>{importSuccess}</div>}
+                  {Object.keys(importErrors).length > 0 && (
+                    <div style={{ ...alertError, marginBottom: '10px' }}>
+                      {Object.entries(importErrors).map(([id, msg]) => (
+                        <div key={id}>{id ? <><strong>{id}:</strong> {msg}</> : msg}</div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+
+                  {userPlugins.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text4)', fontSize: 'var(--fs-xs)' }}>
+                      No plugins yet.{' '}
+                      <button style={{ ...btnGhost, display: 'inline-flex' }} onClick={openNew}>Create one</button>
+                      {' '}or{' '}
+                      <button style={{ ...btnGhost, display: 'inline-flex' }} onClick={() => fileInputRef.current?.click()}>import a .json file</button>
+                      {' '}or browse the{' '}
+                      <button style={{ ...btnGhost, display: 'inline-flex' }} onClick={() => setTab('store')}>Store</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {userPlugins.map((p) => (
+                        <div key={p.id} style={{
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          padding: '10px 14px', background: 'var(--bg2)',
+                          border: '1px solid var(--border)', borderRadius: '6px',
+                        }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 700, fontSize: 'var(--fs-xs)', color: 'var(--text1)' }}>{p.name}</span>
+                              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)', border: '1px solid var(--border)', borderRadius: '3px', padding: '1px 6px', background: 'var(--bg)' }}>{p.category}</span>
+                              <code style={{ fontSize: 'var(--fs-2xs)', color: 'var(--green-dim)' }}>{p.id}</code>
+                            </div>
+                            {p.description && (
+                              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', marginTop: '2px' }}>{p.description}</div>
+                            )}
+                          </div>
+                          <button style={btnGhost} title="Export as .plugin.json" onClick={() => handleExportOne(p)}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Export
+                          </button>
+                          <button style={btnGhost} onClick={() => openEdit(p)}>Edit</button>
+                          {deleteConfirm === p.id ? (
+                            <>
+                              <button style={btnDanger} onClick={() => handleDelete(p.id)}>Confirm</button>
+                              <button style={btnGhost} onClick={() => setDeleteConfirm(null)}>Cancel</button>
+                            </>
+                          ) : (
+                            <button style={btnDanger} onClick={() => setDeleteConfirm(p.id)}>Delete</button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── Edit view ── */}
+              {view === 'edit' && editor && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={labelStyle}>Tool ID <span style={{ color: 'var(--text4)', textTransform: 'none', fontWeight: 400 }}>(auto from name)</span></label>
+                      <input style={inputStyle} value={editor.id} placeholder="e.g. chat-aba-path-parser"
+                        onChange={(e) => field('id', e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Display Name *</label>
+                      <input style={inputStyle} value={editor.name} placeholder="e.g. ChatABA Path Parser"
+                        onChange={(e) => {
+                          const name = e.target.value;
+                          setEditor((prev) => prev ? { ...prev, name, id: prev.id || slugify(name) } : prev);
+                        }} />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={labelStyle}>Category</label>
+                      <select style={{ ...inputStyle, cursor: 'pointer' }} value={editor.category}
+                        onChange={(e) => field('category', e.target.value as Category)}>
+                        {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Output Extension</label>
+                      <input style={inputStyle} value={editor.outputExtension} placeholder="txt"
+                        onChange={(e) => field('outputExtension', e.target.value)} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>Description</label>
+                    <input style={inputStyle} value={editor.description}
+                      placeholder="One-line description of what this tool does"
+                      onChange={(e) => field('description', e.target.value)} />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>Keywords <span style={{ textTransform: 'none', fontWeight: 400 }}>(comma-separated)</span></label>
+                    <input style={inputStyle} value={editor.keywordsRaw}
+                      placeholder="e.g. chataba, unc, path, share"
+                      onChange={(e) => field('keywordsRaw', e.target.value)} />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>
+                      detect(input) → number
+                      <span style={{ marginLeft: '8px', color: 'var(--text4)', textTransform: 'none', fontWeight: 400 }}>
+                        function body · return confidence 0–1
+                      </span>
+                    </label>
+                    <textarea style={{ ...textareaStyle, minHeight: '120px' }} value={editor.detectCode}
+                      spellCheck={false} onChange={(e) => field('detectCode', e.target.value)} />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>
+                      execute(input) → {'{ output, outputLanguage?, error? }'}
+                      <span style={{ marginLeft: '8px', color: 'var(--text4)', textTransform: 'none', fontWeight: 400 }}>
+                        function body · return result object
+                      </span>
+                    </label>
+                    <textarea style={{ ...textareaStyle, minHeight: '150px' }} value={editor.executeCode}
+                      spellCheck={false} onChange={(e) => field('executeCode', e.target.value)} />
+                  </div>
+
+                  {compileError && <div style={alertError}>{compileError}</div>}
+                  {saved && !compileError && <div style={alertSuccess}>Plugin saved and registered.</div>}
+
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '4px' }}>
+                    <button style={btnGhost} onClick={() => setView('list')}>Cancel</button>
+                    <button style={btnPrimary} onClick={handleSave}>Save &amp; Register</button>
+                  </div>
                 </div>
               )}
             </>
           )}
 
-          {/* ════════════ EDIT VIEW ════════════ */}
-          {view === 'edit' && editor && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* ══════════════ TAB: STORE ══════════════ */}
+          {tab === 'store' && (
+            <>
+              {/* Search bar */}
+              <div style={{ marginBottom: '14px' }}>
+                <input
+                  style={{ ...inputStyle, width: 'auto', minWidth: '260px', maxWidth: '400px' }}
+                  type="search"
+                  placeholder="Search plugins…"
+                  value={storeQuery}
+                  onChange={(e) => handleStoreSearch(e.target.value)}
+                />
+              </div>
 
-              {/* Row 1: id + name */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={labelStyle}>
-                    Tool ID{' '}
-                    <span style={{ color: 'var(--text4)', textTransform: 'none', fontWeight: 400 }}>(auto from name)</span>
-                  </label>
-                  <input
-                    style={inputStyle}
-                    value={editor.id}
-                    placeholder="e.g. chat-aba-path-parser"
-                    onChange={(e) => field('id', e.target.value)}
-                  />
+              {storeError && (
+                <div style={{ ...alertError, marginBottom: '12px' }}>{storeError}</div>
+              )}
+
+              {storeLoading && (
+                <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text4)', fontSize: 'var(--fs-xs)' }}>
+                  Loading…
                 </div>
-                <div>
-                  <label style={labelStyle}>Display Name *</label>
-                  <input
-                    style={inputStyle}
-                    value={editor.name}
-                    placeholder="e.g. ChatABA Path Parser"
-                    onChange={(e) => {
-                      const name = e.target.value;
-                      setEditor((prev) => prev ? { ...prev, name, id: prev.id || slugify(name) } : prev);
-                    }}
-                  />
+              )}
+
+              {!storeLoading && storePlugins.length === 0 && !storeError && (
+                <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text4)', fontSize: 'var(--fs-xs)' }}>
+                  {storeQuery
+                    ? `No plugins match "${storeQuery}".`
+                    : 'No plugins in the hub yet. Be the first to submit one!'}
                 </div>
-              </div>
+              )}
 
-              {/* Row 2: category + outputExtension */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={labelStyle}>Category</label>
-                  <select style={{ ...inputStyle, cursor: 'pointer' }} value={editor.category}
-                    onChange={(e) => field('category', e.target.value as Category)}>
-                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
+              {!storeLoading && storePlugins.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {storePlugins.map((p) => {
+                    const isInstalled = installed.has(p.id);
+                    return (
+                      <div key={p.id} style={{
+                        display: 'flex', alignItems: 'flex-start', gap: '12px',
+                        padding: '12px 14px', background: 'var(--bg2)',
+                        border: '1px solid var(--border)', borderRadius: '6px',
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '3px' }}>
+                            <span style={{ fontWeight: 700, fontSize: 'var(--fs-xs)', color: 'var(--text1)' }}>{p.name}</span>
+                            <span style={badge('var(--bg)', 'var(--text3)')}>{p.category}</span>
+                            <code style={{ fontSize: 'var(--fs-2xs)', color: 'var(--green-dim)' }}>{p.id}</code>
+                            {isInstalled && <span style={badge('var(--green-bg)', 'var(--green)')}>installed</span>}
+                          </div>
+                          {p.description && (
+                            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', marginBottom: '4px' }}>{p.description}</div>
+                          )}
+                          <div style={{ display: 'flex', gap: '10px', fontSize: 'var(--fs-2xs)', color: 'var(--text4)' }}>
+                            <span>{p.downloads ?? 0} installs</span>
+                            <span>updated {new Date(p.updatedAt).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        <div style={{ flexShrink: 0 }}>
+                          <button
+                            style={isInstalled ? btnGhost : btnPrimary}
+                            onClick={() => !isInstalled && handleInstall(p)}
+                            disabled={installing === p.id || isInstalled}
+                          >
+                            {isInstalled ? 'Installed' : installing === p.id ? 'Installing…' : 'Install'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div>
-                  <label style={labelStyle}>Output Extension</label>
-                  <input style={inputStyle} value={editor.outputExtension} placeholder="txt"
-                    onChange={(e) => field('outputExtension', e.target.value)} />
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label style={labelStyle}>Description</label>
-                <input style={inputStyle} value={editor.description}
-                  placeholder="One-line description of what this tool does"
-                  onChange={(e) => field('description', e.target.value)} />
-              </div>
-
-              {/* Keywords */}
-              <div>
-                <label style={labelStyle}>Keywords <span style={{ textTransform: 'none', fontWeight: 400 }}>(comma-separated)</span></label>
-                <input style={inputStyle} value={editor.keywordsRaw}
-                  placeholder="e.g. chataba, unc, path, share"
-                  onChange={(e) => field('keywordsRaw', e.target.value)} />
-              </div>
-
-              {/* detect code */}
-              <div>
-                <label style={labelStyle}>
-                  detect(input) → number
-                  <span style={{ marginLeft: '8px', color: 'var(--text4)', textTransform: 'none', fontWeight: 400 }}>
-                    function body · return confidence 0–1
-                  </span>
-                </label>
-                <textarea style={{ ...textareaStyle, minHeight: '120px' }} value={editor.detectCode}
-                  spellCheck={false} onChange={(e) => field('detectCode', e.target.value)} />
-              </div>
-
-              {/* execute code */}
-              <div>
-                <label style={labelStyle}>
-                  execute(input) → {'{ output, outputLanguage?, error? }'}
-                  <span style={{ marginLeft: '8px', color: 'var(--text4)', textTransform: 'none', fontWeight: 400 }}>
-                    function body · return result object
-                  </span>
-                </label>
-                <textarea style={{ ...textareaStyle, minHeight: '150px' }} value={editor.executeCode}
-                  spellCheck={false} onChange={(e) => field('executeCode', e.target.value)} />
-              </div>
-
-              {/* Feedback */}
-              {compileError && <div style={alertError}>{compileError}</div>}
-              {saved && !compileError && <div style={alertSuccess}>Plugin saved and registered.</div>}
-
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '4px' }}>
-                <button style={btnGhost} onClick={() => setView('list')}>Cancel</button>
-                <button style={btnPrimary} onClick={handleSave}>Save &amp; Register</button>
-              </div>
-            </div>
+              )}
+            </>
           )}
 
         </div>

@@ -29,5 +29,10 @@
 		// Enable image optimization
 		// see https://opennext.js.org/cloudflare/howtos/image
 		"binding": "IMAGES"
+	},
+	"vars": {
+		// URL to the raw index.json from the SmartDevBox Plugin Hub.
+		// Set this to the GitHub raw URL after the hub repo is published, e.g.:
+		"PLUGIN_HUB_INDEX_URL": "https://raw.githubusercontent.com/mongosteen-lab/smart-dev-box-plugin/master/index.json"
 	}
 }

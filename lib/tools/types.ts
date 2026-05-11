@@ -65,6 +65,21 @@ export interface PluginDefinition {
 }
 
 /**
+ * A plugin that has been published to the Plugin Store (KV-backed).
+ * Extends PluginDefinition with store-specific metadata.
+ */
+export interface StorePlugin extends PluginDefinition {
+  /** Username of the publisher — empty string when auth is disabled */
+  author: string;
+  /** ISO timestamp of first publish */
+  publishedAt: string;
+  /** ISO timestamp of last update */
+  updatedAt: string;
+  /** Total installs / downloads */
+  downloads: number;
+}
+
+/**
  * The portable file format for sharing plugins (single file = one or many plugins).
  * Intended for community repos like smartdevbox-plugins.
  *
