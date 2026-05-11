@@ -1,13 +1,15 @@
 /**
  * GET /api/plugins
  * Public — no auth required.
- * Returns all published plugins from the SmartDevBox Plugin Hub (index.json).
+ * Returns all published plugins from a plugin hub index.json.
  *
- * Resolution order:
- *   1. Fetch PLUGIN_HUB_INDEX_URL remotely (set in .dev.vars or wrangler vars).
- *   2. If the remote fetch fails (network error, non-2xx), fall back to the
- *      on-disk index.json in the sibling smart-dev-box-plugin repo.
- *   3. If neither is available, return an empty list.
+ * Source resolution (first wins):
+ *   1. ?url=<encoded>  — any custom index.json URL supplied by the client
+ *   2. PLUGIN_HUB_INDEX_URL env var — official hub (set in .dev.vars / wrangler vars)
+ *   3. On-disk sibling repo — dev fallback when the remote is unreachable
+ *
+ * Remote fetches fall back to the on-disk index on non-2xx or network error so
+ * development works without a live GitHub URL.
  *
  * Optional query param: ?q=<search>  (filters id, name, description, keywords)
  */
@@ -15,7 +17,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { StorePlugin } from '@/lib/tools/types';
 
-/** Shape of the index.json produced by generate-index.js in the hub repo */
 interface HubIndex {
   schemaVersion: string;
   plugins: StorePlugin[];
@@ -27,7 +28,6 @@ function loadDiskIndex(): StorePlugin[] {
     const fs   = require('fs')   as typeof import('fs');
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const path = require('path') as typeof import('path');
-    // process.cwd() is the project root in both `next dev` and `next build`
     const indexPath = path.join(process.cwd(), '..', 'smart-dev-box-plugin', 'index.json');
     if (!fs.existsSync(indexPath)) return [];
     const raw: HubIndex = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
@@ -37,34 +37,50 @@ function loadDiskIndex(): StorePlugin[] {
   }
 }
 
-async function loadHubIndex(): Promise<StorePlugin[]> {
-  const remoteUrl = process.env.PLUGIN_HUB_INDEX_URL?.trim();
-
-  if (remoteUrl) {
-    try {
-      const res = await fetch(remoteUrl, {
-        // Revalidate at most every 5 minutes in production
-        next: { revalidate: 300 },
-      } as RequestInit);
-
-      if (res.ok) {
-        const data: HubIndex = await res.json();
-        return data.plugins ?? [];
-      }
-      // Non-2xx (e.g. 404 while hub repo is not yet public) → fall through to disk
-      console.warn(`[plugins] Remote hub returned ${res.status} — falling back to disk index`);
-    } catch (err) {
-      console.warn(`[plugins] Remote hub fetch failed — falling back to disk index`, err);
+async function fetchRemoteIndex(url: string): Promise<StorePlugin[] | null> {
+  try {
+    const res = await fetch(url, { next: { revalidate: 300 } } as RequestInit);
+    if (!res.ok) {
+      console.warn(`[plugins] ${url} returned ${res.status}`);
+      return null;
     }
+    const data: HubIndex = await res.json();
+    return data.plugins ?? [];
+  } catch (err) {
+    console.warn(`[plugins] fetch failed for ${url}`, err);
+    return null;
+  }
+}
+
+async function loadHubIndex(customUrl?: string): Promise<StorePlugin[]> {
+  // 1. Custom URL supplied by the client
+  if (customUrl) {
+    const plugins = await fetchRemoteIndex(customUrl);
+    if (plugins !== null) return plugins;
+    // Custom URL failed — return empty rather than leaking the official hub into a
+    // custom-source context; the UI will show its own error.
+    return [];
   }
 
+  // 2. Official hub URL from env
+  const officialUrl = process.env.PLUGIN_HUB_INDEX_URL?.trim();
+  if (officialUrl) {
+    const plugins = await fetchRemoteIndex(officialUrl);
+    if (plugins !== null) return plugins;
+    console.warn('[plugins] Official hub unreachable — falling back to disk index');
+  }
+
+  // 3. On-disk fallback (local dev)
   return loadDiskIndex();
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const q = req.nextUrl.searchParams.get('q')?.toLowerCase().trim() ?? '';
-    const all = await loadHubIndex();
+    const { searchParams } = req.nextUrl;
+    const q         = searchParams.get('q')?.toLowerCase().trim() ?? '';
+    const customUrl = searchParams.get('url')?.trim() || undefined;
+
+    const all = await loadHubIndex(customUrl);
 
     const plugins = q
       ? all.filter(
@@ -72,7 +88,7 @@ export async function GET(req: NextRequest) {
             p.id.toLowerCase().includes(q) ||
             p.name.toLowerCase().includes(q) ||
             (p.description ?? '').toLowerCase().includes(q) ||
-            (p.keywords ?? []).some((k) => k.toLowerCase().includes(q))
+            ('keywords' in p ? (p.keywords ?? []) : []).some((k: string) => k.toLowerCase().includes(q))
         )
       : all;
 

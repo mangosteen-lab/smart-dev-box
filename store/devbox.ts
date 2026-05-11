@@ -19,6 +19,7 @@ interface DevboxState {
   recentToolIds: string[];   // last N unique tool ids used
   pinnedToolIds: string[];   // user-pinned tool ids
   userPlugins: PluginDefinition[];  // user-authored plugin tools
+  pluginStoreUrls: string[];        // user-added custom plugin store index URLs
 
   setInput: (input: string) => void;
   setActiveToolId: (id: string | null) => void;
@@ -40,6 +41,8 @@ interface DevboxState {
   togglePinnedTool: (toolId: string) => void;
   savePlugin: (plugin: PluginDefinition) => void;
   deletePlugin: (id: string) => void;
+  addPluginStoreUrl: (url: string) => void;
+  removePluginStoreUrl: (url: string) => void;
 }
 
 export const useDevboxStore = create<DevboxState>()(
@@ -59,6 +62,7 @@ export const useDevboxStore = create<DevboxState>()(
       recentToolIds: [],
       pinnedToolIds: [],
       userPlugins: [],
+      pluginStoreUrls: [],
 
       setInput: (input) => set({ input }),
       setActiveToolId: (id) => set({ activeToolId: id }),
@@ -107,6 +111,16 @@ export const useDevboxStore = create<DevboxState>()(
         set((state) => ({
           userPlugins: state.userPlugins.filter((p) => p.id !== id),
         })),
+      addPluginStoreUrl: (url) =>
+        set((state) => ({
+          pluginStoreUrls: state.pluginStoreUrls.includes(url)
+            ? state.pluginStoreUrls
+            : [...state.pluginStoreUrls, url],
+        })),
+      removePluginStoreUrl: (url) =>
+        set((state) => ({
+          pluginStoreUrls: state.pluginStoreUrls.filter((u) => u !== url),
+        })),
     }),
     {
       name: 'devbox-storage',
@@ -118,6 +132,7 @@ export const useDevboxStore = create<DevboxState>()(
         recentToolIds: state.recentToolIds,
         pinnedToolIds: state.pinnedToolIds,
         userPlugins: state.userPlugins,
+        pluginStoreUrls: state.pluginStoreUrls,
       }),
     }
   )

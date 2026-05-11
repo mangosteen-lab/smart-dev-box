@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useSyncExternalStore } from 'react';
 import { useDevboxStore } from '@/store/devbox';
 import { runDetection } from '@/lib/tools';
+import { getGeneratorPlugins, subscribeGenerators } from '@/lib/tools/plugin-registry';
+import type { GeneratorOption, GeneratorPlugin } from '@/lib/tools/types';
 
 // ── Clipboard ─────────────────────────────────────────────────────────────────
 
@@ -341,6 +343,95 @@ function HashBody({ onUse }: { onUse: (v: string) => void }) {
   );
 }
 
+// ── Plugin generator body ─────────────────────────────────────────────────────
+
+function PluginGeneratorBody({
+  options,
+  generate,
+  onUse,
+}: {
+  options: GeneratorOption[];
+  generate: (opts: Record<string, unknown>) => { output: string; outputLanguage?: string; error?: string };
+  onUse: (v: string) => void;
+}) {
+  const [values, setValues] = useState<Record<string, unknown>>(() => {
+    const init: Record<string, unknown> = {};
+    for (const opt of options) init[opt.key] = opt.defaultValue;
+    return init;
+  });
+  const [result, setResult] = useState('');
+  const [error, setError] = useState('');
+
+  const handleGenerate = () => {
+    const res = generate(values);
+    if (res.error) { setError(res.error); setResult(''); }
+    else { setResult(res.output); setError(''); }
+  };
+
+  const set = (key: string, value: unknown) => setValues(prev => ({ ...prev, [key]: value }));
+
+  return (
+    <div className="flex flex-col gap-3">
+      {options.map((opt) => {
+        if (opt.type === 'text') {
+          return (
+            <label key={opt.key} className="flex flex-col gap-1" style={{ fontSize: 'var(--fs-xs)', color: 'var(--text2)' }}>
+              <span>{opt.label}</span>
+              <input
+                type="text"
+                value={String(values[opt.key] ?? '')}
+                placeholder={(opt as GeneratorOption & { placeholder?: string }).placeholder ?? ''}
+                onChange={(e) => set(opt.key, e.target.value)}
+                style={{ padding: '4px 8px', borderRadius: '4px', fontSize: 'var(--fs-xs)', outline: 'none', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font)' }}
+              />
+            </label>
+          );
+        }
+        if (opt.type === 'number') {
+          return (
+            <NumberInput
+              key={opt.key}
+              label={opt.label}
+              value={Number(values[opt.key] ?? opt.defaultValue)}
+              min={opt.min}
+              max={opt.max}
+              onChange={(n) => set(opt.key, n)}
+            />
+          );
+        }
+        if (opt.type === 'select') {
+          return (
+            <label key={opt.key} className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text2)' }}>
+              {opt.label}
+              <select
+                value={String(values[opt.key] ?? opt.defaultValue)}
+                onChange={(e) => set(opt.key, e.target.value)}
+                style={{ padding: '3px 6px', borderRadius: '4px', fontSize: 'var(--fs-xs)', outline: 'none', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font)' }}
+              >
+                {opt.choices.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+          );
+        }
+        if (opt.type === 'toggle') {
+          return (
+            <ToggleChip
+              key={opt.key}
+              label={opt.label}
+              active={Boolean(values[opt.key] ?? opt.defaultValue)}
+              onClick={() => set(opt.key, !values[opt.key])}
+            />
+          );
+        }
+        return null;
+      })}
+      <GenerateButton onClick={handleGenerate} />
+      {error && <div style={{ fontSize: 'var(--fs-xs)', color: 'rgba(248,113,113,0.9)', fontFamily: 'monospace' }}>{error}</div>}
+      {result && <ResultBox value={result} onUse={onUse} />}
+    </div>
+  );
+}
+
 // ── Generator definitions ─────────────────────────────────────────────────────
 
 const GENERATORS = [
@@ -356,7 +447,7 @@ type GeneratorId = typeof GENERATORS[number]['id'];
 // ── Popover wrapper ───────────────────────────────────────────────────────────
 
 function Popover({ id, label, open, onToggle, onUse, Body }: {
-  id: GeneratorId;
+  id: string;
   label: string;
   open: boolean;
   onToggle: () => void;
@@ -426,11 +517,14 @@ function Popover({ id, label, open, onToggle, onUse, Body }: {
 
 // ── GeneratorBar ──────────────────────────────────────────────────────────────
 
-export function GeneratorBar() {
-  const [openId, setOpenId] = useState<GeneratorId | null>(null);
-  const { setInput, setDetectionResults } = useDevboxStore();
+const EMPTY_GENERATORS = () => [] as ReturnType<typeof getGeneratorPlugins>;
 
-  const toggle = (id: GeneratorId) => setOpenId(prev => prev === id ? null : id);
+export function GeneratorBar() {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const { setInput, setDetectionResults } = useDevboxStore();
+  const pluginGenerators = useSyncExternalStore(subscribeGenerators, getGeneratorPlugins, EMPTY_GENERATORS);
+
+  const toggle = (id: string) => setOpenId(prev => prev === id ? null : id);
 
   const handleUse = (value: string) => {
     setInput(value);
@@ -450,6 +544,23 @@ export function GeneratorBar() {
           onToggle={() => toggle(id)}
           onUse={handleUse}
           Body={Body}
+        />
+      ))}
+      {pluginGenerators.map(({ plugin, generate }) => (
+        <Popover
+          key={plugin.id}
+          id={plugin.id}
+          label={plugin.name}
+          open={openId === plugin.id}
+          onToggle={() => toggle(plugin.id)}
+          onUse={handleUse}
+          Body={({ onUse }) => (
+            <PluginGeneratorBody
+              options={plugin.options}
+              generate={generate}
+              onUse={onUse}
+            />
+          )}
         />
       ))}
     </div>

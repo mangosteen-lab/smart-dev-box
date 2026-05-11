@@ -1,27 +1,83 @@
 /**
  * Plugin registry — converts user-authored PluginDefinitions (stored as JSON
- * in localStorage via Zustand) into live ToolDefinitions and registers them.
+ * in localStorage via Zustand) into live registrations.
  *
- * Each plugin's detectCode / executeCode is compiled once with `new Function()`
- * and wrapped in try/catch so a buggy plugin can never crash the whole app.
+ * Detector plugins  → registered as ToolDefinitions (detect + execute)
+ * Generator plugins → stored in a separate in-memory map; read by GeneratorBar
+ *
+ * Code strings are compiled once with `new Function()` and wrapped in try/catch
+ * so a buggy plugin can never crash the whole app.
  */
 
 import { registerTool, unregisterTool } from './registry';
-import type { PluginBundle, PluginDefinition, ToolDefinition } from './types';
+import type {
+  DetectorPlugin,
+  GeneratorPlugin,
+  GeneratorOption,
+  PluginBundle,
+  PluginDefinition,
+  ToolDefinition,
+} from './types';
 
-/** IDs of currently-loaded plugins, so we can unregister on reload. */
-const loadedPluginIds = new Set<string>();
+// ── Type guards ───────────────────────────────────────────────────────────────
+
+export function isGeneratorPlugin(p: PluginDefinition): p is GeneratorPlugin {
+  return p.type === 'generator';
+}
+export function isDetectorPlugin(p: PluginDefinition): p is DetectorPlugin {
+  return p.type !== 'generator';
+}
+
+// ── Generator plugin registry ─────────────────────────────────────────────────
+
+type GeneratorEntry = {
+  plugin: GeneratorPlugin;
+  generate: (options: Record<string, unknown>) => { output: string; outputLanguage?: string; error?: string };
+};
+
+/** Live compiled generator plugins keyed by id */
+const generatorPlugins = new Map<string, GeneratorEntry>();
+
+/** Subscribe to generator plugin changes (used by GeneratorBar) */
+type GeneratorListener = () => void;
+const generatorListeners = new Set<GeneratorListener>();
+
+export function subscribeGenerators(fn: GeneratorListener): () => void {
+  generatorListeners.add(fn);
+  return () => generatorListeners.delete(fn);
+}
+
+/** Stable snapshot array — only replaced when the map changes */
+let generatorPluginsSnapshot: GeneratorEntry[] = [];
+
+function notifyGenerators() {
+  generatorPluginsSnapshot = Array.from(generatorPlugins.values());
+  for (const fn of generatorListeners) fn();
+}
+
+export function getGeneratorPlugins(): GeneratorEntry[] {
+  return generatorPluginsSnapshot;
+}
+
+// ── Detector plugin registry ──────────────────────────────────────────────────
+
+/** IDs of currently-loaded detector plugins, so we can unregister on reload. */
+const loadedDetectorIds = new Set<string>();
+
+// ── Compile ───────────────────────────────────────────────────────────────────
 
 /**
- * Compile a PluginDefinition into a ToolDefinition and register it.
+ * Compile a DetectorPlugin into a ToolDefinition and register it.
  * Returns an error string if compilation fails, or null on success.
  */
-export function compilePlugin(plugin: PluginDefinition): string | null {
+export function compileDetectorPlugin(plugin: DetectorPlugin): string | null {
   try {
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
     const detectFn = new Function('input', plugin.detectCode) as (input: string) => number;
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const executeFn = new Function('input', plugin.executeCode) as (input: string) => { output: string; outputLanguage?: string; error?: string };
+    const executeFn = new Function('input', plugin.executeCode) as (input: string) => {
+      output: string; outputLanguage?: string; error?: string;
+    };
 
     const tool: ToolDefinition = {
       id: plugin.id,
@@ -30,53 +86,97 @@ export function compilePlugin(plugin: PluginDefinition): string | null {
       description: plugin.description,
       keywords: plugin.keywords,
       outputExtension: plugin.outputExtension,
-      detect: (input) => {
-        try { return detectFn(input); }
-        catch { return 0; }
-      },
+      detect: (input) => { try { return detectFn(input); } catch { return 0; } },
       execute: (input) => {
         try { return executeFn(input); }
-        catch (err) {
-          return { output: '', error: err instanceof Error ? err.message : String(err) };
-        }
+        catch (err) { return { output: '', error: err instanceof Error ? err.message : String(err) }; }
       },
     };
 
     registerTool(tool);
-    loadedPluginIds.add(plugin.id);
+    loadedDetectorIds.add(plugin.id);
     return null;
   } catch (err) {
     return err instanceof Error ? err.message : String(err);
   }
 }
 
+/**
+ * Compile a GeneratorPlugin and store it in the generator map.
+ * Returns an error string if compilation fails, or null on success.
+ */
+export function compileGeneratorPlugin(plugin: GeneratorPlugin): string | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    const generateFn = new Function('options', plugin.generateCode) as (
+      options: Record<string, unknown>
+    ) => { output: string; outputLanguage?: string; error?: string };
+
+    generatorPlugins.set(plugin.id, {
+      plugin,
+      generate: (opts) => {
+        try { return generateFn(opts); }
+        catch (err) { return { output: '', error: err instanceof Error ? err.message : String(err) }; }
+      },
+    });
+    notifyGenerators();
+    return null;
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err);
+  }
+}
+
+/**
+ * Compile any PluginDefinition (detector or generator).
+ * Used by the editor's Save & Register button and by import validation.
+ */
+export function compilePlugin(plugin: PluginDefinition): string | null {
+  return isGeneratorPlugin(plugin)
+    ? compileGeneratorPlugin(plugin)
+    : compileDetectorPlugin(plugin);
+}
+
+// ── Load / unload ─────────────────────────────────────────────────────────────
+
 /** Load (or reload) a full list of plugins, unregistering stale ones first. */
 export function loadPlugins(plugins: PluginDefinition[]): void {
-  // Unregister plugins that are no longer in the list
-  for (const id of loadedPluginIds) {
-    if (!plugins.find((p) => p.id === id)) {
+  const incomingIds = new Set(plugins.map((p) => p.id));
+
+  // Unregister detector plugins no longer in the list
+  for (const id of loadedDetectorIds) {
+    if (!incomingIds.has(id)) {
       unregisterTool(id);
-      loadedPluginIds.delete(id);
+      loadedDetectorIds.delete(id);
+    }
+  }
+
+  // Remove generator plugins no longer in the list
+  let generatorChanged = false;
+  for (const id of generatorPlugins.keys()) {
+    if (!incomingIds.has(id)) {
+      generatorPlugins.delete(id);
+      generatorChanged = true;
     }
   }
 
   for (const plugin of plugins) {
-    // Always re-register (handles edits)
-    if (loadedPluginIds.has(plugin.id)) {
-      unregisterTool(plugin.id);
-      loadedPluginIds.delete(plugin.id);
+    if (isGeneratorPlugin(plugin)) {
+      generatorPlugins.delete(plugin.id); // always re-compile
+      compileGeneratorPlugin(plugin);
+    } else {
+      if (loadedDetectorIds.has(plugin.id)) {
+        unregisterTool(plugin.id);
+        loadedDetectorIds.delete(plugin.id);
+      }
+      compileDetectorPlugin(plugin);
     }
-    compilePlugin(plugin);
   }
+
+  if (generatorChanged) notifyGenerators();
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
 
-/**
- * Serialise one or more plugins into a PluginBundle JSON string and trigger a
- * browser file download.  Filename for a single plugin: `<id>.plugin.json`.
- * Filename for a pack: `smartdevbox-plugins.json`.
- */
 export function exportPluginsAsFile(plugins: PluginDefinition[], packName?: string): void {
   const isSingle = plugins.length === 1 && !packName;
   const bundle: PluginBundle = isSingle
@@ -97,42 +197,28 @@ export function exportPluginsAsFile(plugins: PluginDefinition[], packName?: stri
 
 export interface ImportResult {
   imported: PluginDefinition[];
-  /** Per-plugin compile errors keyed by plugin id */
   errors: Record<string, string>;
-  /** Top-level parse / schema errors */
   fatalError?: string;
 }
 
-/**
- * Parse and validate a raw JSON string as a PluginBundle.
- * Validates required fields on every plugin before attempting to compile.
- * Does NOT register — call loadPlugins() with the returned `imported` list.
- */
 export function parsePluginBundle(raw: string): ImportResult {
   let bundle: unknown;
-  try {
-    bundle = JSON.parse(raw);
-  } catch {
-    return { imported: [], errors: {}, fatalError: 'Invalid JSON — could not parse file.' };
-  }
+  try { bundle = JSON.parse(raw); }
+  catch { return { imported: [], errors: {}, fatalError: 'Invalid JSON — could not parse file.' }; }
 
-  if (typeof bundle !== 'object' || bundle === null) {
+  if (typeof bundle !== 'object' || bundle === null)
     return { imported: [], errors: {}, fatalError: 'File must be a JSON object.' };
-  }
 
   const b = bundle as Record<string, unknown>;
-  if (b.schemaVersion !== '1.0') {
+  if (b.schemaVersion !== '1.0')
     return { imported: [], errors: {}, fatalError: `Unsupported schemaVersion "${b.schemaVersion}". Expected "1.0".` };
-  }
 
-  // Normalise single / pack format into a flat list
   const candidates: unknown[] = [];
   if (b.plugin) candidates.push(b.plugin);
   if (Array.isArray(b.plugins)) candidates.push(...b.plugins);
 
-  if (candidates.length === 0) {
+  if (candidates.length === 0)
     return { imported: [], errors: {}, fatalError: 'Bundle contains no plugins (need "plugin" or "plugins" field).' };
-  }
 
   const imported: PluginDefinition[] = [];
   const errors: Record<string, string> = {};
@@ -143,17 +229,41 @@ export function parsePluginBundle(raw: string): ImportResult {
     const id = typeof p.id === 'string' ? p.id : undefined;
     const label = id ?? '(unknown)';
 
-    const missing = (['id', 'name', 'category', 'detectCode', 'executeCode'] as const)
-      .filter((k) => typeof p[k] !== 'string');
-    if (missing.length > 0) {
-      errors[label] = `Missing required fields: ${missing.join(', ')}`;
+    // ── Generator plugin ──
+    if (p.type === 'generator') {
+      const missing = (['id', 'name', 'generateCode'] as const).filter((k) => typeof p[k] !== 'string');
+      if (missing.length > 0) { errors[label] = `Missing required fields: ${missing.join(', ')}`; continue; }
+
+      const plugin: GeneratorPlugin = {
+        type: 'generator',
+        id: p.id as string,
+        name: p.name as string,
+        description: typeof p.description === 'string' ? p.description : '',
+        options: Array.isArray(p.options) ? (p.options as GeneratorOption[]) : [],
+        generateCode: p.generateCode as string,
+        outputExtension: typeof p.outputExtension === 'string' ? p.outputExtension : undefined,
+        updatedAt: typeof p.updatedAt === 'string' ? p.updatedAt : new Date().toISOString(),
+      };
+
+      const err = compileGeneratorPlugin(plugin);
+      if (err) {
+        errors[plugin.id] = err;
+        generatorPlugins.delete(plugin.id);
+      } else {
+        imported.push(plugin);
+      }
       continue;
     }
 
-    const plugin: PluginDefinition = {
+    // ── Detector plugin ──
+    const missing = (['id', 'name', 'category', 'detectCode', 'executeCode'] as const)
+      .filter((k) => typeof p[k] !== 'string');
+    if (missing.length > 0) { errors[label] = `Missing required fields: ${missing.join(', ')}`; continue; }
+
+    const plugin: DetectorPlugin = {
       id: p.id as string,
       name: p.name as string,
-      category: p.category as PluginDefinition['category'],
+      category: p.category as DetectorPlugin['category'],
       description: typeof p.description === 'string' ? p.description : '',
       keywords: Array.isArray(p.keywords) ? (p.keywords as string[]) : [],
       outputExtension: typeof p.outputExtension === 'string' ? p.outputExtension : 'txt',
@@ -162,13 +272,11 @@ export function parsePluginBundle(raw: string): ImportResult {
       updatedAt: typeof p.updatedAt === 'string' ? p.updatedAt : new Date().toISOString(),
     };
 
-    // Dry-run compile to catch syntax errors before saving
-    const err = compilePlugin(plugin);
+    const err = compileDetectorPlugin(plugin);
     if (err) {
       errors[plugin.id] = err;
-      // Clean up the registration attempt on failure
       unregisterTool(plugin.id);
-      loadedPluginIds.delete(plugin.id);
+      loadedDetectorIds.delete(plugin.id);
     } else {
       imported.push(plugin);
     }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDevboxStore } from '@/store/devbox';
 import { compilePlugin, exportPluginsAsFile, loadPlugins, parsePluginBundle } from '@/lib/tools/plugin-registry';
 import { runDetection } from '@/lib/tools';
-import type { Category, PluginDefinition, StorePlugin } from '@/lib/tools/types';
+import type { Category, GeneratorOption, GeneratorOptionType, PluginDefinition, StorePlugin } from '@/lib/tools/types';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -26,39 +26,86 @@ const EXECUTE_PLACEHOLDER = `// Return { output, outputLanguage?, error? }
 // 'output' is the string shown in the output panel.
 return { output: input, outputLanguage: 'text' };`;
 
+const GENERATE_PLACEHOLDER = `// Receives 'options' object — keys match your defined options.
+// Return { output, outputLanguage?, error? }
+// Example: return { output: options.prefix + '-' + Date.now(), outputLanguage: 'text' };
+return { output: 'hello from plugin', outputLanguage: 'text' };`;
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function slugify(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
+type PluginType = 'detector' | 'generator';
+
 interface EditorState {
+  pluginType: PluginType;
   id: string;
   name: string;
   category: Category;
   description: string;
+  // Detector fields
   keywordsRaw: string;
   outputExtension: string;
   detectCode: string;
   executeCode: string;
+  // Generator fields
+  generateCode: string;
+  options: GeneratorOption[];
 }
 
 function toEditorState(p: PluginDefinition): EditorState {
-  return { ...p, outputExtension: p.outputExtension ?? 'txt', keywordsRaw: p.keywords.join(', ') };
+  if (p.type === 'generator') {
+    return {
+      pluginType: 'generator',
+      id: p.id, name: p.name, category: 'Generation',
+      description: p.description,
+      keywordsRaw: '', outputExtension: p.outputExtension ?? '',
+      detectCode: DETECT_PLACEHOLDER, executeCode: EXECUTE_PLACEHOLDER,
+      generateCode: p.generateCode,
+      options: p.options,
+    };
+  }
+  return {
+    pluginType: 'detector',
+    id: p.id, name: p.name, category: p.category,
+    description: p.description,
+    keywordsRaw: (p.keywords ?? []).join(', '),
+    outputExtension: p.outputExtension ?? 'txt',
+    detectCode: p.detectCode, executeCode: p.executeCode,
+    generateCode: GENERATE_PLACEHOLDER, options: [],
+  };
 }
 
 function fromEditorState(e: EditorState): PluginDefinition {
+  if (e.pluginType === 'generator') {
+    return {
+      type: 'generator',
+      id: e.id, name: e.name, description: e.description,
+      outputExtension: e.outputExtension || undefined,
+      generateCode: e.generateCode,
+      options: e.options,
+      updatedAt: new Date().toISOString(),
+    };
+  }
   return {
-    id: e.id,
-    name: e.name,
-    category: e.category,
+    id: e.id, name: e.name, category: e.category,
     description: e.description,
     keywords: e.keywordsRaw.split(',').map((k) => k.trim()).filter(Boolean),
     outputExtension: e.outputExtension || 'txt',
-    detectCode: e.detectCode,
-    executeCode: e.executeCode,
+    detectCode: e.detectCode, executeCode: e.executeCode,
     updatedAt: new Date().toISOString(),
   };
+}
+
+// ── Option builder helpers ────────────────────────────────────────────────────
+
+function defaultOption(type: GeneratorOptionType): GeneratorOption {
+  if (type === 'text') return { type: 'text', key: '', label: '', defaultValue: '', placeholder: '' };
+  if (type === 'number') return { type: 'number', key: '', label: '', defaultValue: 1, min: 1, max: 100 };
+  if (type === 'select') return { type: 'select', key: '', label: '', defaultValue: '', choices: [] };
+  return { type: 'toggle', key: '', label: '', defaultValue: false };
 }
 
 // ── Shared style tokens ───────────────────────────────────────────────────────
@@ -125,7 +172,8 @@ type EditView = 'list' | 'edit';
 interface PluginManagerProps { onClose: () => void; }
 
 export function PluginManager({ onClose }: PluginManagerProps) {
-  const { userPlugins, savePlugin, deletePlugin, setDetectionResults, input } = useDevboxStore();
+  const { userPlugins, savePlugin, deletePlugin, setDetectionResults, input,
+          pluginStoreUrls, addPluginStoreUrl, removePluginStoreUrl } = useDevboxStore();
   const [tab, setTab] = useState<Tab>('mine');
 
   // ── "My Plugins" tab state ─────────────────────────────────────────────────
@@ -147,6 +195,10 @@ export function PluginManager({ onClose }: PluginManagerProps) {
   const [installed, setInstalled] = useState<Set<string>>(new Set());
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const storeFetched = useRef(false);
+  // null = official hub; string = custom URL
+  const [activeStoreUrl, setActiveStoreUrl] = useState<string | null>(null);
+  const [addUrlInput, setAddUrlInput] = useState('');
+  const [addUrlError, setAddUrlError] = useState<string | null>(null);
 
   // ── Shared helpers ─────────────────────────────────────────────────────────
 
@@ -159,9 +211,11 @@ export function PluginManager({ onClose }: PluginManagerProps) {
 
   const openNew = () => {
     setEditor({
+      pluginType: 'detector',
       id: '', name: '', category: 'Inspection', description: '',
       keywordsRaw: '', outputExtension: 'txt',
       detectCode: DETECT_PLACEHOLDER, executeCode: EXECUTE_PLACEHOLDER,
+      generateCode: GENERATE_PLACEHOLDER, options: [],
     });
     setCompileError(null);
     setSaved(false);
@@ -189,7 +243,6 @@ export function PluginManager({ onClose }: PluginManagerProps) {
     setSaved(true);
     setTimeout(() => setView('list'), 600);
   }, [editor, userPlugins, savePlugin, reloadAndDetect]);
-
   const handleDelete = (id: string) => {
     deletePlugin(id);
     reloadAndDetect(userPlugins.filter((p) => p.id !== id));
@@ -229,20 +282,20 @@ export function PluginManager({ onClose }: PluginManagerProps) {
     e.target.value = '';
   };
 
-  const field = (key: keyof EditorState, value: string) =>
-    setEditor((e) => e ? { ...e, [key]: value } : e);
-
   // ── "Store" handlers ───────────────────────────────────────────────────────
 
   useEffect(() => {
     setInstalled(new Set(userPlugins.map((p) => p.id)));
   }, [userPlugins]);
 
-  const fetchStore = useCallback(async (q: string) => {
+  const fetchStore = useCallback(async (q: string, sourceUrl: string | null) => {
     setStoreLoading(true);
     setStoreError(null);
     try {
-      const url = q.trim() ? `/api/plugins?q=${encodeURIComponent(q.trim())}` : '/api/plugins';
+      const params = new URLSearchParams();
+      if (q.trim()) params.set('q', q.trim());
+      if (sourceUrl) params.set('url', sourceUrl);
+      const url = `/api/plugins${params.toString() ? `?${params}` : ''}`;
       const res = await fetch(url);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to load plugins');
@@ -258,14 +311,23 @@ export function PluginManager({ onClose }: PluginManagerProps) {
   useEffect(() => {
     if (tab === 'store' && !storeFetched.current) {
       storeFetched.current = true;
-      fetchStore('');
+      fetchStore('', activeStoreUrl);
     }
-  }, [tab, fetchStore]);
+  }, [tab, fetchStore, activeStoreUrl]);
+
+  // Re-fetch when the active source changes
+  useEffect(() => {
+    if (tab === 'store') {
+      setStoreQuery('');
+      fetchStore('', activeStoreUrl);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStoreUrl]);
 
   const handleStoreSearch = (q: string) => {
     setStoreQuery(q);
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => fetchStore(q), 350);
+    searchTimer.current = setTimeout(() => fetchStore(q, activeStoreUrl), 350);
   };
 
   const handleInstall = (plugin: StorePlugin) => {
@@ -277,6 +339,27 @@ export function PluginManager({ onClose }: PluginManagerProps) {
     }
     setInstalled((prev) => new Set([...prev, plugin.id]));
     setInstalling(null);
+  };
+
+  const handleAddUrl = () => {
+    const url = addUrlInput.trim();
+    if (!url) { setAddUrlError('Please enter a URL.'); return; }
+    try {
+      const parsed = new URL(url);
+      if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Must be http or https');
+    } catch {
+      setAddUrlError('Invalid URL — must start with https://');
+      return;
+    }
+    if (pluginStoreUrls.includes(url)) {
+      setAddUrlError('This source is already added.');
+      return;
+    }
+    addPluginStoreUrl(url);
+    setAddUrlInput('');
+    setAddUrlError(null);
+    // Switch to the newly added source immediately
+    setActiveStoreUrl(url);
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -418,7 +501,10 @@ export function PluginManager({ onClose }: PluginManagerProps) {
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                               <span style={{ fontWeight: 700, fontSize: 'var(--fs-xs)', color: 'var(--text1)' }}>{p.name}</span>
-                              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)', border: '1px solid var(--border)', borderRadius: '3px', padding: '1px 6px', background: 'var(--bg)' }}>{p.category}</span>
+                              {p.type === 'generator'
+                                ? <span style={badge('rgba(99,102,241,0.15)', 'rgba(165,180,252,0.9)')}>generator</span>
+                                : <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)', border: '1px solid var(--border)', borderRadius: '3px', padding: '1px 6px', background: 'var(--bg)' }}>{p.category}</span>
+                              }
                               <code style={{ fontSize: 'var(--fs-2xs)', color: 'var(--green-dim)' }}>{p.id}</code>
                             </div>
                             {p.description && (
@@ -448,11 +534,46 @@ export function PluginManager({ onClose }: PluginManagerProps) {
               {/* ── Edit view ── */}
               {view === 'edit' && editor && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                  {/* Plugin type toggle */}
+                  <div>
+                    <label style={labelStyle}>Plugin Type</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {(['detector', 'generator'] as PluginType[]).map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => setEditor((e) => e ? { ...e, pluginType: t } : e)}
+                          style={{
+                            padding: '5px 16px', borderRadius: '4px', cursor: 'pointer',
+                            fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)', fontWeight: 600,
+                            background: editor.pluginType === t
+                              ? (t === 'generator' ? 'rgba(99,102,241,0.15)' : 'var(--green-bg)')
+                              : 'var(--bg2)',
+                            border: `1px solid ${editor.pluginType === t
+                              ? (t === 'generator' ? 'rgba(165,180,252,0.4)' : 'var(--green-dim)')
+                              : 'var(--border)'}`,
+                            color: editor.pluginType === t
+                              ? (t === 'generator' ? 'rgba(165,180,252,0.9)' : 'var(--green)')
+                              : 'var(--text3)',
+                          }}
+                        >
+                          {t === 'detector' ? 'Detector' : 'Generator'}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)', marginTop: '4px' }}>
+                      {editor.pluginType === 'detector'
+                        ? 'Detector plugins auto-detect and transform input in the main panel.'
+                        : 'Generator plugins appear in the Generate bar and produce output on demand.'}
+                    </div>
+                  </div>
+
+                  {/* Common fields: ID + Name */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div>
                       <label style={labelStyle}>Tool ID <span style={{ color: 'var(--text4)', textTransform: 'none', fontWeight: 400 }}>(auto from name)</span></label>
                       <input style={inputStyle} value={editor.id} placeholder="e.g. chat-aba-path-parser"
-                        onChange={(e) => field('id', e.target.value)} />
+                        onChange={(e) => setEditor((prev) => prev ? { ...prev, id: e.target.value } : prev)} />
                     </div>
                     <div>
                       <label style={labelStyle}>Display Name *</label>
@@ -464,56 +585,239 @@ export function PluginManager({ onClose }: PluginManagerProps) {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div>
-                      <label style={labelStyle}>Category</label>
-                      <select style={{ ...inputStyle, cursor: 'pointer' }} value={editor.category}
-                        onChange={(e) => field('category', e.target.value as Category)}>
-                        {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Output Extension</label>
-                      <input style={inputStyle} value={editor.outputExtension} placeholder="txt"
-                        onChange={(e) => field('outputExtension', e.target.value)} />
-                    </div>
-                  </div>
-
+                  {/* Description */}
                   <div>
                     <label style={labelStyle}>Description</label>
                     <input style={inputStyle} value={editor.description}
-                      placeholder="One-line description of what this tool does"
-                      onChange={(e) => field('description', e.target.value)} />
+                      placeholder="One-line description of what this plugin does"
+                      onChange={(e) => setEditor((prev) => prev ? { ...prev, description: e.target.value } : prev)} />
                   </div>
 
-                  <div>
-                    <label style={labelStyle}>Keywords <span style={{ textTransform: 'none', fontWeight: 400 }}>(comma-separated)</span></label>
-                    <input style={inputStyle} value={editor.keywordsRaw}
-                      placeholder="e.g. chataba, unc, path, share"
-                      onChange={(e) => field('keywordsRaw', e.target.value)} />
-                  </div>
+                  {/* ── Detector-only fields ── */}
+                  {editor.pluginType === 'detector' && (
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={labelStyle}>Category</label>
+                          <select style={{ ...inputStyle, cursor: 'pointer' }} value={editor.category}
+                            onChange={(e) => setEditor((prev) => prev ? { ...prev, category: e.target.value as Category } : prev)}>
+                            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Output Extension</label>
+                          <input style={inputStyle} value={editor.outputExtension} placeholder="txt"
+                            onChange={(e) => setEditor((prev) => prev ? { ...prev, outputExtension: e.target.value } : prev)} />
+                        </div>
+                      </div>
 
-                  <div>
-                    <label style={labelStyle}>
-                      detect(input) → number
-                      <span style={{ marginLeft: '8px', color: 'var(--text4)', textTransform: 'none', fontWeight: 400 }}>
-                        function body · return confidence 0–1
-                      </span>
-                    </label>
-                    <textarea style={{ ...textareaStyle, minHeight: '120px' }} value={editor.detectCode}
-                      spellCheck={false} onChange={(e) => field('detectCode', e.target.value)} />
-                  </div>
+                      <div>
+                        <label style={labelStyle}>Keywords <span style={{ textTransform: 'none', fontWeight: 400 }}>(comma-separated)</span></label>
+                        <input style={inputStyle} value={editor.keywordsRaw}
+                          placeholder="e.g. chataba, unc, path, share"
+                          onChange={(e) => setEditor((prev) => prev ? { ...prev, keywordsRaw: e.target.value } : prev)} />
+                      </div>
 
-                  <div>
-                    <label style={labelStyle}>
-                      execute(input) → {'{ output, outputLanguage?, error? }'}
-                      <span style={{ marginLeft: '8px', color: 'var(--text4)', textTransform: 'none', fontWeight: 400 }}>
-                        function body · return result object
-                      </span>
-                    </label>
-                    <textarea style={{ ...textareaStyle, minHeight: '150px' }} value={editor.executeCode}
-                      spellCheck={false} onChange={(e) => field('executeCode', e.target.value)} />
-                  </div>
+                      <div>
+                        <label style={labelStyle}>
+                          detect(input) → number
+                          <span style={{ marginLeft: '8px', color: 'var(--text4)', textTransform: 'none', fontWeight: 400 }}>
+                            function body · return confidence 0–1
+                          </span>
+                        </label>
+                        <textarea style={{ ...textareaStyle, minHeight: '120px' }} value={editor.detectCode}
+                          spellCheck={false} onChange={(e) => setEditor((prev) => prev ? { ...prev, detectCode: e.target.value } : prev)} />
+                      </div>
+
+                      <div>
+                        <label style={labelStyle}>
+                          execute(input) → {'{ output, outputLanguage?, error? }'}
+                          <span style={{ marginLeft: '8px', color: 'var(--text4)', textTransform: 'none', fontWeight: 400 }}>
+                            function body · return result object
+                          </span>
+                        </label>
+                        <textarea style={{ ...textareaStyle, minHeight: '150px' }} value={editor.executeCode}
+                          spellCheck={false} onChange={(e) => setEditor((prev) => prev ? { ...prev, executeCode: e.target.value } : prev)} />
+                      </div>
+                    </>
+                  )}
+
+                  {/* ── Generator-only fields ── */}
+                  {editor.pluginType === 'generator' && (
+                    <>
+                      <div>
+                        <label style={labelStyle}>Output Extension <span style={{ textTransform: 'none', fontWeight: 400, color: 'var(--text4)' }}>(optional)</span></label>
+                        <input style={{ ...inputStyle, maxWidth: '160px' }} value={editor.outputExtension} placeholder="txt"
+                          onChange={(e) => setEditor((prev) => prev ? { ...prev, outputExtension: e.target.value } : prev)} />
+                      </div>
+
+                      {/* Options schema builder */}
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                          <label style={{ ...labelStyle, marginBottom: 0 }}>Options</label>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {(['text', 'number', 'select', 'toggle'] as GeneratorOptionType[]).map((t) => (
+                              <button
+                                key={t}
+                                style={{ ...btnGhost, padding: '2px 8px', fontSize: 'var(--fs-2xs)' }}
+                                onClick={() => setEditor((prev) => prev ? { ...prev, options: [...prev.options, defaultOption(t)] } : prev)}
+                              >
+                                + {t}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {editor.options.length === 0 && (
+                          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)', padding: '8px 0' }}>
+                            No options — your generateCode will receive an empty options object. Add options to let users configure the generator.
+                          </div>
+                        )}
+
+                        {editor.options.map((opt, i) => (
+                          <div key={i} style={{
+                            padding: '10px 12px', background: 'var(--bg2)', border: '1px solid var(--border)',
+                            borderRadius: '5px', marginBottom: '6px', display: 'flex', flexDirection: 'column', gap: '8px',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ ...badge('var(--bg3)', 'var(--text3)'), fontSize: 'var(--fs-2xs)' }}>{opt.type}</span>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', flex: 1 }}>
+                                <input
+                                  style={{ ...inputStyle, fontSize: '12px' }}
+                                  placeholder="key (e.g. count)"
+                                  value={opt.key}
+                                  onChange={(e) => setEditor((prev) => {
+                                    if (!prev) return prev;
+                                    const opts = [...prev.options];
+                                    opts[i] = { ...opts[i], key: e.target.value } as GeneratorOption;
+                                    return { ...prev, options: opts };
+                                  })}
+                                />
+                                <input
+                                  style={{ ...inputStyle, fontSize: '12px' }}
+                                  placeholder="label (shown to user)"
+                                  value={opt.label}
+                                  onChange={(e) => setEditor((prev) => {
+                                    if (!prev) return prev;
+                                    const opts = [...prev.options];
+                                    opts[i] = { ...opts[i], label: e.target.value } as GeneratorOption;
+                                    return { ...prev, options: opts };
+                                  })}
+                                />
+                              </div>
+                              <button
+                                style={{ ...btnDanger, padding: '2px 8px', fontSize: 'var(--fs-2xs)', flexShrink: 0 }}
+                                onClick={() => setEditor((prev) => prev ? { ...prev, options: prev.options.filter((_, j) => j !== i) } : prev)}
+                              >Remove</button>
+                            </div>
+
+                            {/* Type-specific extra fields */}
+                            {opt.type === 'number' && (
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                                {(['min', 'max', 'defaultValue'] as const).map((field) => (
+                                  <label key={field} style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                    {field}
+                                    <input
+                                      type="number"
+                                      style={{ ...inputStyle, fontSize: '12px' }}
+                                      value={(opt as typeof opt & Record<string, number>)[field]}
+                                      onChange={(e) => setEditor((prev) => {
+                                        if (!prev) return prev;
+                                        const opts = [...prev.options];
+                                        opts[i] = { ...opts[i], [field]: Number(e.target.value) } as GeneratorOption;
+                                        return { ...prev, options: opts };
+                                      })}
+                                    />
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+
+                            {opt.type === 'text' && (
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                {(['defaultValue', 'placeholder'] as const).map((field) => (
+                                  <label key={field} style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                    {field}
+                                    <input
+                                      style={{ ...inputStyle, fontSize: '12px' }}
+                                      value={(opt as typeof opt & Record<string, string>)[field] ?? ''}
+                                      onChange={(e) => setEditor((prev) => {
+                                        if (!prev) return prev;
+                                        const opts = [...prev.options];
+                                        opts[i] = { ...opts[i], [field]: e.target.value } as GeneratorOption;
+                                        return { ...prev, options: opts };
+                                      })}
+                                    />
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+
+                            {opt.type === 'select' && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <label style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)' }}>
+                                  Choices (comma-separated) &amp; default value
+                                </label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px' }}>
+                                  <input
+                                    style={{ ...inputStyle, fontSize: '12px' }}
+                                    placeholder="option1, option2, option3"
+                                    value={opt.choices.join(', ')}
+                                    onChange={(e) => setEditor((prev) => {
+                                      if (!prev) return prev;
+                                      const opts = [...prev.options];
+                                      const choices = e.target.value.split(',').map((c) => c.trim()).filter(Boolean);
+                                      opts[i] = { ...opts[i], choices } as GeneratorOption;
+                                      return { ...prev, options: opts };
+                                    })}
+                                  />
+                                  <input
+                                    style={{ ...inputStyle, fontSize: '12px' }}
+                                    placeholder="defaultValue"
+                                    value={opt.defaultValue}
+                                    onChange={(e) => setEditor((prev) => {
+                                      if (!prev) return prev;
+                                      const opts = [...prev.options];
+                                      opts[i] = { ...opts[i], defaultValue: e.target.value } as GeneratorOption;
+                                      return { ...prev, options: opts };
+                                    })}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {opt.type === 'toggle' && (
+                              <label style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                Default:
+                                <input
+                                  type="checkbox"
+                                  checked={opt.defaultValue}
+                                  style={{ accentColor: 'var(--green)', cursor: 'pointer' }}
+                                  onChange={(e) => setEditor((prev) => {
+                                    if (!prev) return prev;
+                                    const opts = [...prev.options];
+                                    opts[i] = { ...opts[i], defaultValue: e.target.checked } as GeneratorOption;
+                                    return { ...prev, options: opts };
+                                  })}
+                                />
+                              </label>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div>
+                        <label style={labelStyle}>
+                          generate(options) → {'{ output, outputLanguage?, error? }'}
+                          <span style={{ marginLeft: '8px', color: 'var(--text4)', textTransform: 'none', fontWeight: 400 }}>
+                            function body · receives options object
+                          </span>
+                        </label>
+                        <textarea style={{ ...textareaStyle, minHeight: '160px' }} value={editor.generateCode}
+                          spellCheck={false} onChange={(e) => setEditor((prev) => prev ? { ...prev, generateCode: e.target.value } : prev)} />
+                      </div>
+                    </>
+                  )}
 
                   {compileError && <div style={alertError}>{compileError}</div>}
                   {saved && !compileError && <div style={alertSuccess}>Plugin saved and registered.</div>}
@@ -530,7 +834,94 @@ export function PluginManager({ onClose }: PluginManagerProps) {
           {/* ══════════════ TAB: STORE ══════════════ */}
           {tab === 'store' && (
             <>
-              {/* Search bar */}
+              {/* ── Source selector ── */}
+              <div style={{
+                marginBottom: '14px', padding: '10px 14px',
+                background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '6px',
+                display: 'flex', flexDirection: 'column', gap: '8px',
+              }}>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Plugin Source
+                </div>
+
+                {/* Official source */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="storeSource"
+                    checked={activeStoreUrl === null}
+                    onChange={() => setActiveStoreUrl(null)}
+                    style={{ accentColor: 'var(--green)', cursor: 'pointer' }}
+                  />
+                  <a
+                    href="https://github.com/mongosteen-lab/smart-dev-box-plugin"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      fontSize: 'var(--fs-xs)',
+                      color: activeStoreUrl === null ? 'var(--green-dim)' : 'var(--text3)',
+                      textDecoration: 'none',
+                      borderBottom: `1px solid ${activeStoreUrl === null ? 'var(--green-dim)' : 'var(--text4)'}`,
+                      transition: 'color .12s',
+                    }}
+                  >
+                    Official Hub
+                  </a>
+                  <span style={{
+                    fontSize: 'var(--fs-2xs)', borderRadius: '3px', padding: '1px 6px',
+                    background: 'var(--green-bg)', color: 'var(--green)', border: '1px solid var(--green-dim)33',
+                    marginLeft: '2px',
+                  }}>official</span>
+                </label>
+
+                {/* User-added sources */}
+                {pluginStoreUrls.map((url) => (
+                  <div key={url} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1, minWidth: 0 }}>
+                      <input
+                        type="radio"
+                        name="storeSource"
+                        checked={activeStoreUrl === url}
+                        onChange={() => setActiveStoreUrl(url)}
+                        style={{ accentColor: 'var(--green)', cursor: 'pointer', flexShrink: 0 }}
+                      />
+                      <span style={{
+                        fontSize: 'var(--fs-2xs)', color: activeStoreUrl === url ? 'var(--text1)' : 'var(--text3)',
+                        fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }} title={url}>{url}</span>
+                    </label>
+                    <button
+                      style={{ ...btnDanger, padding: '2px 8px', fontSize: 'var(--fs-2xs)', flexShrink: 0 }}
+                      title="Remove this source"
+                      onClick={() => {
+                        if (activeStoreUrl === url) setActiveStoreUrl(null);
+                        removePluginStoreUrl(url);
+                      }}
+                    >Remove</button>
+                  </div>
+                ))}
+
+                {/* Add source input */}
+                <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
+                  <input
+                    style={{ ...inputStyle, flex: 1, fontSize: 'var(--fs-xs)' }}
+                    type="url"
+                    placeholder="https://example.com/my-plugins/index.json"
+                    value={addUrlInput}
+                    onChange={(e) => { setAddUrlInput(e.target.value); setAddUrlError(null); }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddUrl()}
+                  />
+                  <button style={{ ...btnGhost, flexShrink: 0 }} onClick={handleAddUrl}>
+                    Add source
+                  </button>
+                </div>
+                {addUrlError && (
+                  <div style={{ fontSize: 'var(--fs-2xs)', color: 'rgba(248,113,113,0.9)' }}>{addUrlError}</div>
+                )}
+              </div>
+
+              {/* ── Search bar ── */}
               <div style={{ marginBottom: '14px' }}>
                 <input
                   style={{ ...inputStyle, width: 'auto', minWidth: '260px', maxWidth: '400px' }}
@@ -555,7 +946,7 @@ export function PluginManager({ onClose }: PluginManagerProps) {
                 <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text4)', fontSize: 'var(--fs-xs)' }}>
                   {storeQuery
                     ? `No plugins match "${storeQuery}".`
-                    : 'No plugins in the hub yet. Be the first to submit one!'}
+                    : 'No plugins in this source yet.'}
                 </div>
               )}
 
@@ -572,7 +963,10 @@ export function PluginManager({ onClose }: PluginManagerProps) {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '3px' }}>
                             <span style={{ fontWeight: 700, fontSize: 'var(--fs-xs)', color: 'var(--text1)' }}>{p.name}</span>
-                            <span style={badge('var(--bg)', 'var(--text3)')}>{p.category}</span>
+                            {p.type === 'generator'
+                              ? <span style={badge('rgba(99,102,241,0.15)', 'rgba(165,180,252,0.9)')}>generator</span>
+                              : <span style={badge('var(--bg)', 'var(--text3)')}>{p.category}</span>
+                            }
                             <code style={{ fontSize: 'var(--fs-2xs)', color: 'var(--green-dim)' }}>{p.id}</code>
                             {isInstalled && <span style={badge('var(--green-bg)', 'var(--green)')}>installed</span>}
                           </div>

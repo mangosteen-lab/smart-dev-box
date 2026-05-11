@@ -44,11 +44,72 @@ export interface ToolOutput {
 }
 
 /**
+ * A single runtime option field shown in a generator plugin's popover panel.
+ * The user fills these in before clicking Generate.
+ */
+export type GeneratorOptionType = 'text' | 'number' | 'select' | 'toggle';
+
+export interface GeneratorOptionBase {
+  /** Unique key — passed as `options.<key>` into generateCode */
+  key: string;
+  /** Label shown above/beside the field */
+  label: string;
+  type: GeneratorOptionType;
+}
+export interface GeneratorOptionText extends GeneratorOptionBase {
+  type: 'text';
+  defaultValue: string;
+  placeholder?: string;
+}
+export interface GeneratorOptionNumber extends GeneratorOptionBase {
+  type: 'number';
+  defaultValue: number;
+  min: number;
+  max: number;
+}
+export interface GeneratorOptionSelect extends GeneratorOptionBase {
+  type: 'select';
+  defaultValue: string;
+  choices: string[];
+}
+export interface GeneratorOptionToggle extends GeneratorOptionBase {
+  type: 'toggle';
+  defaultValue: boolean;
+}
+
+export type GeneratorOption =
+  | GeneratorOptionText
+  | GeneratorOptionNumber
+  | GeneratorOptionSelect
+  | GeneratorOptionToggle;
+
+/**
+ * A user-authored generator plugin.
+ * Shown in the GeneratorBar alongside the built-in generators.
+ * `generateCode` — body of `(options: Record<string, unknown>) => { output, outputLanguage?, error? }`
+ */
+export interface GeneratorPlugin {
+  type: 'generator';
+  id: string;
+  name: string;
+  description: string;
+  /** Declarative option fields rendered in the popover at runtime */
+  options: GeneratorOption[];
+  /** JS function body — receives `options` object, must return { output, outputLanguage?, error? } */
+  generateCode: string;
+  /** File extension hint for downloads */
+  outputExtension?: string;
+  /** ISO timestamp of last save */
+  updatedAt: string;
+}
+
+/**
  * A user-authored plugin stored as plain JSON (no live function references).
  * `detectCode`  — body of `(input: string) => number`
  * `executeCode` — body of `(input: string) => { output: string; outputLanguage?: string; error?: string }`
  */
-export interface PluginDefinition {
+export interface DetectorPlugin {
+  type?: 'detector';   // optional for backward-compat — absence means detector
   /** Must be unique; user-defined, e.g. "my-chat-aba-parser" */
   id: string;
   name: string;
@@ -64,24 +125,24 @@ export interface PluginDefinition {
   updatedAt: string;
 }
 
+/** Union of all plugin kinds */
+export type PluginDefinition = DetectorPlugin | GeneratorPlugin;
+
 /**
- * A plugin that has been published to the Plugin Store (KV-backed).
+ * A plugin that has been published to the Plugin Hub.
  * Extends PluginDefinition with store-specific metadata.
  */
-export interface StorePlugin extends PluginDefinition {
+export type StorePlugin = PluginDefinition & {
   /** Username of the publisher — empty string when auth is disabled */
   author: string;
   /** ISO timestamp of first publish */
   publishedAt: string;
-  /** ISO timestamp of last update */
-  updatedAt: string;
   /** Total installs / downloads */
   downloads: number;
-}
+};
 
 /**
  * The portable file format for sharing plugins (single file = one or many plugins).
- * Intended for community repos like smartdevbox-plugins.
  *
  * File extension convention: `.plugin.json`
  * Single plugin : { schemaVersion, plugin }
