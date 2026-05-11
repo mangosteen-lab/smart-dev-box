@@ -47,7 +47,7 @@ export const useDevboxStore = create<DevboxState>()(
       detectionResults: [],
       outputs: [],
       history: [],
-      sidebarOpen: true,
+      sidebarOpen: false,
       sidebarMini: false,
       mobileSidebarOpen: false,
       isDark: true,

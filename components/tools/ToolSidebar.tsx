@@ -34,6 +34,7 @@ export function ToolSidebar() {
   const {
     activeToolId, setActiveToolId, addOutput, input,
     mobileSidebarOpen, setMobileSidebarOpen,
+    sidebarOpen,
     sidebarMini, toggleSidebarMini,
     recentToolIds, pinnedToolIds, addRecentTool, togglePinnedTool,
   } = useDevboxStore();
@@ -335,10 +336,12 @@ export function ToolSidebar() {
 
   return (
     <>
-      {/* Desktop sidebar — always visible on md+ */}
-      <div className="hidden md:flex h-full">
-        {sidebarContent}
-      </div>
+      {/* Desktop sidebar — only visible when sidebarOpen */}
+      {sidebarOpen && (
+        <div className="hidden md:flex h-full">
+          {sidebarContent}
+        </div>
+      )}
 
       {/* Mobile drawer overlay */}
       {mobileSidebarOpen && (

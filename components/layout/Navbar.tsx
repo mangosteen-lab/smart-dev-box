@@ -3,7 +3,7 @@
 import { useDevboxStore } from '@/store/devbox';
 
 export function Navbar() {
-  const { isDark, toggleTheme, toggleMobileSidebar } = useDevboxStore();
+  const { isDark, toggleTheme, toggleMobileSidebar, toggleSidebar, sidebarOpen } = useDevboxStore();
 
   return (
     <header
@@ -90,6 +90,36 @@ export function Navbar() {
       <span className="hidden md:inline" style={{ fontSize: 'var(--fs-xs)', color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
         Paste anything. We figure out the rest.
       </span>
+
+      {/* Tools toggle — desktop only */}
+      <button
+        onClick={toggleSidebar}
+        className="hidden md:flex items-center justify-center"
+        title={sidebarOpen ? 'Hide tools' : 'Show tools'}
+        aria-label="Toggle tools sidebar"
+        style={{
+          height: '28px',
+          padding: '0 10px',
+          fontSize: 'var(--fs-xs)',
+          color: sidebarOpen ? 'var(--green)' : 'var(--text3)',
+          background: sidebarOpen ? 'var(--green-bg)' : 'none',
+          border: `1px solid ${sidebarOpen ? 'var(--green)' : 'var(--border)'}`,
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontFamily: 'var(--font)',
+          gap: '6px',
+          transition: 'color .15s, border-color .15s, background .15s',
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+        }}
+        onMouseEnter={e => { if (!sidebarOpen) { (e.currentTarget as HTMLElement).style.color = 'var(--text2)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; } }}
+        onMouseLeave={e => { if (!sidebarOpen) { (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; } }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
+        </svg>
+        Tools
+      </button>
 
       {/* Right actions */}
       <div className="flex items-center" style={{ marginLeft: 'auto', gap: '6px' }}>
