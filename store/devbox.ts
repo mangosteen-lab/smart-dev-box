@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { DetectionResult, ToolOutput } from '@/lib/tools/types';
+import type { DetectionResult, PluginDefinition, ToolOutput } from '@/lib/tools/types';
 
 interface DevboxState {
   input: string;
@@ -18,6 +18,7 @@ interface DevboxState {
   aiEnabled: boolean;
   recentToolIds: string[];   // last N unique tool ids used
   pinnedToolIds: string[];   // user-pinned tool ids
+  userPlugins: PluginDefinition[];  // user-authored plugin tools
 
   setInput: (input: string) => void;
   setActiveToolId: (id: string | null) => void;
@@ -37,6 +38,8 @@ interface DevboxState {
   clearHistory: () => void;
   addRecentTool: (toolId: string) => void;
   togglePinnedTool: (toolId: string) => void;
+  savePlugin: (plugin: PluginDefinition) => void;
+  deletePlugin: (id: string) => void;
 }
 
 export const useDevboxStore = create<DevboxState>()(
@@ -55,6 +58,7 @@ export const useDevboxStore = create<DevboxState>()(
       aiEnabled: false,
       recentToolIds: [],
       pinnedToolIds: [],
+      userPlugins: [],
 
       setInput: (input) => set({ input }),
       setActiveToolId: (id) => set({ activeToolId: id }),
@@ -92,6 +96,17 @@ export const useDevboxStore = create<DevboxState>()(
             ? state.pinnedToolIds.filter((id) => id !== toolId)
             : [toolId, ...state.pinnedToolIds].slice(0, 20),
         })),
+      savePlugin: (plugin) =>
+        set((state) => ({
+          userPlugins: [
+            ...state.userPlugins.filter((p) => p.id !== plugin.id),
+            plugin,
+          ],
+        })),
+      deletePlugin: (id) =>
+        set((state) => ({
+          userPlugins: state.userPlugins.filter((p) => p.id !== id),
+        })),
     }),
     {
       name: 'devbox-storage',
@@ -102,6 +117,7 @@ export const useDevboxStore = create<DevboxState>()(
         history: state.history,
         recentToolIds: state.recentToolIds,
         pinnedToolIds: state.pinnedToolIds,
+        userPlugins: state.userPlugins,
       }),
     }
   )

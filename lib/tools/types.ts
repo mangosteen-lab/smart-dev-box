@@ -42,3 +42,45 @@ export interface ToolOutput {
   timestamp: number;
   aiAssisted?: boolean;
 }
+
+/**
+ * A user-authored plugin stored as plain JSON (no live function references).
+ * `detectCode`  — body of `(input: string) => number`
+ * `executeCode` — body of `(input: string) => { output: string; outputLanguage?: string; error?: string }`
+ */
+export interface PluginDefinition {
+  /** Must be unique; user-defined, e.g. "my-chat-aba-parser" */
+  id: string;
+  name: string;
+  category: Category;
+  description: string;
+  keywords: string[];
+  outputExtension?: string;
+  /** JS function body — receives `input` string, must return a number 0–1 */
+  detectCode: string;
+  /** JS function body — receives `input` string, must return { output, outputLanguage?, error? } */
+  executeCode: string;
+  /** ISO timestamp of last save */
+  updatedAt: string;
+}
+
+/**
+ * The portable file format for sharing plugins (single file = one or many plugins).
+ * Intended for community repos like smartdevbox-plugins.
+ *
+ * File extension convention: `.plugin.json`
+ * Single plugin : { schemaVersion, plugin }
+ * Plugin pack   : { schemaVersion, plugins }
+ */
+export interface PluginBundle {
+  /** Semver string — allows future format migrations */
+  schemaVersion: '1.0';
+  /** Human-readable description of this bundle / pack */
+  description?: string;
+  /** Author or repo URL */
+  author?: string;
+  /** Single plugin (mutually exclusive with `plugins`) */
+  plugin?: PluginDefinition;
+  /** Multiple plugins in one file */
+  plugins?: PluginDefinition[];
+}

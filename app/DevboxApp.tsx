@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useDevboxStore } from '@/store/devbox';
 import { runDetection } from '@/lib/tools';
+import { loadPlugins } from '@/lib/tools/plugin-registry';
 import { ToolSidebar } from '@/components/tools/ToolSidebar';
 import { UniversalInput } from '@/components/tools/UniversalInput';
 import { DetectionBar } from '@/components/tools/DetectionBar';
@@ -11,6 +12,7 @@ import { OutputPanel } from '@/components/tools/OutputPanel';
 import { ResizablePanels } from '@/components/ResizablePanels';
 import { GeneratorBar } from '@/components/tools/GeneratorBar';
 import { CommandPalette } from '@/components/CommandPalette';
+import { PluginManager } from '@/components/tools/PluginManager';
 
 // Lazily loaded — only fetched when the panel is first activated
 const JwtEncoderPanel    = dynamic(() => import('@/components/tools/JwtEncoderPanel').then(m => ({ default: m.JwtEncoderPanel })), { ssr: false });
@@ -49,8 +51,9 @@ const CUSTOM_PANELS: Record<string, { title: string; badge?: string; component: 
 };
 
 export default function DevboxApp() {
-  const { setAiEnabled, activeToolId, setActiveToolId, input, outputs, setInput, setDetectionResults } = useDevboxStore();
+  const { setAiEnabled, activeToolId, setActiveToolId, input, outputs, setInput, setDetectionResults, userPlugins } = useDevboxStore();
   const [splitMode, setSplitMode] = useState(false);
+  const [pluginManagerOpen, setPluginManagerOpen] = useState(false);
   const [splitSnapshot, setSplitSnapshot] = useState<{
     input: string;
     output: string;
@@ -65,6 +68,8 @@ export default function DevboxApp() {
   // After registration, re-run detection in case the user already typed input.
   useEffect(() => {
     import('@/lib/tools').then(() => {
+      // Load user plugins on top of built-in tools
+      loadPlugins(useDevboxStore.getState().userPlugins);
       const currentInput = useDevboxStore.getState().input;
       if (currentInput.trim()) {
         setDetectionResults(runDetection(currentInput));
@@ -120,6 +125,47 @@ export default function DevboxApp() {
           }}
         >
           <GeneratorBar />
+          {/* Plugin Manager button */}
+          <button
+            onClick={() => setPluginManagerOpen(true)}
+            title="Manage user-defined plugin tools"
+            className="flex items-center"
+            style={{
+              gap: '6px',
+              fontSize: 'var(--fs-xs)',
+              background: 'transparent',
+              border: '1px solid var(--border)',
+              color: 'var(--text3)',
+              padding: '4px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontFamily: 'var(--font)',
+              transition: 'color .12s, border-color .12s',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.color = 'var(--text1)';
+              el.style.borderColor = 'var(--text3)';
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.color = 'var(--text3)';
+              el.style.borderColor = 'var(--border)';
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+            Plugins{userPlugins.length > 0 && (
+              <span style={{
+                background: 'var(--green-bg)', border: '1px solid var(--green-dim)',
+                color: 'var(--green)', borderRadius: '10px',
+                padding: '0 6px', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+              }}>{userPlugins.length}</span>
+            )}
+          </button>
           {/* Dual view — desktop only; hidden when a custom panel manages its own dual view */}
           {!customPanel && <button
             data-onboard-split
@@ -406,6 +452,9 @@ export default function DevboxApp() {
         </div>
 
       </div>
+
+      {/* Plugin Manager modal */}
+      {pluginManagerOpen && <PluginManager onClose={() => setPluginManagerOpen(false)} />}
     </div>
   );
 }

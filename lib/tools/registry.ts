@@ -6,6 +6,10 @@ export function registerTool(tool: ToolDefinition) {
   registry.set(tool.id, tool);
 }
 
+export function unregisterTool(id: string) {
+  registry.delete(id);
+}
+
 export function getToolById(id: string): ToolDefinition | undefined {
   return registry.get(id);
 }
