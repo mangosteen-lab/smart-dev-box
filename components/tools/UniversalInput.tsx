@@ -8,6 +8,29 @@ import '@/lib/tools';
 
 const PLACEHOLDER = `Paste anything here — JSON, Base64, XML, timestamps, JWT tokens, UUIDs, URLs…`;
 
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/bmp', 'image/gif', 'image/tiff'];
+
+/** Run Tesseract OCR on an image File/Blob. Returns extracted text. */
+async function runOCR(
+  imageSource: File | Blob,
+  onProgress: (pct: number) => void
+): Promise<string> {
+  const { createWorker } = await import('tesseract.js');
+  const worker = await createWorker('eng', 1, {
+    logger: (m: { status: string; progress: number }) => {
+      if (m.status === 'recognizing text') onProgress(Math.round(m.progress * 100));
+    },
+  });
+  const url = URL.createObjectURL(imageSource);
+  try {
+    const { data } = await worker.recognize(url);
+    return data.text.trim();
+  } finally {
+    URL.revokeObjectURL(url);
+    await worker.terminate();
+  }
+}
+
 // Rotating example snippets shown in empty state
 const EXAMPLES: { label: string; hint: string; value: string }[] = [
   {
@@ -58,6 +81,7 @@ export function UniversalInput() {
   const [command, setCommand] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [exampleIdx, setExampleIdx] = useState(0);
+  const [ocrProgress, setOcrProgress] = useState<number | null>(null); // null = idle, 0-100 = running
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -83,6 +107,19 @@ export function UniversalInput() {
     [setInput, setDetectionResults]
   );
 
+  /** OCR an image file and feed extracted text into the input pipeline */
+  const handleImageFile = useCallback(async (file: File | Blob) => {
+    setOcrProgress(0);
+    try {
+      const text = await runOCR(file, setOcrProgress);
+      if (text) handleInputChange(text);
+    } catch {
+      // silently fall back — user can still type manually
+    } finally {
+      setOcrProgress(null);
+    }
+  }, [handleInputChange]);
+
   useEffect(() => {
     const handler = async (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -97,6 +134,26 @@ export function UniversalInput() {
     return () => window.removeEventListener('keydown', handler);
   }, [activeToolId, input, addOutput]);
 
+  // Intercept clipboard image pastes
+  useEffect(() => {
+    const handler = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (IMAGE_TYPES.includes(item.type)) {
+          const blob = item.getAsFile();
+          if (blob) {
+            e.preventDefault();
+            handleImageFile(blob);
+            return;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', handler);
+    return () => window.removeEventListener('paste', handler);
+  }, [handleImageFile]);
+
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = () => setIsDragging(false);
   const handleDrop = (e: React.DragEvent) => {
@@ -104,6 +161,10 @@ export function UniversalInput() {
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (!file) return;
+    if (IMAGE_TYPES.includes(file.type)) {
+      handleImageFile(file);
+      return;
+    }
     if (file.size > 1024 * 1024) {
       alert(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please upload a file smaller than 1 MB.`);
       return;
@@ -121,6 +182,11 @@ export function UniversalInput() {
   const handleFileLoad = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (IMAGE_TYPES.includes(file.type)) {
+      handleImageFile(file);
+      e.target.value = '';
+      return;
+    }
     if (file.size > 1024 * 1024) {
       alert(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please upload a file smaller than 1 MB.`);
       e.target.value = '';
@@ -129,6 +195,7 @@ export function UniversalInput() {
     const reader = new FileReader();
     reader.onload = (ev) => handleInputChange(ev.target?.result as string);
     reader.readAsText(file);
+    e.target.value = '';
   };
 
   const handleRunCommand = async () => {
@@ -223,8 +290,31 @@ export function UniversalInput() {
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            <span style={{ fontWeight: 600 }}>Drop file to load</span>
-            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)' }}>Max 1 MB</span>
+            <span style={{ fontWeight: 600 }}>Drop file or image to load</span>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)' }}>Text files (max 1 MB) · Images (OCR)</span>
+          </div>
+        )}
+        {/* OCR progress overlay */}
+        {ocrProgress !== null && (
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-3"
+            style={{
+              color: 'var(--green)',
+              fontSize: 'var(--fs-sm)',
+              background: 'rgba(10,10,10,0.82)',
+              backdropFilter: 'blur(2px)',
+              borderRadius: '4px',
+              pointerEvents: 'none',
+            }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}>
+              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>
+            </svg>
+            <span style={{ fontWeight: 600 }}>Reading image…</span>
+            <div style={{ width: '160px', height: '4px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{ width: `${ocrProgress}%`, height: '100%', background: 'var(--green)', borderRadius: '2px', transition: 'width .2s' }} />
+            </div>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)' }}>{ocrProgress}%</span>
           </div>
         )}
         {/* Empty-state example snippets */}
@@ -326,7 +416,7 @@ export function UniversalInput() {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
           </svg>
-          drop file to load
+          drop file or image to load
         </span>
         {/* Actions */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center' }}>
@@ -348,7 +438,7 @@ export function UniversalInput() {
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
             upload
-            <input type="file" style={{ display: 'none' }} onChange={handleFileLoad} />
+            <input type="file" style={{ display: 'none' }} accept="text/*,.json,.xml,.sql,.csv,.log,.md,.txt,image/*" onChange={handleFileLoad} />
           </label>
         </div>
       </div>

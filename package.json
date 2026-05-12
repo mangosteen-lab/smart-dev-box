@@ -28,6 +28,7 @@
     "react-dom": "^19",
     "shiki": "^4.0.2",
     "sql-formatter": "^15.7.3",
+    "tesseract.js": "^7.0.0",
     "zustand": "^5.0.13"
   },
   "devDependencies": {
