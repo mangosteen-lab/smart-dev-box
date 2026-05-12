@@ -27,6 +27,8 @@ export interface ToolResult {
   error?: string;
   /** If true, indicates AI was involved in routing or correction */
   aiAssisted?: boolean;
+  /** If 'base64', `output` is a base64-encoded binary payload (e.g. docx, zip) */
+  outputEncoding?: 'base64';
 }
 
 export interface DetectionResult {

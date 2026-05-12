@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useDevboxStore } from '@/store/devbox';
 import { runDetection } from '@/lib/tools';
+import { getToolById } from '@/lib/tools/registry';
 import type { ToolOutput } from '@/lib/tools/types';
 
 function getExtensionForLanguage(lang?: string): string {
@@ -158,8 +159,30 @@ function OutputTab({ output, onUseAsInput, inputSnapshot }: { output: ToolOutput
   };
 
   const handleDownload = () => {
-    const ext = getExtensionForLanguage(output.result.outputLanguage);
-    const blob = new Blob([output.result.output], { type: 'text/plain' });
+    const result = output.result;
+    // Prefer outputExtension from the tool registry, then language map
+    const toolDef = getToolById(output.toolId);
+    const ext = toolDef?.outputExtension ?? getExtensionForLanguage(result.outputLanguage);
+
+    let blob: Blob;
+    if (result.outputEncoding === 'base64') {
+      // Decode base64 → binary
+      const binary = atob(result.output);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      // Infer MIME type from extension
+      const mimeMap: Record<string, string> = {
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        zip: 'application/zip',
+        pdf: 'application/pdf',
+      };
+      const mime = mimeMap[ext] ?? 'application/octet-stream';
+      blob = new Blob([bytes], { type: mime });
+    } else {
+      blob = new Blob([result.output], { type: 'text/plain' });
+    }
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
