@@ -244,7 +244,7 @@ function OutputTab({ output, onUseAsInput, inputSnapshot }: { output: ToolOutput
         )}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Diff toggle */}
-          {!output.result.error && inputSnapshot && (
+          {!output.result.error && inputSnapshot && output.result.outputEncoding !== 'base64' && (
             <button
               onClick={() => setShowDiff((d) => !d)}
               title="Toggle before/after diff"
@@ -266,6 +266,7 @@ function OutputTab({ output, onUseAsInput, inputSnapshot }: { output: ToolOutput
               diff
             </button>
           )}
+          {output.result.outputEncoding !== 'base64' && (
           <button
             onClick={handleCopy}
             style={{
@@ -283,6 +284,7 @@ function OutputTab({ output, onUseAsInput, inputSnapshot }: { output: ToolOutput
             </svg>
             {copied ? 'copied!' : 'copy'}
           </button>
+          )}
           <button
             onClick={handleDownload}
             style={{
@@ -299,7 +301,7 @@ function OutputTab({ output, onUseAsInput, inputSnapshot }: { output: ToolOutput
             </svg>
             save
           </button>
-          {!output.result.error && (
+          {!output.result.error && output.result.outputEncoding !== 'base64' && (
             <button
               onClick={() => onUseAsInput(output.result.output)}
               title="Use output as input and re-detect"
@@ -348,6 +350,18 @@ function OutputTab({ output, onUseAsInput, inputSnapshot }: { output: ToolOutput
           </div>
         ) : showDiff ? (
           <DiffView before={inputSnapshot} after={output.result.output} />
+        ) : output.result.outputEncoding === 'base64' ? (
+          <div
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: '10px', height: '100%', color: 'var(--text3)', fontSize: 'var(--fs-xs)',
+            }}
+          >
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+            <span>Binary file generated — use <strong>save</strong> to download</span>
+          </div>
         ) : (
           <HighlightedCode code={output.result.output} language={output.result.outputLanguage} />
         )}

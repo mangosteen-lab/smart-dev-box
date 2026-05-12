@@ -517,7 +517,8 @@ function Popover({ id, label, open, onToggle, onUse, Body }: {
 
 // ── GeneratorBar ──────────────────────────────────────────────────────────────
 
-const EMPTY_GENERATORS = () => [] as ReturnType<typeof getGeneratorPlugins>;
+const EMPTY_GENERATORS_SNAPSHOT: ReturnType<typeof getGeneratorPlugins> = [];
+const EMPTY_GENERATORS = () => EMPTY_GENERATORS_SNAPSHOT;
 
 export function GeneratorBar() {
   const [openId, setOpenId] = useState<string | null>(null);
