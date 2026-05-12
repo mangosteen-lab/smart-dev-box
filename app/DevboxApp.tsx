@@ -21,7 +21,7 @@ const HtmlPreviewPanel   = dynamic(() => import('@/components/tools/HtmlPreviewP
 const QrCodePanel        = dynamic(() => import('@/components/tools/QrCodePanel').then(m => ({ default: m.QrCodePanel })), { ssr: false });
 const ExtractorPanel     = dynamic(() => import('@/components/tools/ExtractorPanel').then(m => ({ default: m.ExtractorPanel })), { ssr: false });
 const SplitDiffPanel     = dynamic(() => import('@/components/tools/SplitDiffPanel').then(m => ({ default: m.SplitDiffPanel })), { ssr: false });
-
+const CaseConverterPanel = dynamic(() => import('@/components/tools/CaseConverterPanel').then(m => ({ default: m.CaseConverterPanel })), { ssr: false });
 const CUSTOM_PANELS: Record<string, { title: string; badge?: string; component: () => React.ReactNode }> = {
   'jwt-encoder': {
     title: 'JWT Encoder',
@@ -455,6 +455,11 @@ export default function DevboxApp() {
 
       {/* Plugin Manager modal */}
       {pluginManagerOpen && <PluginManager onClose={() => setPluginManagerOpen(false)} />}
+
+      {/* Case Converter modal */}
+      {activeToolId === 'text-case' && (
+        <CaseConverterPanel onClose={() => setActiveToolId(null)} />
+      )}
     </div>
   );
 }

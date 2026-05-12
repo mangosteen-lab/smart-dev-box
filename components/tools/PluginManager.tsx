@@ -53,6 +53,8 @@ interface EditorState {
   // Generator fields
   generateCode: string;
   options: GeneratorOption[];
+  // Shared
+  tagsRaw: string;
 }
 
 function toEditorState(p: PluginDefinition): EditorState {
@@ -65,6 +67,7 @@ function toEditorState(p: PluginDefinition): EditorState {
       detectCode: DETECT_PLACEHOLDER, executeCode: EXECUTE_PLACEHOLDER,
       generateCode: p.generateCode,
       options: p.options,
+      tagsRaw: (p.tags ?? []).join(', '),
     };
   }
   return {
@@ -75,10 +78,12 @@ function toEditorState(p: PluginDefinition): EditorState {
     outputExtension: p.outputExtension ?? 'txt',
     detectCode: p.detectCode, executeCode: p.executeCode,
     generateCode: GENERATE_PLACEHOLDER, options: [],
+    tagsRaw: (p.tags ?? []).join(', '),
   };
 }
 
 function fromEditorState(e: EditorState): PluginDefinition {
+  const tags = e.tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
   if (e.pluginType === 'generator') {
     return {
       type: 'generator',
@@ -87,6 +92,7 @@ function fromEditorState(e: EditorState): PluginDefinition {
       generateCode: e.generateCode,
       options: e.options,
       updatedAt: new Date().toISOString(),
+      tags: tags.length ? tags : undefined,
     };
   }
   return {
@@ -96,6 +102,7 @@ function fromEditorState(e: EditorState): PluginDefinition {
     outputExtension: e.outputExtension || 'txt',
     detectCode: e.detectCode, executeCode: e.executeCode,
     updatedAt: new Date().toISOString(),
+    tags: tags.length ? tags : undefined,
   };
 }
 
@@ -216,6 +223,7 @@ export function PluginManager({ onClose }: PluginManagerProps) {
       keywordsRaw: '', outputExtension: 'txt',
       detectCode: DETECT_PLACEHOLDER, executeCode: EXECUTE_PLACEHOLDER,
       generateCode: GENERATE_PLACEHOLDER, options: [],
+      tagsRaw: '',
     });
     setCompileError(null);
     setSaved(false);
@@ -510,6 +518,15 @@ export function PluginManager({ onClose }: PluginManagerProps) {
                             {p.description && (
                               <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', marginTop: '2px' }}>{p.description}</div>
                             )}
+                            {p.tags && p.tags.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                                {p.tags.map((tag) => (
+                                  <span key={tag} style={badge('rgba(14,165,233,0.1)', 'rgba(56,189,248,0.85)')}>
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <button style={btnGhost} title="Export as .plugin.json" onClick={() => handleExportOne(p)}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -591,6 +608,14 @@ export function PluginManager({ onClose }: PluginManagerProps) {
                     <input style={inputStyle} value={editor.description}
                       placeholder="One-line description of what this plugin does"
                       onChange={(e) => setEditor((prev) => prev ? { ...prev, description: e.target.value } : prev)} />
+                  </div>
+
+                  {/* Tags */}
+                  <div>
+                    <label style={labelStyle}>Tags <span style={{ textTransform: 'none', fontWeight: 400 }}>(comma-separated, e.g. Programmer, Student)</span></label>
+                    <input style={inputStyle} value={editor.tagsRaw}
+                      placeholder="e.g. Programmer, Student, Office Worker"
+                      onChange={(e) => setEditor((prev) => prev ? { ...prev, tagsRaw: e.target.value } : prev)} />
                   </div>
 
                   {/* ── Detector-only fields ── */}
@@ -972,6 +997,15 @@ export function PluginManager({ onClose }: PluginManagerProps) {
                           </div>
                           {p.description && (
                             <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', marginBottom: '4px' }}>{p.description}</div>
+                          )}
+                          {p.tags && p.tags.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' }}>
+                              {p.tags.map((tag) => (
+                                <span key={tag} style={badge('rgba(14,165,233,0.1)', 'rgba(56,189,248,0.85)')}>
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
                           )}
                           <div style={{ display: 'flex', gap: '10px', fontSize: 'var(--fs-2xs)', color: 'var(--text4)' }}>
                             <span>{p.downloads ?? 0} installs</span>

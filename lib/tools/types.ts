@@ -103,6 +103,8 @@ export interface GeneratorPlugin {
   outputExtension?: string;
   /** ISO timestamp of last save */
   updatedAt: string;
+  /** Audience / persona tags, e.g. ["Programmer", "Student"] */
+  tags?: string[];
 }
 
 /**
@@ -125,6 +127,8 @@ export interface DetectorPlugin {
   executeCode: string;
   /** ISO timestamp of last save */
   updatedAt: string;
+  /** Audience / persona tags, e.g. ["Programmer", "Student"] */
+  tags?: string[];
 }
 
 /** Union of all plugin kinds */
@@ -141,6 +145,8 @@ export type StorePlugin = PluginDefinition & {
   publishedAt: string;
   /** Total installs / downloads */
   downloads: number;
+  /** Audience / persona tags, e.g. ["Programmer", "Student"] */
+  tags?: string[];
 };
 
 /**

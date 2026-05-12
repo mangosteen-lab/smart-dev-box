@@ -9,139 +9,78 @@ function isPlainText(input: string): number {
   return 0.3;
 }
 
-registerTool({
-  id: 'lowercase',
-  name: 'Lowercase',
-  category: 'Text',
-  description: 'Convert text to lowercase',
-  keywords: ['lowercase', 'lower', 'case', 'convert', 'text'],
-  outputExtension: 'txt',
-  detect: isPlainText,
-  execute: (input) => ({
-    output: input.toLowerCase(),
-    outputLanguage: 'text',
-  }),
-});
+// ── Case conversion functions (exported for use in CaseConverterPanel) ─────────
+
+export type CaseVariant =
+  | 'lowercase'
+  | 'uppercase'
+  | 'title-case'
+  | 'camel-case'
+  | 'pascal-case'
+  | 'snake-case'
+  | 'kebab-case'
+  | 'constant-case';
+
+export const CASE_VARIANTS: { id: CaseVariant; label: string }[] = [
+  { id: 'lowercase',     label: 'lowercase'      },
+  { id: 'uppercase',     label: 'UPPERCASE'       },
+  { id: 'title-case',    label: 'Title Case'      },
+  { id: 'camel-case',    label: 'camelCase'       },
+  { id: 'pascal-case',   label: 'PascalCase'      },
+  { id: 'snake-case',    label: 'snake_case'      },
+  { id: 'kebab-case',    label: 'kebab-case'      },
+  { id: 'constant-case', label: 'CONSTANT_CASE'   },
+];
+
+export function convertCase(input: string, variant: CaseVariant): string {
+  switch (variant) {
+    case 'lowercase':
+      return input.toLowerCase();
+    case 'uppercase':
+      return input.toUpperCase();
+    case 'title-case':
+      return input.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+    case 'camel-case': {
+      const words = input.trim().split(/[\s_\-]+/);
+      return words
+        .map((w, i) => i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join('');
+    }
+    case 'pascal-case':
+      return input.trim().split(/[\s_\-]+/)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join('');
+    case 'snake-case':
+      return input.trim()
+        .replace(/([a-z])([A-Z])/g, '$1_$2')
+        .replace(/[\s\-]+/g, '_')
+        .toLowerCase();
+    case 'kebab-case':
+      return input.trim()
+        .replace(/([a-z])([A-Z])/g, '$1-$2')
+        .replace(/[\s_]+/g, '-')
+        .toLowerCase();
+    case 'constant-case':
+      return input.trim()
+        .replace(/([a-z])([A-Z])/g, '$1_$2')
+        .replace(/[\s\-]+/g, '_')
+        .toUpperCase();
+  }
+}
+
+// ── Single unified tool (opens the Case Converter panel) ──────────────────────
 
 registerTool({
-  id: 'uppercase',
-  name: 'Uppercase',
+  id: 'text-case',
+  name: 'Case Converter',
   category: 'Text',
-  description: 'Convert text to UPPERCASE',
-  keywords: ['uppercase', 'upper', 'case', 'convert', 'text'],
+  description: 'Convert text case: lowercase, UPPERCASE, Title Case, camelCase, PascalCase, snake_case, kebab-case, CONSTANT_CASE',
+  keywords: ['case', 'convert', 'lowercase', 'uppercase', 'title', 'camel', 'pascal', 'snake', 'kebab', 'constant', 'text'],
   outputExtension: 'txt',
   detect: isPlainText,
-  execute: (input) => ({
-    output: input.toUpperCase(),
-    outputLanguage: 'text',
-  }),
-});
-
-registerTool({
-  id: 'title-case',
-  name: 'Title Case',
-  category: 'Text',
-  description: 'Convert text to Title Case',
-  keywords: ['title', 'case', 'convert', 'text', 'capitalize'],
-  outputExtension: 'txt',
-  detect: isPlainText,
-  execute: (input) => ({
-    output: input.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()),
-    outputLanguage: 'text',
-  }),
-});
-
-registerTool({
-  id: 'camel-case',
-  name: 'camelCase',
-  category: 'Text',
-  description: 'Convert text to camelCase',
-  keywords: ['camel', 'case', 'camelcase', 'convert', 'text'],
-  outputExtension: 'txt',
-  detect: isPlainText,
-  execute: (input) => {
-    const words = input.trim().split(/[\s_\-]+/);
-    const result = words
-      .map((w, i) =>
-        i === 0
-          ? w.toLowerCase()
-          : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
-      )
-      .join('');
-    return { output: result, outputLanguage: 'text' };
-  },
-});
-
-registerTool({
-  id: 'pascal-case',
-  name: 'PascalCase',
-  category: 'Text',
-  description: 'Convert text to PascalCase',
-  keywords: ['pascal', 'case', 'pascalcase', 'convert', 'text'],
-  outputExtension: 'txt',
-  detect: isPlainText,
-  execute: (input) => {
-    const words = input.trim().split(/[\s_\-]+/);
-    const result = words
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join('');
-    return { output: result, outputLanguage: 'text' };
-  },
-});
-
-registerTool({
-  id: 'snake-case',
-  name: 'snake_case',
-  category: 'Text',
-  description: 'Convert text to snake_case',
-  keywords: ['snake', 'case', 'snake_case', 'convert', 'text'],
-  outputExtension: 'txt',
-  detect: isPlainText,
-  execute: (input) => {
-    const result = input
-      .trim()
-      // Insert underscore between camelCase boundaries
-      .replace(/([a-z])([A-Z])/g, '$1_$2')
-      // Replace spaces/hyphens with underscore
-      .replace(/[\s\-]+/g, '_')
-      .toLowerCase();
-    return { output: result, outputLanguage: 'text' };
-  },
-});
-
-registerTool({
-  id: 'kebab-case',
-  name: 'kebab-case',
-  category: 'Text',
-  description: 'Convert text to kebab-case',
-  keywords: ['kebab', 'case', 'kebab-case', 'convert', 'text', 'slug'],
-  outputExtension: 'txt',
-  detect: isPlainText,
-  execute: (input) => {
-    const result = input
-      .trim()
-      .replace(/([a-z])([A-Z])/g, '$1-$2')
-      .replace(/[\s_]+/g, '-')
-      .toLowerCase();
-    return { output: result, outputLanguage: 'text' };
-  },
-});
-
-registerTool({
-  id: 'constant-case',
-  name: 'CONSTANT_CASE',
-  category: 'Text',
-  description: 'Convert text to CONSTANT_CASE',
-  keywords: ['constant', 'case', 'screaming', 'snake', 'convert', 'text'],
-  outputExtension: 'txt',
-  detect: isPlainText,
-  execute: (input) => {
-    const result = input
-      .trim()
-      .replace(/([a-z])([A-Z])/g, '$1_$2')
-      .replace(/[\s\-]+/g, '_')
-      .toUpperCase();
-    return { output: result, outputLanguage: 'text' };
+  execute: (input, options) => {
+    const variant = (options?.variant as CaseVariant) ?? 'lowercase';
+    return { output: convertCase(input, variant), outputLanguage: 'text' };
   },
 });
 
