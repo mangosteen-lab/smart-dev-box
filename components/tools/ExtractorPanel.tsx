@@ -13,10 +13,9 @@ const LANG_META: Record<ExtractedSectionLanguage, { label: string; color: string
   date:   { label: 'DATE',   color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
   url:    { label: 'URL',    color: '#34d399', bg: 'rgba(52,211,153,0.12)'  },
   email:  { label: 'EMAIL',  color: '#fb923c', bg: 'rgba(251,146,60,0.12)'  },
-  number: { label: 'NUM',    color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
 };
 
-const ALL_LANGS: ExtractedSectionLanguage[] = ['json', 'xml', 'html', 'date', 'url', 'email', 'number'];
+const ALL_LANGS: ExtractedSectionLanguage[] = ['json', 'xml', 'html', 'date', 'url', 'email'];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -285,19 +284,31 @@ export function SectionPickerPopup({
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
           <span className="text-xs" style={{ color: 'var(--text3)' }}>{hint}</span>
-          <button
-            onClick={() => { const p = picked(); if (p.length > 0) onConfirm(p); }}
-            disabled={selected.size === 0}
-            className="text-sm px-5 py-1.5 rounded font-semibold transition-opacity"
-            style={{
-              background: 'var(--primary)',
-              color: '#000',
-              border: 'none',
-              opacity: selected.size === 0 ? 0.4 : 1,
-              cursor: selected.size === 0 ? 'default' : 'pointer',
-              boxShadow: selected.size > 0 ? '0 0 10px rgba(74,222,128,0.35)' : 'none',
-            }}
-          >Extract</button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="text-sm px-4 py-1.5 rounded font-semibold transition-opacity"
+              style={{
+                background: 'var(--bg2)',
+                color: 'var(--text2)',
+                border: '1px solid var(--border)',
+                cursor: 'pointer',
+              }}
+            >← Back</button>
+            <button
+              onClick={() => { const p = picked(); if (p.length > 0) onConfirm(p); }}
+              disabled={selected.size === 0}
+              className="text-sm px-5 py-1.5 rounded font-semibold transition-opacity"
+              style={{
+                background: 'var(--primary)',
+                color: '#000',
+                border: 'none',
+                opacity: selected.size === 0 ? 0.4 : 1,
+                cursor: selected.size === 0 ? 'default' : 'pointer',
+                boxShadow: selected.size > 0 ? '0 0 10px rgba(74,222,128,0.35)' : 'none',
+              }}
+            >Extract</button>
+          </div>
         </div>
       </div>
     </div>

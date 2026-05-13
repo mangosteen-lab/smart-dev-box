@@ -245,6 +245,37 @@ export default function DevboxApp() {
                   borderRadius: '6px',
                 }}
               >
+                <button
+                  onClick={() => setActiveToolId(null)}
+                  title="Back"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '5px',
+                    fontSize: 'var(--fs-xs)', fontWeight: 600,
+                    color: 'var(--text2)',
+                    background: 'var(--bg2)',
+                    border: '1px solid var(--border2)',
+                    cursor: 'pointer', padding: '4px 10px', borderRadius: '5px',
+                    transition: 'background .12s, border-color .12s, color .12s',
+                  }}
+                  onMouseEnter={e => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.background = 'var(--bg3)';
+                    el.style.borderColor = 'var(--text3)';
+                    el.style.color = 'var(--text)';
+                  }}
+                  onMouseLeave={e => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.background = 'var(--bg2)';
+                    el.style.borderColor = 'var(--border2)';
+                    el.style.color = 'var(--text2)';
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 18 9 12 15 6"/>
+                  </svg>
+                  Back
+                </button>
+                <div style={{ width: '1px', height: '14px', background: 'var(--border)', flexShrink: 0 }} />
                 <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--green-dim)' }}>
                   {customPanel.title.toUpperCase()}
                 </span>

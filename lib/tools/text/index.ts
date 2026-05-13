@@ -370,7 +370,7 @@ registerTool({
 
 // ── Extract Sections ──────────────────────────────────────────────────────────
 
-export type ExtractedSectionLanguage = 'json' | 'xml' | 'html' | 'date' | 'url' | 'email' | 'number';
+export type ExtractedSectionLanguage = 'json' | 'xml' | 'html' | 'date' | 'url' | 'email';
 
 export interface ExtractedSection {
   language: ExtractedSectionLanguage;
@@ -517,16 +517,8 @@ export function extractSections(input: string): ExtractedSection[] {
     all.push({ start: em.index, end: em.index + em[0].length, content: em[0], language: 'email' });
   }
 
-  // ── Numbers ─────────────────────────────────────────────────────────────────
-  const numRe = /-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/g;
-  let nm: RegExpExecArray | null;
-  while ((nm = numRe.exec(input)) !== null) {
-    // Skip numbers that are part of already-found dates / timestamps
-    all.push({ start: nm.index, end: nm.index + nm[0].length, content: nm[0], language: 'number' });
-  }
-
   // ── De-nest per language, deduplicate, sort ──────────────────────────────────
-  const langs: ExtractedSectionLanguage[] = ['json', 'xml', 'html', 'date', 'url', 'email', 'number'];
+  const langs: ExtractedSectionLanguage[] = ['json', 'xml', 'html', 'date', 'url', 'email'];
   const filtered: RawSpan[] = [];
   for (const lang of langs) {
     filtered.push(...keepOutermost(all.filter((s) => s.language === lang)));
@@ -553,8 +545,8 @@ registerTool({
   id: 'extract-sections',
   name: 'Extract Sections',
   category: 'Text',
-  description: 'Find and extract embedded JSON, XML, HTML, dates, URLs, emails and numbers from mixed text',
-  keywords: ['extract', 'json', 'xml', 'html', 'date', 'url', 'email', 'number', 'find', 'sections', 'mixed', 'parse'],
+  description: 'Find and extract embedded JSON, XML, HTML, dates, URLs and emails from mixed text',
+  keywords: ['extract', 'json', 'xml', 'html', 'date', 'url', 'email', 'find', 'sections', 'mixed', 'parse'],
   outputExtension: 'txt',
   detect: (input) => {
     const t = input.trim();

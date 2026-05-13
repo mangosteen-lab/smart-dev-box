@@ -14,6 +14,69 @@ function getExtensionForLanguage(lang?: string): string {
   return map[lang ?? ''] ?? 'txt';
 }
 
+// ── Order-independent normalisation for JSON / XML diffs ─────────────────────
+
+function sortJsonKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortJsonKeys);
+  if (value !== null && typeof value === 'object') {
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(value as object).sort()) {
+      sorted[key] = sortJsonKeys((value as Record<string, unknown>)[key]);
+    }
+    return sorted;
+  }
+  return value;
+}
+
+function sortXmlNode(node: Element): void {
+  const attrs = Array.from(node.attributes).sort((a, b) => a.name.localeCompare(b.name));
+  attrs.forEach((attr) => node.removeAttribute(attr.name));
+  attrs.forEach((attr) => node.setAttribute(attr.name, attr.value));
+  const children = Array.from(node.children);
+  children.forEach(sortXmlNode);
+  if (children.length > 1) {
+    const sorted = [...children].sort((a, b) =>
+      (a.tagName + a.textContent).localeCompare(b.tagName + b.textContent)
+    );
+    sorted.forEach((child) => node.appendChild(child));
+  }
+}
+
+function prettyPrintXml(xml: string): string {
+  let formatted = '';
+  let indent = 0;
+  const pad = (n: number) => '  '.repeat(n);
+  xml.replace(/>\s*</g, '>\n<').split('\n').forEach((node) => {
+    const trimmed = node.trim();
+    if (!trimmed) return;
+    if (/^<\//.test(trimmed)) indent = Math.max(indent - 1, 0);
+    formatted += pad(indent) + trimmed + '\n';
+    if (/^<[^/?!][^>]*[^/]>$/.test(trimmed) && !trimmed.startsWith('</')) indent++;
+  });
+  return formatted.trim();
+}
+
+function normalizeForDiff(text: string): string {
+  const t = text.trim();
+  if (!t) return text;
+  if (t.startsWith('{') || t.startsWith('[')) {
+    try {
+      return JSON.stringify(sortJsonKeys(JSON.parse(t)), null, 2);
+    } catch { /* fall through */ }
+  }
+  if (t.startsWith('<')) {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(t, 'application/xml');
+      if (!doc.querySelector('parsererror') && doc.documentElement) {
+        sortXmlNode(doc.documentElement);
+        return prettyPrintXml(new XMLSerializer().serializeToString(doc));
+      }
+    } catch { /* fall through */ }
+  }
+  return text;
+}
+
 function HighlightedCode({ code, language }: { code: string; language?: string }) {
   const [html, setHtml] = useState<string | null>(null);
 
@@ -76,6 +139,8 @@ function HighlightedCode({ code, language }: { code: string; language?: string }
 
 /** Side-by-side split diff view using unified-diff rendered inline */
 function DiffView({ before, after }: { before: string; after: string }) {
+  const normBefore = normalizeForDiff(before);
+  const normAfter = normalizeForDiff(after);
   const [diffHtml, setDiffHtml] = useState<string | null>(null);
 
   useEffect(() => {
@@ -83,7 +148,7 @@ function DiffView({ before, after }: { before: string; after: string }) {
     (async () => {
       try {
         const { createPatch } = await import('diff');
-        const patch = createPatch('output', before, after, 'input', 'output');
+        const patch = createPatch('output', normBefore, normAfter, 'input', 'output');
         const { createHighlighterCore } = await import('@shikijs/core');
         const { createOnigurumaEngine } = await import('shiki/engine/oniguruma');
         const hl = await createHighlighterCore({
@@ -98,7 +163,7 @@ function DiffView({ before, after }: { before: string; after: string }) {
       }
     })();
     return () => { cancelled = true; };
-  }, [before, after]);
+  }, [normBefore, normAfter]);
 
   if (diffHtml) {
     return (
@@ -110,8 +175,8 @@ function DiffView({ before, after }: { before: string; after: string }) {
   }
 
   // Fallback plain split
-  const beforeLines = before.split('\n');
-  const afterLines = after.split('\n');
+  const beforeLines = normBefore.split('\n');
+  const afterLines = normAfter.split('\n');
   const maxLen = Math.max(beforeLines.length, afterLines.length);
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)' }}>

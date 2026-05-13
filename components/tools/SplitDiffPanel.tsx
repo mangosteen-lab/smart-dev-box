@@ -134,6 +134,109 @@ function PlainOutput({ code }: { code: string; language?: string }) {
   );
 }
 
+// ── JSON / XML order-independent normalisation ────────────────────────────────
+
+/** Recursively sort object keys so that key-order differences don't produce false diffs. */
+function sortJsonKeys(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortJsonKeys);
+  }
+  if (value !== null && typeof value === 'object') {
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(value as object).sort()) {
+      sorted[key] = sortJsonKeys((value as Record<string, unknown>)[key]);
+    }
+    return sorted;
+  }
+  return value;
+}
+
+/** Attempt to parse text as JSON, sort its keys, and re-serialise. Returns null on failure. */
+function normalizeJson(text: string): string | null {
+  try {
+    const parsed = JSON.parse(text);
+    return JSON.stringify(sortJsonKeys(parsed), null, 2);
+  } catch {
+    return null;
+  }
+}
+
+/** Sort XML element attributes alphabetically and sort child elements by tag+text. */
+function sortXmlNode(node: Element): void {
+  // Sort attributes
+  const attrs = Array.from(node.attributes).sort((a, b) => a.name.localeCompare(b.name));
+  // Re-apply in sorted order by removing all then adding back
+  attrs.forEach((attr) => node.removeAttribute(attr.name));
+  attrs.forEach((attr) => node.setAttribute(attr.name, attr.value));
+
+  // Recurse into children first
+  const children = Array.from(node.children);
+  children.forEach(sortXmlNode);
+
+  // Sort child *element* nodes (preserve text nodes in-place is hard via DOM;
+  // we sort element children by their serialised form for consistency)
+  if (children.length > 1) {
+    const sorted = [...children].sort((a, b) =>
+      (a.tagName + a.textContent).localeCompare(b.tagName + b.textContent)
+    );
+    // Re-insert in sorted order
+    sorted.forEach((child) => node.appendChild(child));
+  }
+}
+
+/** Attempt to parse text as XML, sort attributes/children, and re-serialise. Returns null on failure. */
+function normalizeXml(text: string): string | null {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, 'application/xml');
+    const parseError = doc.querySelector('parsererror');
+    if (parseError) return null;
+    if (doc.documentElement) sortXmlNode(doc.documentElement);
+    const serialiser = new XMLSerializer();
+    // Pretty-print by inserting newlines/indentation
+    const raw = serialiser.serializeToString(doc);
+    return prettyPrintXml(raw);
+  } catch {
+    return null;
+  }
+}
+
+function prettyPrintXml(xml: string): string {
+  let formatted = '';
+  let indent = 0;
+  const pad = (n: number) => '  '.repeat(n);
+  // Split on tag boundaries
+  xml.replace(/>\s*</g, '>\n<').split('\n').forEach((node) => {
+    const trimmed = node.trim();
+    if (!trimmed) return;
+    if (/^<\//.test(trimmed)) indent = Math.max(indent - 1, 0);
+    formatted += pad(indent) + trimmed + '\n';
+    if (/^<[^/?!][^>]*[^/]>$/.test(trimmed) && !trimmed.startsWith('</')) indent++;
+  });
+  return formatted.trim();
+}
+
+/**
+ * Detect whether text is JSON or XML and return a normalised (sorted) version
+ * so that order-only differences don't produce false positives in the diff.
+ * Falls back to the original text if detection/parsing fails.
+ */
+function normalizeForDiff(text: string): string {
+  const t = text.trim();
+  if (!t) return text;
+  // Try JSON first
+  if (t.startsWith('{') || t.startsWith('[')) {
+    const normalised = normalizeJson(t);
+    if (normalised !== null) return normalised;
+  }
+  // Try XML
+  if (t.startsWith('<')) {
+    const normalised = normalizeXml(t);
+    if (normalised !== null) return normalised;
+  }
+  return text;
+}
+
 // ── DiffView (unified) ────────────────────────────────────────────────────────
 
 function UnifiedDiffView({ left, right }: { left: string; right: string }) {
@@ -654,8 +757,8 @@ export function SplitDiffPanel({
   }, [left.input, right.input, onPaneChange]);
 
   // Determine what to diff: prefer formatted output, fall back to raw input
-  const leftText = left.output || left.input;
-  const rightText = right.output || right.input;
+  const leftText = normalizeForDiff(left.output || left.input);
+  const rightText = normalizeForDiff(right.output || right.input);
   const canDiff = !!(leftText.trim() || rightText.trim());
 
   return (
