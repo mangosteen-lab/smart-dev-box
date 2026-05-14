@@ -15,7 +15,7 @@ interface CloudflareEnv {
   OPENAI_MODEL?: string;
   /**
    * Optional: URL to the raw index.json from the SmartDevBox Plugin Hub.
-   * e.g. https://raw.githubusercontent.com/mongosteen-lab/smart-dev-box-plugin/main/index.json
+   * e.g. https://raw.githubusercontent.com/mangosteen-lab/smart-dev-box-plugin/main/index.json
    * Leave empty to use the on-disk dev fallback.
    */
   PLUGIN_HUB_INDEX_URL?: string;

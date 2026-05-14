@@ -437,7 +437,7 @@ export function PluginManager({ onClose }: PluginManagerProps) {
           {/* Store: submit link */}
           {showTabs && tab === 'store' && (
             <a
-              href="https://github.com/mongosteen-lab/smart-dev-box-plugin"
+              href="https://github.com/mangosteen-lab/smart-dev-box-plugin"
               target="_blank"
               rel="noopener noreferrer"
               style={{ ...btnGhost, textDecoration: 'none', fontSize: 'var(--fs-xs)' }}
@@ -879,7 +879,7 @@ export function PluginManager({ onClose }: PluginManagerProps) {
                     style={{ accentColor: 'var(--green)', cursor: 'pointer' }}
                   />
                   <a
-                    href="https://github.com/mongosteen-lab/smart-dev-box-plugin"
+                    href="https://github.com/mangosteen-lab/smart-dev-box-plugin"
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}

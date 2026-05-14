@@ -149,7 +149,7 @@ export function Navbar() {
       <div className="flex items-center" style={{ marginLeft: 'auto', gap: '6px' }}>
         {/* GitHub link */}
         <a
-          href="https://github.com/mongosteen-lab/smart-dev-box"
+          href="https://github.com/mangosteen-lab/smart-dev-box"
           target="_blank"
           rel="noopener noreferrer"
           title="View on GitHub"
