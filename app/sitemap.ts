@@ -1,8 +1,16 @@
 import type { MetadataRoute } from 'next';
+import { TOOL_SEO_DATA } from '@/lib/tools/seo-data';
 
 const BASE_URL = 'https://smartdevbox.com';
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const toolPages: MetadataRoute.Sitemap = TOOL_SEO_DATA.map((tool) => ({
+    url: `${BASE_URL}/tools/${tool.slug}`,
+    lastModified: new Date('2025-05-01'),
+    changeFrequency: 'monthly' as const,
+    priority: 0.8,
+  }));
+
   return [
     {
       url: BASE_URL,
@@ -46,5 +54,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.7,
     },
+    ...toolPages,
   ];
 }

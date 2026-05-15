@@ -1,5 +1,6 @@
 import DevboxApp from './DevboxApp';
 import Link from 'next/link';
+import { TOOL_SEO_DATA } from '@/lib/tools/seo-data';
 
 /**
  * Server component wrapper.
@@ -137,6 +138,18 @@ export default function Home() {
           <li><Link href="/features/compare">Compare / Diff</Link> — free side-by-side text and code diff tool.</li>
           <li><Link href="/features/plugins">Plugin System</Link> — extend SmartDevBox with custom tools.</li>
           <li><Link href="/features/privacy">Privacy &amp; Security</Link> — why 100% client-side means your data never leaves your browser.</li>
+        </ul>
+
+        <h2>Individual Tool Pages</h2>
+        <ul>
+          {TOOL_SEO_DATA.map((tool) => (
+            <li key={tool.id}>
+              <Link href={`/tools/${tool.slug}`}>
+                {tool.heading.split(' — ')[0].trim()}
+              </Link>{' '}
+              — {tool.metaDescription}
+            </li>
+          ))}
         </ul>
 
         <h2>SmartDevBox vs Other Developer Tools</h2>
