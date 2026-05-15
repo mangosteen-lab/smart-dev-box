@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
@@ -13,6 +13,14 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 const BASE_URL = 'https://smartdevbox.com';
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)',  color: '#0f1117' },
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+  ],
+  colorScheme: 'dark light',
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),

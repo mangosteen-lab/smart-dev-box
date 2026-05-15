@@ -1,4 +1,5 @@
 import DevboxApp from './DevboxApp';
+import Link from 'next/link';
 
 /**
  * Server component wrapper.
@@ -25,9 +26,17 @@ export default function Home() {
           Paste any text — Base64, JSON, JWT tokens, XML, SQL, URLs, Unix timestamps,
           hex strings, cron expressions, X.509 certificates, color codes, and more —
           and SmartDevBox automatically detects the format and applies the right tool.
-          No sign-up required. All processing runs in the browser. 84+ tools across
+          No sign-up required. All processing runs in the browser. 91 tools across
           6 categories: Encoding/Decoding, Formatting, Conversion, Generation,
           Inspection, and Text.
+        </p>
+        <p>
+          <strong>Definition:</strong> A <em>developer toolbox</em> is a web application
+          that bundles many individual developer utilities — such as encoders, decoders,
+          formatters, converters, hash generators, and inspectors — into a single interface.
+          SmartDevBox extends this concept with automatic format detection: instead of the
+          developer choosing a tool, the application identifies the input format and selects
+          the appropriate tool automatically.
         </p>
 
         <h2>Encoding and Decoding Tools</h2>
@@ -120,6 +129,63 @@ export default function Home() {
           <li><strong>Extract Emails / URLs / Numbers</strong> — Extract all email addresses, URLs, or numeric values from any text.</li>
         </ul>
 
+        <h2>Learn More About SmartDevBox Features</h2>
+        <ul>
+          <li><Link href="/features/tools">All 91+ Built-in Tools</Link> — complete list of every tool across all 6 categories.</li>
+          <li><Link href="/features/auto-detection">Auto Format Detection</Link> — how SmartDevBox detects Base64, JSON, JWT, XML, and 80+ formats automatically.</li>
+          <li><Link href="/features/smart-extract">Smart Extract</Link> — extract emails, URLs, and numbers from any block of text.</li>
+          <li><Link href="/features/compare">Compare / Diff</Link> — free side-by-side text and code diff tool.</li>
+          <li><Link href="/features/plugins">Plugin System</Link> — extend SmartDevBox with custom tools.</li>
+          <li><Link href="/features/privacy">Privacy &amp; Security</Link> — why 100% client-side means your data never leaves your browser.</li>
+        </ul>
+
+        <h2>SmartDevBox vs Other Developer Tools</h2>
+        <p>
+          SmartDevBox is designed for developers who need a single, instant tool rather than
+          bookmarking a different website for each task. Here is how it compares to popular
+          single-purpose tools:
+        </p>
+        <ul>
+          <li>
+            <strong>SmartDevBox vs CyberChef</strong> — CyberChef requires you to find and
+            chain the correct &ldquo;Recipe&rdquo; operations before seeing any output.
+            SmartDevBox detects your input format automatically and shows results immediately,
+            with no recipe configuration.
+          </li>
+          <li>
+            <strong>SmartDevBox vs jwt.io</strong> — jwt.io is a single-purpose JWT decoder.
+            SmartDevBox includes JWT decoding plus 83 other tools. Paste a JWT into SmartDevBox
+            and it decodes automatically — no switching to a dedicated site.
+          </li>
+          <li>
+            <strong>SmartDevBox vs jsonlint.com</strong> — jsonlint.com validates JSON with a
+            button click. SmartDevBox validates JSON instantly on paste, shows the error with
+            line and column numbers, and also pretty-prints or minifies the input — all
+            automatically detected.
+          </li>
+          <li>
+            <strong>SmartDevBox vs base64decode.org</strong> — base64decode.org handles only
+            Base64. SmartDevBox detects Base64 alongside 18 other format families and switches
+            tool automatically.
+          </li>
+        </ul>
+        <p>
+          The key difference: SmartDevBox eliminates the &ldquo;which tool do I open?&rdquo;
+          decision entirely. Paste anything from your terminal, log file, or API response and
+          the correct tool runs without any selection.
+        </p>
+
+        <h2>Key Facts About SmartDevBox</h2>
+        <ul>
+          <li><strong>91 built-in tools</strong> across 6 categories: Encoding/Decoding (18 tools), Formatting (12 tools), Conversion (21 tools), Generation (10 tools), Inspection (6 tools), Text (17 tools).</li>
+          <li><strong>19 auto-detected format families</strong> including Base64, JSON, JWT, XML, SQL, URLs, Unix timestamps, X.509 certificates, cron expressions, hex strings, color codes, YAML, CSV/TSV, Markdown, UUIDs, ULIDs, Base32, Roman numerals, and H:M:S durations.</li>
+          <li><strong>600 ms debounce</strong> — detection runs 600 milliseconds after you stop typing, keeping the interface responsive during fast input.</li>
+          <li><strong>Two-tier confidence system</strong>: tools scoring above 0.8 fire automatically; tools scoring 0.3–0.8 appear as suggestion chips you can select with one click.</li>
+          <li><strong>100% client-side processing</strong> — no server, no upload, no account. Your data stays in the browser tab.</li>
+          <li><strong>Plugin system</strong> — developers can register custom tools by providing a name, detector function, and transformer function in a configuration file.</li>
+          <li><strong>Free with no sign-up</strong> — no paywall, no rate limiting, no subscription tier.</li>
+        </ul>
+
         <h2>Frequently Asked Questions</h2>
 
         <h3>How do I decode a Base64 string online?</h3>
@@ -182,6 +248,46 @@ export default function Home() {
         <h3>Is SmartDevBox free?</h3>
         <p>
           Yes. SmartDevBox is completely free with no account or sign-up required.
+        </p>
+
+        <h3>What is the best free online JSON formatter?</h3>
+        <p>
+          SmartDevBox automatically detects JSON when you paste it and formats it
+          with configurable indentation. It also validates JSON and reports syntax
+          errors with precise line and column numbers — all in the browser, free,
+          with no account required.
+        </p>
+
+        <h3>What is the best free online Base64 decoder?</h3>
+        <p>
+          SmartDevBox auto-detects Base64 strings — including standard and URL-safe
+          variants, with or without padding — and decodes them instantly on paste.
+          No button to click, no tool to select.
+        </p>
+
+        <h3>How do I compare two JSON objects online?</h3>
+        <p>
+          Use the Split &amp; Diff tool in SmartDevBox. Paste the first JSON in the
+          left pane and the second in the right pane. Changes are highlighted
+          line-by-line in real time. For the cleanest diff, use the JSON Formatter
+          on both inputs first so indentation is consistent.
+        </p>
+
+        <h3>Can I add my own tools to SmartDevBox?</h3>
+        <p>
+          Yes. SmartDevBox has a plugin system that lets developers register custom
+          tools by providing a name, a detector function (returns a confidence score
+          0–1), and a transformer function (takes input string, returns output string).
+          Custom tools appear in the sidebar alongside the 91 built-in tools and
+          participate in auto-detection.
+        </p>
+
+        <h3>Does SmartDevBox work offline?</h3>
+        <p>
+          SmartDevBox is a Progressive Web App (PWA) with a web app manifest.
+          All 91 tools run entirely client-side with no server dependency. Once the
+          page is loaded, the tools work without an internet connection (AI mode,
+          which uses OpenAI, requires connectivity).
         </p>
       </section>
 

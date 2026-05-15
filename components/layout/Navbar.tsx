@@ -1,9 +1,33 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { useDevboxStore } from '@/store/devbox';
+
+const FEATURE_LINKS = [
+  { href: '/features/tools',          label: 'All Tools',           desc: '91+ built-in tools' },
+  { href: '/features/auto-detection', label: 'Auto Detection',      desc: 'Paste → instant result' },
+  { href: '/features/smart-extract',  label: 'Smart Extract',       desc: 'Pull emails, URLs, numbers' },
+  { href: '/features/compare',        label: 'Compare / Diff',      desc: 'Side-by-side text diff' },
+  { href: '/features/plugins',        label: 'Plugin System',       desc: 'Add your own tools' },
+  { href: '/features/privacy',        label: 'Privacy & Security',  desc: '100% client-side' },
+];
 
 export function Navbar() {
   const { isDark, toggleTheme, toggleMobileSidebar, toggleSidebar, sidebarOpen } = useDevboxStore();
+  const [featuresOpen, setFeaturesOpen] = useState(false);
+  const featuresRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (featuresRef.current && !featuresRef.current.contains(e.target as Node)) {
+        setFeaturesOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   return (
     <header
@@ -91,6 +115,45 @@ export function Navbar() {
         Paste anything. We figure out the rest.
       </span>
 
+      {/* Features dropdown — desktop only */}
+      <div ref={featuresRef} className="hidden md:block nav-features-wrap">
+        <button
+          className="nav-features-btn"
+          onClick={() => setFeaturesOpen(o => !o)}
+          aria-haspopup="true"
+          aria-expanded={featuresOpen}
+        >
+          Features
+          <svg
+            width="10" height="10" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+            style={{ transition: 'transform .15s', transform: featuresOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          >
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+
+        <div
+          className="nav-features-dropdown"
+          role="menu"
+          aria-hidden={!featuresOpen}
+          style={{ display: featuresOpen ? undefined : 'none' }}
+        >
+          {FEATURE_LINKS.map(({ href, label, desc }) => (
+            <Link
+              key={href}
+              href={href}
+              role="menuitem"
+              className="nav-features-item"
+              tabIndex={featuresOpen ? undefined : -1}
+              onClick={() => setFeaturesOpen(false)}
+            >
+              <span className="nav-features-item-label">{label}</span>
+              <span className="nav-features-item-desc">{desc}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
       {/* Always-visible search trigger */}
       <button
         className="hidden md:flex search-trigger"

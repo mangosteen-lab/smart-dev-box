@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useSyncExternalStore } from 'react';
 import { useDevboxStore } from '@/store/devbox';
 import { runDetection } from '@/lib/tools';
 import { getGeneratorPlugins, subscribeGenerators } from '@/lib/tools/plugin-registry';
-import type { GeneratorOption, GeneratorPlugin } from '@/lib/tools/types';
+import type { GeneratorOption } from '@/lib/tools/types';
 
 // ── Clipboard ─────────────────────────────────────────────────────────────────
 
@@ -441,8 +441,6 @@ const GENERATORS = [
   { id: 'lorem',  label: 'Lorem Ipsum',   body: LoremBody },
   { id: 'hash',   label: 'Hash',          body: HashBody },
 ] as const;
-
-type GeneratorId = typeof GENERATORS[number]['id'];
 
 // ── Popover wrapper ───────────────────────────────────────────────────────────
 

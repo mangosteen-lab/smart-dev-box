@@ -58,16 +58,37 @@ function formatXml(xml: string): string {
   let formatted = '';
   let indent = 0;
   const tab = '  ';
-  // Split on tag boundaries
-  xml.replace(/>\s*</g, '>\n<').split('\n').forEach((node) => {
-    node = node.trim();
-    if (!node) return;
-    if (node.match(/^<\/\w/)) indent -= 1;
+  // Collapse whitespace between tags, then split into one node per line
+  const nodes = xml.replace(/>\s*</g, '>\n<').split('\n').map(n => n.trim()).filter(Boolean);
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    // Closing tag — decrease indent before printing
+    if (/^<\/\w/.test(node)) indent -= 1;
+
+    // Peek ahead: if this is a bare open tag and the very next node is its matching close tag,
+    // collapse them into a single <tag></tag> line (handles whitespace-only / empty elements)
+    const openTagMatch = node.match(/^<(\w[^>]*)>$/);
+    if (openTagMatch) {
+      const tagName = openTagMatch[1].split(/[\s/]/)[0];
+      const next = nodes[i + 1];
+      if (next === `</${tagName}>`) {
+        formatted += tab.repeat(Math.max(0, indent)) + `<${openTagMatch[1]}></${tagName}>\n`;
+        i += 1; // consume the close tag
+        continue;
+      }
+    }
+
     formatted += tab.repeat(Math.max(0, indent)) + node + '\n';
-    if (node.match(/^<\w[^>]*[^/]>.*$/) && !node.match(/^<.+\/>/) && !node.match(/^<(\?|!)/)) {
+
+    // Increase indent only for a pure opening tag (no self-close, no inline close tag on same line)
+    const isOpenTag   = /^<[^/?!][^>]*>/.test(node);
+    const isSelfClose = /\/>$/.test(node) || /^<[?!]/.test(node);
+    const hasCloseTag = /<\/\w/.test(node);
+    if (isOpenTag && !isSelfClose && !hasCloseTag) {
       indent += 1;
     }
-  });
+  }
   return formatted.trim();
 }
 

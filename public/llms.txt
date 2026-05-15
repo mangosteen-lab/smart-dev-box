@@ -1,107 +1,146 @@
 # SmartDevBox
 
-> SmartDevBox is a free, AI-powered developer toolbox at https://smartdevbox.com.
-> Paste any text — it auto-detects the format and applies the right tool instantly.
-> No sign-up required. Works entirely in the browser.
+> SmartDevBox is a free, browser-based developer toolbox at https://smartdevbox.com.
+> It auto-detects the format of any input and applies the correct tool instantly —
+> no sign-up, no install, 100% client-side. All 91 built-in tools run in the browser;
+> your data never leaves your machine.
 
 ## What SmartDevBox does
 
-SmartDevBox is the fastest way for developers to encode, decode, format, convert,
-inspect, and generate data. Paste anything — Base64, JSON, JWT, XML, SQL, a URL,
-a Unix timestamp, a certificate, hex bytes, a cron expression — and SmartDevBox
-identifies the format and transforms it automatically, powered by AI.
+SmartDevBox solves a common developer problem: you have a blob of text — a Base64
+string, a JWT, a minified JSON object, a Unix timestamp, a PEM certificate — and you
+need to decode, format, or inspect it quickly. Instead of searching for the right
+tool and navigating to it, you paste into SmartDevBox and it automatically detects
+the format and applies the correct tool in under 600 milliseconds.
 
-## Tool categories and tools
+## Key facts
 
-### Encoding / Decoding (18 tools)
-- Base64 Encode / Decode — encode text to Base64 or decode a Base64 string back to text
-- URL Encode / Decode — percent-encode strings for URLs or decode them back
-- JWT Inspector — decode and inspect a JWT token header and payload without a secret
-- JWT Encoder — create a signed JWT token (HS256, HS384, HS512)
-- HTML Encode / Decode — encode special characters to HTML entities and back
-- Hex ↔ ASCII — convert between hexadecimal and ASCII text
-- Backslash Escape / Unescape — escape or unescape backslash sequences
-- ROT13 / ROT47 — encode or decode text using ROT13 and ROT47 ciphers
-- Base32 Encode / Decode — encode text to Base32 or decode Base32 back to text
-- URL Parser — parse a URL into protocol, host, path, query params, and hash
-- Base64 Image Decode — decode a Base64 data URI and show image metadata
+- 91 built-in tools across 6 categories
+- Automatic format detection for 19+ formats including Base64, JSON, JWT, XML, SQL,
+  URLs, Unix timestamps, X.509 certificates, cron expressions, hex strings, color
+  codes, YAML, CSV/TSV, Markdown, UUIDs, ULIDs, Base32, Roman numerals, H:M:S
+- Detection confidence scored 0–1; tools above 0.8 fire automatically, 0.3–0.8
+  appear as suggestion chips
+- 600 ms debounce so detection fires when you pause, not on every keystroke
+- 100% client-side: no server, no account, no data upload
+- Optional AI mode (OpenAI API key required) for ambiguous inputs only
+- Plugin system: add custom tools, detectors, and transformers without forking
+- Works offline after first load; can be self-hosted as a Next.js static export
+
+## Tool categories
+
+### Encoding & Decoding (18 tools)
+Base64 Encode, Base64 Decode, Base32 Encode, Base32 Decode, URL Encode, URL Decode,
+URL Parser, JWT Inspector, JWT Encoder, HTML Encode, HTML Decode, Hex to ASCII,
+ASCII to Hex, Backslash Escape, Backslash Unescape, ROT13, ROT47, Base64 Image Decode
 
 ### Formatting (12 tools)
-- JSON Formatter — pretty-print and validate JSON with configurable indentation
-- XML Formatter / Minify — pretty-print or minify XML
-- SQL Formatter — format and beautify SQL queries
-- CSS Beautifier / Minify — format or minify CSS stylesheets
-- HTML Beautifier — format and beautify HTML markup
-- JS Beautifier / Minifier / Validator — format, minify, or validate JavaScript
-- Markdown Preview — live split preview of Markdown source and rendered output
-- JSON Validate — validate JSON and report errors with line and column numbers
+JSON Formatter, JSON Validate, XML Formatter, XML Minify, SQL Formatter,
+CSS Beautifier, CSS Minify, HTML Beautifier, JS Beautifier, JS Minifier,
+JS Validate, Markdown Preview
 
 ### Conversion (21 tools)
-- JSON ↔ CSV — convert between JSON arrays and CSV
-- JSON ↔ TSV — convert between JSON arrays and tab-separated values
-- JSON ↔ YAML — convert between JSON and YAML
-- JSON ↔ XML — convert between JSON and XML
-- CSV → JSON — parse CSV into a JSON array
-- HTML → JSX — convert HTML markup to React JSX
-- HTML → Text — strip HTML tags and extract plain text
-- Markdown → HTML — convert Markdown to HTML
-- JSON Escape / Unescape — escape strings for embedding in JSON values
-- Color Converter — convert colors between HEX, RGB, HSL, and HSV
-- Number Base Converter — convert integers between binary, octal, decimal, and hex
-- Unix Timestamp — convert Unix timestamps to human-readable dates and back
-- Date Formatter — format dates in multiple locales and styles
-- Seconds ↔ H:M:S — convert between seconds and hours:minutes:seconds
-- Decimal ↔ Roman — convert between decimal integers and Roman numerals
-- UUID ↔ Hex — convert between UUID format and 32-char hex
+JSON to CSV, JSON to TSV, JSON to YAML, JSON to XML, YAML to JSON, CSV to JSON,
+XML to JSON, Markdown to HTML, HTML to Text, HTML to JSX, JSON Escape, JSON Unescape,
+Color Converter, Number Base Converter, Unix Timestamp, Date Formatter,
+Seconds to H:M:S, H:M:S to Seconds, Decimal to Roman, Roman to Decimal, UUID ↔ Hex
 
 ### Generation (10 tools)
-- UUID Generator — generate UUID v4 strings
-- ULID Generator — generate Universally Unique Lexicographically Sortable Identifiers
-- Hash Generator — compute MD5, SHA-1, SHA-256, and SHA-512 hashes
-- Random String Generator — generate random strings with configurable charset and length
-- Random Password Generator — generate secure random passwords
-- Lorem Ipsum Generator — generate placeholder Latin text
-- QR Code Generator — generate QR codes from URLs or any text (PNG export)
-- Random Number Generator — generate random integers or decimals within a range
-- Random IP Generator — generate random IPv4 addresses
-- Random MAC Generator — generate random MAC addresses
+UUID v4 Generator, ULID Generator, Hash Generator (MD5/SHA-1/SHA-256/SHA-512),
+Random String Generator, Random Password, Lorem Ipsum Generator, QR Code Generator,
+Random Number, Random IP Generator, Random MAC Generator
 
 ### Inspection (6 tools)
-- Regex Tester — test regular expressions against input text and list all matches
-- JSONPath Evaluator — evaluate JSONPath expressions against JSON input
-- String Inspector — detailed character, word, line, and byte statistics
-- Cron Job Parser — parse and explain cron expressions with next scheduled run times
-- Certificate Decoder (X.509) — decode and inspect PEM-encoded X.509 certificates
-- HTML Preview — live preview HTML in a sandboxed iframe
+Regex Tester, JSONPath Evaluator, String Inspector, Cron Job Parser,
+Certificate Decoder (X.509), HTML Preview
 
-### Text (23 tools)
-- Case converters: lowercase, UPPERCASE, Title Case, camelCase, PascalCase,
-  snake_case, kebab-case, CONSTANT_CASE, Invert Case
-- Line tools: Sort lines, Dedupe lines, Reverse lines, Number lines,
-  Prefix lines, Suffix lines, Join lines, Remove empty lines
-- Text tools: Word Count, Text Reverse, Text Trim
-- Extractors: Extract Emails, Extract URLs, Extract Numbers
+### Text (17 tools)
+Lowercase, Uppercase, Title Case, camelCase, PascalCase, snake_case, kebab-case,
+CONSTANT_CASE, Invert Case, Line Sort, Line Dedupe, Line Reverse, Word Count,
+Text Reverse, Text Trim, Remove Empty Lines, Number Lines, Prefix Lines, Suffix Lines,
+Join Lines, Extract Emails, Extract URLs, Extract Numbers, Split & Diff
 
-## Key questions SmartDevBox answers
+## Feature pages
 
-- How do I decode a Base64 string?
-- How do I decode a JWT token without a secret?
-- How do I format or validate JSON?
-- How do I convert a Unix timestamp to a date?
-- How do I convert JSON to CSV?
-- How do I generate a UUID?
-- How do I compute a SHA-256 hash?
-- How do I parse a cron expression?
-- How do I decode an X.509 certificate?
-- How do I convert between color formats (HEX, RGB, HSL)?
-- How do I format a SQL query?
-- How do I convert JSON to YAML?
+- https://smartdevbox.com/features/tools — complete list of all 91 built-in tools
+- https://smartdevbox.com/features/auto-detection — how automatic format detection works
+- https://smartdevbox.com/features/smart-extract — extracting JSON, XML, dates, URLs, emails from mixed text
+- https://smartdevbox.com/features/compare — side-by-side text and code diff
+- https://smartdevbox.com/features/plugins — adding custom tools via the plugin system
+- https://smartdevbox.com/features/privacy — why 100% client-side means zero data exposure
 
-## Technical details
+## Privacy model
 
-- URL: https://smartdevbox.com
-- Free to use, no account required
-- Runs entirely in the browser (no data sent to servers except optional AI routing)
-- Optional AI mode uses GPT-4o-mini for ambiguous input detection
-- Built with Next.js 15, TypeScript, Tailwind CSS, deployed on Cloudflare Workers
-- 84+ tools across 6 categories
+All 91 tools execute in the browser using client-side JavaScript. No input text is
+ever transmitted to a server. Specifically:
+- JWT tokens decoded locally — no secret required, signature not verified server-side
+- X.509 certificates parsed locally — infrastructure details stay private
+- JSON, XML, SQL, code formatted locally — no telemetry on content
+- Hash generation (MD5, SHA-1, SHA-256, SHA-512) computed locally via Web Crypto API
+- The only exception: AI mode (disabled by default) sends a short format-detection
+  prompt to OpenAI. Tool execution still happens client-side.
+
+## Plugin system
+
+SmartDevBox has a plugin API. A plugin is a ToolDefinition object with: id, name,
+category, description, detect() (returns confidence 0–1), transform() (produces
+output). Plugins appear in the sidebar, participate in auto-detection, and are
+searchable via the Command Palette (⌘K). The /api/plugins endpoint and Plugin Manager
+UI allow loading plugins at runtime without a rebuild.
+
+## Common use cases SmartDevBox handles
+
+- Decode a Base64 string: paste → auto-detected → decoded instantly
+- Decode a JWT without a secret: paste → JWT Inspector → header + payload as JSON
+- Format minified JSON: paste → JSON Formatter → pretty-printed with error highlighting
+- Convert a Unix timestamp: paste → Unix Timestamp → UTC + local time displayed
+- Parse a cron expression: paste → Cron Job Parser → plain-English explanation + next runs
+- Decode a PEM X.509 certificate: paste → Certificate Decoder → subject, issuer, validity, SANs
+- Compute SHA-256 hash: use Hash Generator → MD5/SHA-1/SHA-256/SHA-512 computed simultaneously
+- Convert JSON to CSV: paste JSON array → JSON to CSV → downloadable CSV with headers
+- Compare two JSON blobs: paste into Split & Diff → line-level diff with intra-line highlights
+- Extract all URLs from a log file: use Extract URLs text tool
+
+## How SmartDevBox compares to alternatives
+
+| Feature | SmartDevBox | CyberChef | jwt.io | jsonlint.com |
+|---|---|---|---|---|
+| Auto format detection | Yes | No | No | No |
+| Tools covered | 91 | 300+ | 1 | 1 |
+| 100% client-side | Yes | Yes | No | No |
+| No account required | Yes | Yes | Yes | Yes |
+| Plugin system | Yes | No | No | No |
+| Works offline | Yes | Yes | No | No |
+| AI-assisted detection | Yes (optional) | No | No | No |
+
+## Frequently asked questions
+
+**What is SmartDevBox?**
+SmartDevBox is a free, browser-based developer toolbox with 91 built-in tools that
+automatically detects the format of your input and applies the correct tool instantly.
+
+**Is SmartDevBox free?**
+Yes. SmartDevBox is completely free with no account, no sign-up, and no paid tier.
+
+**Does SmartDevBox send my data to a server?**
+No. All 91 tools run entirely in the browser. Your input never leaves your machine.
+The only exception is the optional AI mode, which requires your own OpenAI API key.
+
+**How does auto-detection work?**
+Every tool registers a detector function that scores input 0–1. When you paste,
+all detectors run in parallel. The highest-confidence tool above 0.8 fires
+automatically; tools scoring 0.3–0.8 appear as clickable suggestion chips.
+
+**Can I use SmartDevBox offline?**
+Yes. After the first page load, all tools work without a network connection because
+the application is a Next.js static export cached by the browser.
+
+**Can I add my own tools?**
+Yes. The plugin system lets you register custom ToolDefinition objects that appear
+alongside built-in tools in the sidebar, Command Palette, and auto-detection engine.
+
+**What formats does SmartDevBox auto-detect?**
+Base64 (standard and URL-safe), JSON, JWT tokens, XML/HTML, SQL, URLs, Unix timestamps
+(10- and 13-digit), X.509 PEM certificates, cron expressions (5- and 6-field), hex
+strings, color codes (HEX/RGB/HSL/HSV), YAML, CSV/TSV, Markdown, UUIDs, ULIDs,
+Base32, Roman numerals, H:M:S durations — 19 format families in total.
