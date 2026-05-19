@@ -78,6 +78,7 @@ function normalizeForDiff(text: string): string {
 }
 
 // Singleton highlighter — created once, reused for all renders
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let highlighterPromise: Promise<any> | null = null;
 function getHighlighter() {
   if (!highlighterPromise) {
