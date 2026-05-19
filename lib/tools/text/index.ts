@@ -484,13 +484,34 @@ export function extractSections(input: string): ExtractedSection[] {
   }
 
   // ── Dates ───────────────────────────────────────────────────────────────────
-  // Covers ISO 8601, common US/EU formats, unix timestamps (10/13 digits)
+  // Covers ISO 8601, RFC 2822, common US/EU named-month, ordinal, 12/24h time,
+  // timezone abbreviations/offsets, and unix timestamps (10/13 digits).
   const datePatterns: RegExp[] = [
+    // ISO 8601: 2024-01-15, 2024-01-15T13:00:00Z, 2024-01-15T13:00:00+05:30, etc.
     /\b\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?\b/g,
-    /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?\b/gi,
-    /\b(?:0?[1-9]|[12]\d|3[01])[\/\-.](?:0?[1-9]|1[0-2])[\/\-.](?:\d{2}|\d{4})\b/g,
-    /\b(?:0?[1-9]|1[0-2])[\/\-.](?:0?[1-9]|[12]\d|3[01])[\/\-.](?:\d{2}|\d{4})\b/g,
-    /\b1[3-9]\d{8}(?:\d{3})?\b/g,  // unix ms timestamps (13 digits starting 13x..19x)
+
+    // Named month, day-first (ordinal or plain), 4-digit year, optional 12/24h time + tz
+    // e.g. "May 18th, 2026 12:01 AM PDT"  "January 1st 2024"  "Mar. 5, 2023 14:30:00"
+    /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}(?:[,\s]+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AaPp][Mm])?(?:\s+[A-Z][A-Za-z]{1,4}|[+-]\d{2}:?\d{2})?)?\b/gi,
+
+    // Day-first named month: "18th May 2026"  "1 January 2024 09:00 AM"
+    /\b\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}(?:[,\s]+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AaPp][Mm])?(?:\s+[A-Z][A-Za-z]{1,4}|[+-]\d{2}:?\d{2})?)?\b/gi,
+
+    // RFC 2822: "Mon, 18 May 2026 12:01:00 -0700"  (weekday optional)
+    /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s+\d{2}:\d{2}(?::\d{2})?(?:\s+[+-]\d{4}|\s+[A-Z]{2,5})?\b/gi,
+
+    // US slash/dash: MM/DD/YYYY or MM-DD-YYYY (with optional time)
+    /\b(?:0?[1-9]|1[0-2])[\/\-](?:0?[1-9]|[12]\d|3[01])[\/\-](?:\d{2}|\d{4})(?:\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AaPp][Mm])?(?:\s+[A-Z][A-Za-z]{1,4}|[+-]\d{2}:?\d{2})?)?\b/g,
+
+    // EU slash/dash/dot: DD/MM/YYYY or DD.MM.YYYY (with optional time)
+    /\b(?:0?[1-9]|[12]\d|3[01])[\/\-.](?:0?[1-9]|1[0-2])[\/\-.](?:\d{2}|\d{4})(?:\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AaPp][Mm])?(?:\s+[A-Z][A-Za-z]{1,4}|[+-]\d{2}:?\d{2})?)?\b/g,
+
+    // Time-only with date context: standalone "12:01 AM PDT" won't match (needs 4-digit year nearby)
+    // YYYY/MM/DD (Asian-style with slashes)
+    /\b\d{4}\/(?:0[1-9]|1[0-2])\/(?:0[1-9]|[12]\d|3[01])(?:\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AaPp][Mm])?(?:\s+[A-Z][A-Za-z]{1,4}|[+-]\d{2}:?\d{2})?)?\b/g,
+
+    // Unix epoch: 10-digit (seconds) or 13-digit (milliseconds)
+    /\b1[3-9]\d{8}(?:\d{3})?\b/g,
   ];
   for (const re of datePatterns) {
     re.lastIndex = 0;

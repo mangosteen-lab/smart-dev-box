@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useDevboxStore } from '@/store/devbox';
 import { getAllTools, getToolsByCategory, executeTool } from '@/lib/tools';
+import { TOOL_SEO_MAP } from '@/lib/tools/seo-data';
 import type { Category } from '@/lib/tools/types';
 
 const CATEGORY_ORDER: Category[] = [
@@ -331,6 +333,45 @@ export function ToolSidebar() {
           })
         )}
       </div>
+
+      {/* Read article link — shown when the active tool has an SEO page */}
+      {activeToolId && TOOL_SEO_MAP.get(activeToolId) && (
+        <div
+          style={{
+            margin: '0 8px 8px',
+            flexShrink: 0,
+          }}
+        >
+          <Link
+            href={`/tools/${TOOL_SEO_MAP.get(activeToolId)!.slug}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 10px',
+              fontSize: 'var(--fs-2xs)',
+              color: 'var(--text3)',
+              background: 'var(--bg2)',
+              border: '1px solid var(--border)',
+              borderRadius: '4px',
+              textDecoration: 'none',
+              transition: 'color .15s, border-color .15s',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--green)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--green-dim)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            Read article
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto', flexShrink: 0 }}>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </Link>
+        </div>
+      )}
     </aside>
   );
 

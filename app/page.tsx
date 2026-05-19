@@ -133,6 +133,7 @@ export default function Home() {
         <h2>Learn More About SmartDevBox Features</h2>
         <ul>
           <li><Link href="/features/tools">All 91+ Built-in Tools</Link> — complete list of every tool across all 6 categories.</li>
+          <li><Link href="/tools">Tool Guides</Link> — in-depth reference articles for every tool: what it does, worked examples, and FAQs.</li>
           <li><Link href="/features/auto-detection">Auto Format Detection</Link> — how SmartDevBox detects Base64, JSON, JWT, XML, and 80+ formats automatically.</li>
           <li><Link href="/features/smart-extract">Smart Extract</Link> — extract emails, URLs, and numbers from any block of text.</li>
           <li><Link href="/features/compare">Compare / Diff</Link> — free side-by-side text and code diff tool.</li>
@@ -160,13 +161,13 @@ export default function Home() {
         </p>
         <ul>
           <li>
-            <strong>SmartDevBox vs CyberChef</strong> — CyberChef requires you to find and
+            <Link href="/vs/cyberchef"><strong>SmartDevBox vs CyberChef</strong></Link> — CyberChef requires you to find and
             chain the correct &ldquo;Recipe&rdquo; operations before seeing any output.
             SmartDevBox detects your input format automatically and shows results immediately,
             with no recipe configuration.
           </li>
           <li>
-            <strong>SmartDevBox vs jwt.io</strong> — jwt.io is a single-purpose JWT decoder.
+            <Link href="/vs/jwt-io"><strong>SmartDevBox vs jwt.io</strong></Link> — jwt.io is a single-purpose JWT decoder.
             SmartDevBox includes JWT decoding plus 83 other tools. Paste a JWT into SmartDevBox
             and it decodes automatically — no switching to a dedicated site.
           </li>
@@ -177,7 +178,7 @@ export default function Home() {
             automatically detected.
           </li>
           <li>
-            <strong>SmartDevBox vs base64decode.org</strong> — base64decode.org handles only
+            <Link href="/alternatives/base64decode-org"><strong>SmartDevBox vs base64decode.org</strong></Link> — base64decode.org handles only
             Base64. SmartDevBox detects Base64 alongside 18 other format families and switches
             tool automatically.
           </li>
@@ -197,6 +198,73 @@ export default function Home() {
           <li><strong>100% client-side processing</strong> — no server, no upload, no account. Your data stays in the browser tab.</li>
           <li><strong>Plugin system</strong> — developers can register custom tools by providing a name, detector function, and transformer function in a configuration file.</li>
           <li><strong>Free with no sign-up</strong> — no paywall, no rate limiting, no subscription tier.</li>
+        </ul>
+
+        <h2>Developer Glossary</h2>
+        <p>
+          Short, authoritative definitions of the data formats SmartDevBox works with every day:
+        </p>
+        <ul>
+          <li>
+            <Link href="/glossary/what-is-base64-encoding"><strong>What is Base64 encoding?</strong></Link>{' '}
+            — Base64 converts binary data into a 64-character ASCII alphabet so it can travel safely through text-only systems like email and HTTP headers.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-a-jwt"><strong>What is a JWT (JSON Web Token)?</strong></Link>{' '}
+            — A JWT is a compact, self-contained token with a Base64url-encoded header, payload, and signature, used to transmit authentication claims without server-side session storage.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-a-unix-timestamp"><strong>What is a Unix timestamp?</strong></Link>{' '}
+            — A Unix timestamp is the number of seconds elapsed since 1970-01-01 00:00:00 UTC. It is timezone-independent and the universal computer representation of a moment in time.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-json"><strong>What is JSON?</strong></Link>{' '}
+            — JSON (JavaScript Object Notation) is a lightweight text format for structured data using six value types: string, number, boolean, null, object, and array.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-a-hash-function"><strong>What is a hash function?</strong></Link>{' '}
+            — A cryptographic hash function maps any input to a fixed-length digest. It is one-way and collision-resistant, underpinning digital signatures, password storage, and file integrity checks.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-a-url"><strong>What is a URL?</strong></Link>{' '}
+            — A URL (Uniform Resource Locator) is the address of a resource on the internet, composed of a scheme, host, path, query string, and optional fragment.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-a-uuid"><strong>What is a UUID?</strong></Link>{' '}
+            — A UUID (Universally Unique Identifier) is a 128-bit identifier formatted as 8-4-4-4-12 hex groups, designed to be unique without a central registry.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-a-cron-expression"><strong>What is a cron expression?</strong></Link>{' '}
+            — A cron expression is a string of five fields (minute, hour, day-of-month, month, day-of-week) that schedules recurring tasks in Unix-like systems.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-xml"><strong>What is XML?</strong></Link>{' '}
+            — XML (Extensible Markup Language) is a text format for structured hierarchical data using nested tags, attributes, and a strict well-formedness rule set.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-a-regex"><strong>What is a regex?</strong></Link>{' '}
+            — A regular expression (regex) is a pattern language for matching, searching, and extracting text, supported natively in JavaScript, Python, Java, and most other languages.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-an-x509-certificate"><strong>What is an X.509 certificate?</strong></Link>{' '}
+            — An X.509 certificate is a digitally signed document that binds a public key to an identity, forming the foundation of HTTPS, TLS, and PKI.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-csv"><strong>What is CSV?</strong></Link>{' '}
+            — CSV (Comma-Separated Values) is a plain-text tabular format where each line is a row and fields are separated by commas, governed loosely by RFC 4180.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-sql"><strong>What is SQL?</strong></Link>{' '}
+            — SQL (Structured Query Language) is the standard declarative language for querying and managing data in relational databases like PostgreSQL, MySQL, and SQLite.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-yaml"><strong>What is YAML?</strong></Link>{' '}
+            — YAML is a human-readable, indentation-based data serialisation format popular for configuration files (GitHub Actions, Kubernetes, Docker Compose). It is a superset of JSON.
+          </li>
+          <li>
+            <Link href="/glossary/what-is-a-color-code"><strong>What is a color code?</strong></Link>{' '}
+            — A color code is a notation — HEX, RGB, or HSL — that uniquely identifies a color so browsers and design tools render it consistently.
+          </li>
         </ul>
 
         <h2>Frequently Asked Questions</h2>

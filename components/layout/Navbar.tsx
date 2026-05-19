@@ -6,6 +6,7 @@ import { useDevboxStore } from '@/store/devbox';
 
 const FEATURE_LINKS = [
   { href: '/features/tools',          label: 'All Tools',           desc: '91+ built-in tools' },
+  { href: '/tools',                   label: 'Tool Guides',         desc: 'Articles for every tool' },
   { href: '/features/auto-detection', label: 'Auto Detection',      desc: 'Paste → instant result' },
   { href: '/features/smart-extract',  label: 'Smart Extract',       desc: 'Pull emails, URLs, numbers' },
   { href: '/features/compare',        label: 'Compare / Diff',      desc: 'Side-by-side text diff' },

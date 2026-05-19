@@ -50,12 +50,15 @@ export async function generateMetadata({
 ───────────────────────────────────────────────────────────────────────────── */
 
 function buildJsonLd(tool: (typeof TOOL_SEO_DATA)[number]) {
-  const url = `https://smartdevbox.com/tools/${tool.slug}`;
+  const BASE = 'https://smartdevbox.com';
+  const url = `${BASE}/tools/${tool.slug}`;
+  const toolName = tool.heading.split(' — ')[0].trim();
 
-  const webApp = {
+  // SoftwareApplication — Google's preferred type for App rich results
+  const softwareApp = {
     '@context': 'https://schema.org',
-    '@type': 'WebApplication',
-    name: tool.heading.split(' — ')[0].trim(),
+    '@type': 'SoftwareApplication',
+    name: toolName,
     url,
     applicationCategory: 'DeveloperApplication',
     operatingSystem: 'Any',
@@ -64,10 +67,54 @@ function buildJsonLd(tool: (typeof TOOL_SEO_DATA)[number]) {
     creator: {
       '@type': 'Organization',
       name: 'SmartDevBox',
-      url: 'https://smartdevbox.com',
+      url: BASE,
     },
   };
 
+  // WebApplication — retained for completeness / other crawlers
+  const webApp = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: toolName,
+    url,
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Any',
+    description: tool.metaDescription,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    creator: {
+      '@type': 'Organization',
+      name: 'SmartDevBox',
+      url: BASE,
+    },
+  };
+
+  // BreadcrumbList — enables breadcrumb rich results in SERPs
+  const breadcrumb = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'SmartDevBox',
+        item: BASE,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Tools',
+        item: `${BASE}/features/tools`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: toolName,
+        item: url,
+      },
+    ],
+  };
+
+  // FAQPage — triggers "People Also Ask" / FAQ rich results
   const faqPage =
     tool.faqs.length > 0
       ? {
@@ -81,7 +128,7 @@ function buildJsonLd(tool: (typeof TOOL_SEO_DATA)[number]) {
         }
       : null;
 
-  return { webApp, faqPage };
+  return { softwareApp, webApp, breadcrumb, faqPage };
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -97,7 +144,7 @@ export default async function ToolPage({
   const tool = TOOL_SLUG_MAP.get(slug);
   if (!tool) notFound();
 
-  const { webApp, faqPage } = buildJsonLd(tool);
+  const { softwareApp, webApp, breadcrumb, faqPage } = buildJsonLd(tool);
 
   const relatedTools = tool.relatedToolIds
     .map((id) => TOOL_SEO_DATA.find((t) => t.id === id))
@@ -106,10 +153,22 @@ export default async function ToolPage({
   return (
     <>
       {/* ── Structured data ──────────────────────────────────────────────── */}
+      {/* SoftwareApplication — Google App rich results */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApp) }}
+      />
+      {/* WebApplication — for other crawlers / schema validators */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webApp) }}
       />
+      {/* BreadcrumbList — breadcrumb rich results in SERPs */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+      />
+      {/* FAQPage — People Also Ask / FAQ rich results */}
       {faqPage && (
         <script
           type="application/ld+json"
@@ -132,6 +191,16 @@ export default async function ToolPage({
         </div>
 
         <div className="feat-prose">
+          {/* Body sections (long-form educational content) */}
+          {tool.bodySections && tool.bodySections.length > 0 && tool.bodySections.map((section) => (
+            <section key={section.heading} className="feat-section" aria-labelledby={`bs-${section.heading.replace(/\s+/g, '-').toLowerCase()}`}>
+              <h2 id={`bs-${section.heading.replace(/\s+/g, '-').toLowerCase()}`} className="feat-h2">{section.heading}</h2>
+              {section.paragraphs.map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+            </section>
+          ))}
+
           {/* Use Cases */}
           {tool.useCases.length > 0 && (
             <section className="feat-section" aria-labelledby="use-cases-heading">
@@ -204,6 +273,11 @@ export default async function ToolPage({
       <aside className="feat-toc" aria-label="On this page">
         <p className="feat-toc-title">On this page</p>
         <ul className="feat-toc-list">
+          {tool.bodySections && tool.bodySections.map((section) => (
+            <li key={section.heading} className="feat-toc-item">
+              <a href={`#bs-${section.heading.replace(/\s+/g, '-').toLowerCase()}`}>{section.heading}</a>
+            </li>
+          ))}
           {tool.useCases.length > 0 && (
             <li className="feat-toc-item"><a href="#use-cases-heading">Use Cases</a></li>
           )}

@@ -262,6 +262,58 @@ export default function RootLayout({
                       text: 'No. All tools run entirely in the browser using client-side JavaScript. Your data never leaves your machine unless you opt into the AI mode, which sends input to OpenAI for format detection.',
                     },
                   },
+                  {
+                    '@type': 'Question',
+                    name: 'What is the best free online JSON formatter?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'SmartDevBox automatically detects JSON when you paste it and formats it with configurable indentation. It also validates JSON and reports syntax errors with precise line and column numbers — all in the browser, free, with no account required.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'What is the best free online Base64 decoder?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'SmartDevBox auto-detects Base64 strings — including standard and URL-safe variants, with or without padding — and decodes them instantly on paste. No button to click, no tool to select.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'How do I compare two JSON objects online?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Use the Split & Diff tool in SmartDevBox. Paste the first JSON in the left pane and the second in the right pane. Changes are highlighted line-by-line in real time.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Can I add my own tools to SmartDevBox?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Yes. SmartDevBox has a plugin system that lets developers register custom tools by providing a name, a detector function (returns a confidence score 0–1), and a transformer function. Custom tools appear in the sidebar alongside the 91 built-in tools and participate in auto-detection.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Does SmartDevBox work offline?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'SmartDevBox is a Progressive Web App (PWA). All 91 tools run entirely client-side with no server dependency. Once the page is loaded, the tools work without an internet connection. AI mode requires connectivity.',
+                    },
+                  },
+                ],
+              },
+              {
+                '@context': 'https://schema.org',
+                '@type': 'BreadcrumbList',
+                itemListElement: [
+                  {
+                    '@type': 'ListItem',
+                    position: 1,
+                    name: 'SmartDevBox',
+                    item: BASE_URL,
+                  },
                 ],
               },
             ]),

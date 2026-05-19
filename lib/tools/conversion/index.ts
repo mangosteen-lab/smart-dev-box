@@ -169,6 +169,19 @@ const DATE_LOCALES = [
   { code: 'ru-RU', label: 'Russian' },
 ];
 
+/**
+ * Normalise a human-readable date string so that JS's Date.parse / new Date()
+ * can handle formats it natively rejects:
+ *   - Ordinal suffixes: "18th" → "18", "1st" → "1"
+ *   - 12-hour AM/PM times (already handled by most engines, kept as-is)
+ *   - Timezone abbreviations (PDT, EST, …) → UTC offset approximations are
+ *     left to the engine; at minimum stripping the suffix lets Date.parse work.
+ */
+function normalizeDateString(s: string): string {
+  // Strip ordinal suffixes: 1st 2nd 3rd 4th … 31st
+  return s.replace(/\b(\d{1,2})(?:st|nd|rd|th)\b/gi, '$1');
+}
+
 registerTool({
   id: 'date-formatter',
   name: 'Date Formatter',
@@ -180,6 +193,9 @@ registerTool({
     const t = input.trim();
     if (/^\d{10}$/.test(t) || /^\d{13}$/.test(t)) return 0.5;
     if (!isNaN(Date.parse(t)) && /\d{4}/.test(t)) return 0.6;
+    // Try after normalising ordinals / non-standard tokens
+    const n = normalizeDateString(t);
+    if (n !== t && !isNaN(Date.parse(n)) && /\d{4}/.test(n)) return 0.6;
     return 0;
   },
   execute: (input) => {
@@ -187,7 +203,10 @@ registerTool({
     let date: Date;
     if (/^\d{10}$/.test(t)) date = new Date(parseInt(t) * 1000);
     else if (/^\d{13}$/.test(t)) date = new Date(parseInt(t));
-    else date = new Date(t);
+    else {
+      date = new Date(t);
+      if (isNaN(date.getTime())) date = new Date(normalizeDateString(t));
+    }
 
     if (isNaN(date.getTime())) return { output: '', error: 'Could not parse date/time' };
 
@@ -224,6 +243,9 @@ registerTool({
     if (/^\d{10}$/.test(t) || /^\d{13}$/.test(t)) return 0.9;
     // Looks like a date string
     if (!isNaN(Date.parse(t)) && /\d{4}/.test(t)) return 0.7;
+    // Try after normalising ordinals / non-standard tokens
+    const n = normalizeDateString(t);
+    if (n !== t && !isNaN(Date.parse(n)) && /\d{4}/.test(n)) return 0.7;
     return 0;
   },
   execute: (input) => {
@@ -243,14 +265,16 @@ registerTool({
       ];
       return { output: lines.join('\n'), outputLanguage: 'text' };
     }
-    // Parse as date string
-    const d = new Date(t);
+    // Parse as date string; fall back to normalised form if needed
+    let d = new Date(t);
+    if (isNaN(d.getTime())) d = new Date(normalizeDateString(t));
     if (isNaN(d.getTime())) return { output: '', error: 'Could not parse date/time string' };
     const sec = Math.floor(d.getTime() / 1000);
     const lines = [
       `Input:      ${t}`,
       `UTC:        ${d.toUTCString()}`,
       `ISO 8601:   ${d.toISOString()}`,
+      `Local:      ${d.toLocaleString()}`,
       `Unix (s):   ${sec}`,
       `Unix (ms):  ${d.getTime()}`,
     ];

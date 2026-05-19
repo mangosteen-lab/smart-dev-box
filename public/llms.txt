@@ -62,6 +62,7 @@ Join Lines, Extract Emails, Extract URLs, Extract Numbers, Split & Diff
 
 ## Feature pages
 
+- https://smartdevbox.com/tools — index of in-depth reference articles for every tool
 - https://smartdevbox.com/features/tools — complete list of all 91 built-in tools
 - https://smartdevbox.com/features/auto-detection — how automatic format detection works
 - https://smartdevbox.com/features/smart-extract — extracting JSON, XML, dates, URLs, emails from mixed text

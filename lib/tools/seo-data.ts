@@ -26,6 +26,12 @@ export interface ToolSeoData {
   relatedToolIds: string[];
   /** Additional keywords for <meta keywords> */
   keywords: string[];
+  /**
+   * Optional long-form body sections rendered as <h2> + paragraphs below the
+   * intro. Use this to add educational content (explainers, field guides,
+   * worked examples) without bloating the intro string.
+   */
+  bodySections?: { heading: string; paragraphs: string[] }[];
 }
 
 export const TOOL_SEO_DATA: ToolSeoData[] = [
@@ -70,6 +76,32 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['base64-encode', 'base64-image-decode', 'url-decode', 'jwt-inspector'],
     keywords: ['base64 decode', 'base64 decoder online', 'decode base64 string', 'base64 to text', 'b64 decode'],
+    bodySections: [
+      {
+        heading: 'How Base64 Encoding Works',
+        paragraphs: [
+          'Base64 represents arbitrary binary data using only 64 printable ASCII characters: A–Z, a–z, 0–9, plus (+) and slash (/), with equals (=) used as a padding character. The algorithm groups the input bytes into sets of three (24 bits) and re-encodes each group as four 6-bit Base64 characters. Because every possible byte value maps to a printable character, Base64 output can travel safely through any text-based channel — HTTP headers, JSON strings, email bodies, or XML attributes — without corruption.',
+          'The encoding increases size by roughly 33 %: 3 bytes of binary become 4 characters of text. If the input length is not a multiple of three, one or two = padding characters are appended so the total output length is a multiple of four. Some systems strip padding (common in JWTs and many APIs), which is why SmartDevBox accepts both padded and unpadded input.',
+          'URL-safe Base64 is a variant defined in RFC 4648 §5 that substitutes + with - and / with _ so the encoded string can appear in a URL path or query parameter without percent-encoding. JWTs always use URL-safe Base64 without padding for all three of their sections.',
+        ],
+      },
+      {
+        heading: 'Decoding Step by Step',
+        paragraphs: [
+          'To decode Base64 manually, each character is looked up in the 64-character alphabet to get its 6-bit value. Four characters produce 24 bits, which are split back into three 8-bit bytes. Trailing = padding characters are ignored during the bit-split phase. In JavaScript the built-in atob() function handles standard Base64; URL-safe variants require replacing - with + and _ with / before calling atob().',
+          'A common pitfall is line breaks. Some Base64 generators insert a newline every 76 characters (MIME standard). Decoders must strip whitespace before processing, otherwise the line-break characters (ASCII 10 or 13) will cause an "invalid character" error. SmartDevBox strips all whitespace from the input automatically.',
+          'Another source of errors is Unicode: Base64 decodes to raw bytes, not JavaScript strings. If the original data was UTF-8 text, you must decode those bytes as UTF-8 after Base64-decoding. SmartDevBox applies TextDecoder with UTF-8 so multi-byte characters (emoji, CJK, accented letters) are displayed correctly.',
+        ],
+      },
+      {
+        heading: 'Real-World Examples',
+        paragraphs: [
+          'HTTP Basic Authentication encodes credentials as Base64: the string username:password is Base64-encoded and sent in the Authorization header as "Basic dXNlcm5hbWU6cGFzc3dvcmQ=". Decoding that value reveals the credentials in plain text — a reminder that Basic Auth should only be used over HTTPS.',
+          'Email attachments use Base64 via MIME (Multipurpose Internet Mail Extensions). The raw bytes of a PDF or image are Base64-encoded and embedded in the email body. Your email client decodes them transparently when you open the attachment.',
+          'JSON Web Tokens consist of three dot-separated Base64url-encoded sections: header, payload, and signature. The payload section contains the claims — user ID, roles, expiry — encoded as Base64url. Pasting a JWT into this decoder (or into the dedicated JWT Decoder) reveals those claims immediately.',
+        ],
+      },
+    ],
   },
 
   {
@@ -107,6 +139,30 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['base64-decode', 'base64-image-decode', 'url-encode', 'html-encode'],
     keywords: ['base64 encode', 'base64 encoder online', 'text to base64', 'encode base64 string', 'b64 encode'],
+    bodySections: [
+      {
+        heading: 'Why Base64-Encode Text?',
+        paragraphs: [
+          'Many protocols are designed to carry text, not arbitrary binary data. HTTP headers, JSON values, XML attributes, and email bodies all use ASCII or UTF-8 text. When you need to embed binary content — a file, an image, a cryptographic key — inside one of these text containers, you must encode the binary as text first. Base64 is the standard way to do this: it maps every possible byte value to a printable ASCII character, producing output that is safe to paste into any text field without escaping.',
+          'A practical everyday example is HTTP Basic Authentication. The standard requires sending credentials in the form "Authorization: Basic <credentials>" where <credentials> is the Base64 encoding of "username:password". The server Base64-decodes the value to recover the credentials. Another example is embedding images in HTML or CSS using data URIs: "src=\\"data:image/png;base64,iVBOR...\\"".',
+        ],
+      },
+      {
+        heading: 'The Encoding Algorithm',
+        paragraphs: [
+          'Base64 processes input in blocks of three bytes (24 bits). Each block is divided into four 6-bit groups, and each group is mapped to a character in the Base64 alphabet (A–Z = 0–25, a–z = 26–51, 0–9 = 52–61, + = 62, / = 63). If the input is not divisible by three, one or two = padding characters are added to bring the output length to a multiple of four. The result is always exactly 4/3 the size of the input, rounded up to the nearest four characters.',
+          'URL-safe Base64 (used in JWTs, OAuth tokens, and many modern APIs) swaps + for - and / for _ so the encoded string does not need percent-encoding when placed in a URL. Padding is often omitted in URL-safe contexts. SmartDevBox encodes to standard Base64 by default; you can strip the trailing = padding manually if the target system requires it.',
+        ],
+      },
+      {
+        heading: 'Common Encoding Mistakes',
+        paragraphs: [
+          'The most frequent mistake is treating Base64 as encryption. It is not. Any Base64 string can be decoded in seconds by anyone. Do not use Base64 to hide passwords, API keys, or sensitive data — use proper encryption (AES-256-GCM) or hashing (bcrypt, Argon2) for that purpose.',
+          'A subtler mistake is double-encoding. If your text already contains a Base64 string and you encode the whole thing again, the result is valid Base64 of Base64, which requires two rounds of decoding to read. Check whether the system you are sending to expects raw text or Base64 before encoding.',
+          'Unicode handling is important: JavaScript strings are UTF-16, but Base64 encodes bytes. SmartDevBox converts the input text to UTF-8 bytes before encoding, so multi-byte characters (emoji, accented letters, CJK) are encoded correctly. If you are encoding in another language, make sure to specify UTF-8 encoding explicitly to get consistent results.',
+        ],
+      },
+    ],
   },
 
   {
@@ -148,6 +204,32 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['jwt-encoder', 'base64-decode', 'url-decode', 'json-formatter'],
     keywords: ['jwt decoder', 'jwt decode online', 'decode jwt token', 'jwt inspector', 'jwt parser online', 'json web token decoder'],
+    bodySections: [
+      {
+        heading: 'Anatomy of a JSON Web Token',
+        paragraphs: [
+          'A JWT is a compact, URL-safe string composed of three Base64url-encoded sections separated by dots: HEADER.PAYLOAD.SIGNATURE. The header is a JSON object declaring the token type ("JWT") and the signing algorithm (e.g. "alg": "HS256"). The payload is a JSON object containing claims — statements about the user or session. The signature is computed from the header and payload using the chosen algorithm and a secret or private key.',
+          'Because the header and payload are only Base64url-encoded, not encrypted, anyone who possesses the token can read its contents without knowing the secret. This is by design: JWTs are transparent containers for claims. The signature proves the token was created by a trusted party and has not been tampered with, but it does not hide the data inside.',
+          'The three sections always decode to the same structure. A typical header looks like: {"alg":"HS256","typ":"JWT"}. A typical payload might contain: {"sub":"user_123","iat":1700000000,"exp":1700003600,"roles":["admin"]}.',
+        ],
+      },
+      {
+        heading: 'Standard JWT Claims Explained',
+        paragraphs: [
+          '"iss" (Issuer) identifies who created the token — usually your authorization server URL. "sub" (Subject) is the principal identifier, typically a user ID. "aud" (Audience) specifies the intended recipient(s) of the token; a resource server should reject a token if it is not listed in aud. "exp" (Expiration Time) is a Unix timestamp after which the token is invalid. "iat" (Issued At) is the Unix timestamp when the token was created. "jti" (JWT ID) is an optional unique identifier for the token, useful for revocation.',
+          'Tokens commonly also carry custom claims beyond these registered ones: "email", "name", "roles", "permissions", "org_id", and so on. These are application-specific and not standardised by the JWT specification. When debugging an auth issue, the first step is to decode the token and check that the expected custom claims are present and correct.',
+          'A frequent debugging scenario: a user receives a 401 from an API. Decode the token and check "exp" — is it in the past? Check "aud" — does it match the API\'s expected audience? Check "roles" or "permissions" — does the user have the right scope? Ninety percent of JWT auth bugs are answered by reading the payload.',
+        ],
+      },
+      {
+        heading: 'Security Considerations',
+        paragraphs: [
+          'Never trust the "alg" header blindly. The infamous "alg: none" attack involves an attacker sending a JWT with no signature and the algorithm set to "none". Servers that accept this will skip signature verification entirely. Always hard-code the accepted algorithm on the server side.',
+          'JWT payloads are visible to anyone who has the token. Never put passwords, credit card numbers, or other secrets in the payload. Treat a JWT like a signed, readable ID badge — it proves identity but should not carry classified information.',
+          'Short expiry times reduce the damage window if a token is stolen. For access tokens, 15 minutes is a common default. Use refresh tokens (which should be rotated and stored server-side) to obtain new access tokens without re-authenticating the user.',
+        ],
+      },
+    ],
   },
 
   {
@@ -180,6 +262,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['jwt-inspector', 'base64-decode', 'hash-generator', 'json-formatter'],
     keywords: ['jwt encoder', 'jwt sign online', 'create jwt token', 'sign jwt hs256', 'generate jwt online'],
+    bodySections: [
+      {
+        heading: 'JWT Signing Algorithms',
+        paragraphs: [
+          'JWTs can be signed with symmetric algorithms (HMAC) or asymmetric algorithms (RSA, ECDSA). SmartDevBox supports the three HMAC variants: HS256 uses HMAC-SHA256, HS384 uses HMAC-SHA384, and HS512 uses HMAC-SHA512. HMAC signing uses a single shared secret — the same key is used to sign and verify. This is appropriate for tokens consumed by the same service that issued them, or by services that securely share the secret.',
+          'Asymmetric algorithms (RS256, ES256) use a private key for signing and a public key for verification. They are preferred for tokens distributed to third parties: the issuer keeps the private key secret but publishes the public key (via a JWKS endpoint), allowing any consumer to verify tokens without being able to create them. SmartDevBox currently supports HMAC algorithms only.',
+        ],
+      },
+      {
+        heading: 'Building a Test Token',
+        paragraphs: [
+          'For API testing, build the minimum viable payload: {"sub":"test-user","iat":<current Unix timestamp>,"exp":<current + 3600>}. The iat claim tells the server when the token was issued; the exp claim sets the one-hour expiry. Add any custom claims your API expects (e.g. "role":"admin", "org_id":"acme"). Use a test secret (e.g. "test-secret-do-not-use-in-production") and sign with HS256.',
+          'Paste the resulting token into the JWT Decoder to verify the header and payload look correct before using it in your API client. Check the exp timestamp using the Unix Timestamp Converter to confirm the expiry is what you intended.',
+        ],
+      },
+    ],
   },
 
   {
@@ -211,6 +309,23 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['url-decode', 'url-parser', 'base64-encode', 'html-encode'],
     keywords: ['url encode', 'url encoder online', 'percent encode string', 'uri encode', 'encode url online'],
+    bodySections: [
+      {
+        heading: 'How Percent-Encoding Works',
+        paragraphs: [
+          'A URL can only contain a defined set of "safe" characters: unreserved characters (A–Z, a–z, 0–9, hyphen, underscore, period, tilde) and reserved characters that have specific structural meaning (/, ?, #, &, =, :, @, etc.). Any other character — spaces, accented letters, emoji, angle brackets — must be percent-encoded: replaced by a % followed by two hexadecimal digits representing the byte value. A space becomes %20, an ampersand becomes %26, a euro sign (€, U+20AC) becomes %E2%82%AC (its three-byte UTF-8 representation).',
+          'The RFC 3986 specification distinguishes two functions: encodeURI() leaves structural URL characters intact (so a complete URL remains a valid URL) while encodeURIComponent() encodes everything except unreserved characters. SmartDevBox uses encodeURIComponent(), which is the correct choice for encoding individual values like query parameter values, OAuth state tokens, or path segments containing dynamic user input.',
+        ],
+      },
+      {
+        heading: 'Common Encoding Scenarios',
+        paragraphs: [
+          'Query string values are the most frequent use case. If a user searches for "C++ tutorial" and you append that directly to a URL as ?q=C++ tutorial, the + signs become a literal word separator in classic form encoding, and the space breaks the URL entirely. After encoding: ?q=C%2B%2B%20tutorial. Even better, use the URLSearchParams API in JavaScript, which handles encoding automatically.',
+          'OAuth redirect_uri parameters must be encoded when used as a query value within a larger authorization URL. Forgetting to encode them is a common bug that results in an "invalid redirect_uri" error from the authorization server, because the unencoded & in the redirect URI prematurely terminates the outer URL\'s query string.',
+          'Path segments containing slashes need special treatment. encodeURIComponent() encodes / as %2F. If your path segment contains a literal slash that should be treated as part of the segment value (not as a path separator), encode it. If you want it to act as a separator, leave it unencoded.',
+        ],
+      },
+    ],
   },
 
   {
@@ -238,6 +353,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['url-encode', 'url-parser', 'base64-decode'],
     keywords: ['url decode', 'url decoder online', 'percent decode', 'uri decode online', 'decode url string'],
+    bodySections: [
+      {
+        heading: 'Reading Percent-Encoded URLs',
+        paragraphs: [
+          'Log files, browser developer tools, and API error messages frequently contain percent-encoded URLs. A redirect URL that looks like https://example.com/callback?code=abc&state=eyJ0eXAiOiJKV1QifQ%3D%3D&redirect_uri=https%3A%2F%2Fapp.example.com%2Fauth becomes immediately readable once decoded: the state value is a Base64-encoded JSON string, and the redirect_uri is a clean URL.',
+          'decodeURIComponent() is the inverse of encodeURIComponent(). It converts each %XX sequence back to the original character, including %2F back to /, %3D back to =, and %20 back to a space. A different function, decodeURI(), only decodes non-structural sequences, leaving characters like %2F encoded so they do not accidentally split the URL path.',
+        ],
+      },
+      {
+        heading: 'Double-Encoding Pitfalls',
+        paragraphs: [
+          'Double-encoding happens when a string that is already percent-encoded gets encoded again. A % character is itself encoded as %25, so %20 (a space) double-encoded becomes %2520. When decoded once you get %20, not a space. This is a frequent source of bugs in proxy servers, URL-rewriting middleware, and OAuth flows where the redirect_uri is passed through multiple encoding layers.',
+          'To diagnose a double-encoding issue, decode the string once and see whether the output still contains %XX sequences. If it does, the original string was double-encoded. Decode once more to get the final value. SmartDevBox shows the decoded output immediately, making it easy to spot whether further decoding passes are needed.',
+        ],
+      },
+    ],
   },
 
   {
@@ -265,6 +396,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['url-decode', 'url-encode', 'base64-decode'],
     keywords: ['url parser', 'parse url online', 'url components', 'url analyzer', 'query string parser'],
+    bodySections: [
+      {
+        heading: 'URL Component Breakdown',
+        paragraphs: [
+          'A URL (Uniform Resource Locator) has up to six distinct components: scheme (https:), authority (//user:password@host:port), path (/some/path), query (?key=value&key2=value2), and fragment (#section). The URL Parser extracts all of these and additionally splits the query string into individual key–value pairs, decoding each percent-encoded value.',
+          'The scheme defines the protocol: https for encrypted HTTP, http for plain HTTP, ftp for file transfer, mailto for email, ws/wss for WebSockets. The host is the domain name or IP address. The port is optional — if omitted, the default port for the scheme is used (443 for https, 80 for http). The path identifies the resource on the server. The query string carries parameters. The fragment (#) is processed only by the browser and is never sent to the server.',
+        ],
+      },
+      {
+        heading: 'Debugging OAuth and Redirect URLs',
+        paragraphs: [
+          'OAuth authorization URLs pack a lot of information into the query string: client_id, redirect_uri, response_type, scope, state, nonce, and sometimes code_challenge. When an OAuth flow fails, the first debugging step is to paste the full authorization URL into the parser and inspect each parameter individually. Is the redirect_uri correct and properly encoded? Is the scope correct? Is the state parameter present?',
+          'Redirect chains in analytics and affiliate marketing also benefit from URL parsing. A tracked link may contain a destination parameter that is itself a fully percent-encoded URL. The parser shows the outer URL structure; decoding the destination parameter value with the URL Decoder reveals the inner URL. This is the "URL within a URL" pattern common in tracking pixels and ad click attribution.',
+        ],
+      },
+    ],
   },
 
   {
@@ -290,6 +437,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['html-decode', 'html-beautifier', 'url-encode'],
     keywords: ['html encode', 'html escape online', 'html entities encoder', 'escape html characters'],
+    bodySections: [
+      {
+        heading: 'Why HTML Encoding Prevents XSS',
+        paragraphs: [
+          'Cross-site scripting (XSS) is one of the most common web vulnerabilities. It occurs when a web application includes user-supplied data in an HTML page without properly escaping it. If a user submits the string <script>alert(document.cookie)</script> and your application outputs it verbatim into the page HTML, the browser executes it as JavaScript — potentially stealing session cookies or performing actions as the user.',
+          'HTML encoding neutralises this by converting the < character to &lt; and > to &gt;. The browser then displays the literal text "<script>alert(document.cookie)</script>" rather than executing it. The five characters that must always be encoded in HTML context are: & → &amp;, < → &lt;, > → &gt;, " → &quot;, and \' → &#39;. Every web framework\'s template engine (React, Django, Rails, Laravel, Go\'s html/template) applies this encoding automatically when you use the standard interpolation syntax.',
+          'The vulnerability arises when developers bypass the auto-encoding — for example, by using dangerouslySetInnerHTML in React, or marking a variable as "safe" in Django templates without actually validating it. Always apply HTML encoding as the last transformation before inserting dynamic text into HTML.',
+        ],
+      },
+      {
+        heading: 'Named vs Numeric HTML Entities',
+        paragraphs: [
+          'HTML entities come in two forms: named entities like &amp; and &copy;, and numeric entities like &#38; (decimal) or &#x26; (hexadecimal). Named entities are more readable; numeric entities work for any Unicode code point even if no named entity exists. Both forms decode to the same character. SmartDevBox encodes to named entities for the five critical characters and passes all other characters through unchanged, which is the correct approach for UTF-8 HTML documents.',
+        ],
+      },
+    ],
   },
 
   {
@@ -316,6 +479,16 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['html-encode', 'html-beautifier', 'url-decode'],
     keywords: ['html decode', 'html unescape', 'html entities decoder', 'decode html entities online'],
+    bodySections: [
+      {
+        heading: 'When HTML Entities Appear Unexpectedly',
+        paragraphs: [
+          'HTML entities most commonly appear as a problem in two scenarios. First, double-encoding: a server encodes a string to HTML entities, then the output is fed to another layer that encodes it again, resulting in &amp;amp; in the final HTML. The user sees "&amp;" literally instead of "&". Pasting the string into this decoder reveals whether single or double encoding occurred.',
+          'Second, RSS/Atom feeds and XML-based APIs often HTML-encode text content inside CDATA sections or use HTML entities in strings. When you process these programmatically you get the raw entity strings, not the decoded characters. Decoding them before display or further processing is essential.',
+          'Email clients and HTML email template systems frequently double-encode special characters. A template may encode an ampersand for safe HTML, then an email service\'s WYSIWYG editor encodes the & in &amp; again, turning it into &amp;amp;. The recipient sees "&amp;" in the rendered email. Use this decoder to diagnose and fix such issues.',
+        ],
+      },
+    ],
   },
 
   {
@@ -586,6 +759,31 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['json-validate', 'json-to-csv', 'json-to-yaml', 'jsonpath-evaluator'],
     keywords: ['json formatter', 'json formatter online', 'pretty print json', 'json beautifier', 'format json online', 'json validator'],
+    bodySections: [
+      {
+        heading: 'Why JSON Formatting Matters',
+        paragraphs: [
+          'JSON (JavaScript Object Notation) is the dominant data interchange format for web APIs, configuration files, and NoSQL databases. Production systems often transmit minified JSON — all whitespace removed — to reduce payload size. While this is efficient for machines, it is nearly unreadable to humans. A single-line API response with dozens of nested objects and arrays becomes immediately comprehensible once it is pretty-printed with consistent indentation.',
+          'Formatting also reveals structural problems. A missing comma, an extra bracket, or a misplaced colon is nearly impossible to spot in minified JSON but obvious once the data is indented. Well-formatted JSON is also much easier to diff in version control: adding a single key to a formatted JSON object produces a clean one-line diff, whereas the same change in minified JSON shows the entire file as modified.',
+        ],
+      },
+      {
+        heading: 'JSON Syntax Rules',
+        paragraphs: [
+          'JSON is stricter than JavaScript object literal syntax. Keys must be double-quoted strings — single quotes are not valid JSON. Trailing commas after the last item in an array or object are illegal. The value types are: string (double-quoted), number (integer or float, no quotes), boolean (true/false lowercase), null, object ({...}), and array ([...]). Comments are not part of the JSON specification.',
+          'Common mistakes: using undefined as a value (not valid JSON), including NaN or Infinity as numbers (not valid JSON — use null or a sentinel string instead), and forgetting to escape special characters in strings (backslash, double quote, and control characters like newline must be escaped as \\\\, \\", and \\n respectively).',
+          'SmartDevBox\'s formatter normalises single-quoted JSON (common output from Python\'s repr() and some shell scripts) to standard double-quoted JSON before pretty-printing. It also strips JavaScript-style // and /* */ comments from JSONC (JSON with Comments) files used by TypeScript, VS Code, and many build tools.',
+        ],
+      },
+      {
+        heading: 'Worked Formatting Example',
+        paragraphs: [
+          'Minified input: {"user":{"id":1,"name":"Alice","roles":["admin","editor"]},"active":true,"score":9.5}',
+          'After formatting with 2-space indentation, the same data becomes 12 readable lines with clear nesting structure. The roles array items each appear on their own line, the user object\'s properties are vertically aligned, and the boolean and number values are clearly visible.',
+          'For deeply nested API responses it helps to collapse sections you are not currently interested in. SmartDevBox\'s split-pane view lets you format in the output pane and then use the JSONPath Evaluator tool to extract a specific sub-object without manually scrolling through the full document.',
+        ],
+      },
+    ],
   },
 
   {
@@ -611,6 +809,23 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['json-formatter', 'json-to-yaml', 'json-to-csv'],
     keywords: ['json validator', 'validate json online', 'json lint', 'json syntax check', 'check json valid'],
+    bodySections: [
+      {
+        heading: 'What Makes JSON Invalid?',
+        paragraphs: [
+          'The JSON specification (ECMA-404 / RFC 8259) is unambiguous: there is exactly one correct way to write each value. The most common sources of invalid JSON in practice are: trailing commas after the last element of an array or object, single-quoted strings instead of double-quoted strings, unquoted keys, JavaScript comments (// or /* */), undefined values, NaN, Infinity, and unescaped control characters inside strings.',
+          'JavaScript developers often write "JSON-like" object literals in their code and are surprised when the same syntax fails JSON.parse(). The difference: JavaScript allows single quotes, trailing commas, and unquoted identifiers as keys. JSON does not. If you are copying an object literal from JS code into a JSON file, you need to apply the stricter rules.',
+          'SmartDevBox\'s validator uses the native JSON.parse() function, which provides a descriptive error message that includes the position of the first syntax error. Position means character offset from the start of the string; the validator converts this to a line and column number to make it easy to find the offending character in a large document.',
+        ],
+      },
+      {
+        heading: 'Validating JSON in CI/CD Pipelines',
+        paragraphs: [
+          'Beyond the browser, JSON validation belongs in automated workflows. Configuration files (package.json, tsconfig.json, .eslintrc.json), API contract fixtures, and seed data files should all be validated before deployment. A malformed config file that reaches production can cause silent failures or full service outages.',
+          'For command-line validation, the built-in Python tool works well: python3 -m json.tool input.json > /dev/null exits with code 0 for valid JSON and prints the error with line number for invalid JSON. Node.js users can run node -e "require(\'./file.json\')" for a quick sanity check. Both approaches can be wired into a pre-commit hook or CI step.',
+        ],
+      },
+    ],
   },
 
   {
@@ -637,6 +852,23 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['xml-minify', 'xml-to-json', 'json-to-xml', 'html-beautifier'],
     keywords: ['xml formatter', 'xml formatter online', 'pretty print xml', 'xml beautifier online', 'format xml online'],
+    bodySections: [
+      {
+        heading: 'XML Structure and Indentation',
+        paragraphs: [
+          'XML (eXtensible Markup Language) represents data as a tree of nested elements. Unlike JSON, it supports attributes on elements, mixed content (text and child elements in the same node), and namespace declarations. A well-formed XML document must have exactly one root element, all tags must be properly closed or self-closed, attribute values must be quoted, and special characters in text content must be escaped as entities (&amp;, &lt;, &gt;, &quot;, &apos;).',
+          'Minified XML collapses all whitespace, producing a single long line that is unreadable. Formatted XML applies consistent indentation — typically 2 spaces per nesting level — so the tree structure is immediately visible. The formatter does not add or remove any data; it only adjusts whitespace in inter-element positions (whitespace inside text nodes is preserved exactly).',
+        ],
+      },
+      {
+        heading: 'Common XML Formats You Will Encounter',
+        paragraphs: [
+          'SOAP (Simple Object Access Protocol) wraps XML request and response bodies in an Envelope/Body structure. SOAP APIs were the dominant web service style before REST, and many enterprise systems still use them. When debugging a SOAP integration, paste the raw XML body into this formatter to make the structure readable.',
+          'SVG (Scalable Vector Graphics) is XML describing vector graphics. Design tools like Figma and Illustrator export SVG; developers often need to paste SVG into HTML or React. Formatting the SVG first makes it easier to remove unnecessary attributes, add accessibility labels, or optimize the path data.',
+          'Maven pom.xml and Spring application.xml are Java project configuration formats. They use deeply nested XML with attributes, namespaces, and sometimes hundreds of lines. The formatter collapses redundant whitespace and shows the dependency/plugin structure clearly.',
+        ],
+      },
+    ],
   },
 
   {
@@ -687,6 +919,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['json-formatter', 'xml-formatter'],
     keywords: ['sql formatter', 'sql formatter online', 'format sql query', 'sql beautifier', 'pretty print sql'],
+    bodySections: [
+      {
+        heading: 'SQL Formatting Conventions',
+        paragraphs: [
+          'Formatted SQL capitalises reserved keywords (SELECT, FROM, WHERE, JOIN, GROUP BY, ORDER BY, HAVING, LIMIT) and places each major clause on its own line. Joined tables and WHERE conditions are indented below their parent clause. Subqueries are indented one level deeper than the outer query. This structure makes the query\'s logic immediately readable: you can scan vertically to see which tables are joined, which conditions filter rows, and in what order results are sorted.',
+          'SmartDevBox uses the sql-formatter library, which supports standard ANSI SQL and the most common dialects: PostgreSQL, MySQL/MariaDB, SQLite, T-SQL (SQL Server), and PL/SQL (Oracle). Keywords specific to each dialect (e.g. ILIKE in PostgreSQL, LIMIT in MySQL) are recognised and formatted correctly.',
+        ],
+      },
+      {
+        heading: 'Formatting ORM-Generated SQL',
+        paragraphs: [
+          'Object-Relational Mappers (ORMs) like Hibernate, SQLAlchemy, ActiveRecord, and Prisma generate SQL at runtime. When you enable SQL logging in development, the output is usually a single minified line with no indentation. Paste that query here to make it readable, then paste it into your database client (pgAdmin, DBeaver, TablePlus) to analyse the execution plan with EXPLAIN.',
+          'Stored procedures and triggers in legacy databases are often hundreds of lines of dense, unformatted SQL. Formatting them before a code review reveals the structure — nested CASE statements, correlated subqueries, cursor loops — and makes it much easier to identify performance bottlenecks or logic errors.',
+        ],
+      },
+    ],
   },
 
   {
@@ -712,6 +960,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['css-minify', 'html-beautifier', 'js-beautifier'],
     keywords: ['css formatter', 'css formatter online', 'css beautifier', 'format css online', 'pretty print css'],
+    bodySections: [
+      {
+        heading: 'CSS Formatting Rules',
+        paragraphs: [
+          'Formatted CSS places each declaration on its own line with consistent indentation, puts the opening brace on the same line as the selector, and adds a blank line between rule sets. This style is enforced by Prettier — the same formatter used by millions of JavaScript projects — ensuring the output is compatible with any CSS linter or style guide.',
+          'Minified CSS from production builds collapses all whitespace, making debugging nearly impossible. Pasting minified CSS into this formatter restores the full indented structure without changing any property values or selector specificity. The formatted output is functionally identical to the minified original.',
+        ],
+      },
+      {
+        heading: 'Media Queries and Nesting',
+        paragraphs: [
+          'The formatter correctly handles @media, @keyframes, @supports, and @layer blocks, applying extra indentation to the rules inside the at-rule block. CSS custom properties (--my-variable: value) are preserved exactly. CSS nesting (the new native CSS nesting specification, now supported in all major browsers) is also supported through the Prettier Babel CSS parser.',
+          'For very large stylesheets (hundreds of rules), the formatted output is easier to read in a code editor than in a browser text area. Copy the formatted output and paste into VS Code, which applies syntax highlighting. Use Ctrl+F to search for specific selectors or properties.',
+        ],
+      },
+    ],
   },
 
   {
@@ -761,6 +1025,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['html-to-jsx', 'css-beautifier', 'xml-formatter', 'html-preview'],
     keywords: ['html formatter', 'html beautifier online', 'format html online', 'pretty print html', 'html indenter'],
+    bodySections: [
+      {
+        heading: 'HTML Document Structure and Indentation',
+        paragraphs: [
+          'Well-formatted HTML mirrors the document\'s visual hierarchy through indentation. Block elements (div, section, article, header, nav, main, footer, p, ul, ol, table) are placed on their own lines with child elements indented one level. Inline elements (span, a, strong, em, code) stay on the same line as surrounding text unless they are the sole content of a block.',
+          'Prettier\'s HTML formatter (used by SmartDevBox) respects the distinction between block and inline elements and handles edge cases like void elements (br, hr, img, input, meta, link) which do not have closing tags in HTML5. It also formats HTML attributes consistently — one attribute per line when there are many attributes on an element.',
+        ],
+      },
+      {
+        heading: 'Formatting HTML Email Templates',
+        paragraphs: [
+          'HTML emails use table-based layouts for compatibility with email clients. The resulting markup is notoriously nested and verbose. Formatting the template makes it easier to find a specific row or cell, verify alt text on images, and check that all inline styles are correct. Since email templates are rarely served from a web server, all processing here is local — no corporate email content leaves your browser.',
+          'After formatting, use the HTML Preview tool to render the template side-by-side with the source, then use the HTML to Text tool to verify the plain-text fallback version looks correct for email clients that do not render HTML.',
+        ],
+      },
+    ],
   },
 
   {
@@ -786,6 +1066,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['js-minifier', 'js-validate', 'css-beautifier'],
     keywords: ['javascript formatter', 'js formatter online', 'format javascript online', 'typescript formatter', 'prettier online'],
+    bodySections: [
+      {
+        heading: 'What Prettier Fixes in Your JavaScript',
+        paragraphs: [
+          'Prettier is an opinionated code formatter that enforces a consistent style by reprinting code from scratch according to its rules. It normalises: indentation (2 spaces by default), semicolons (added), quote style (double quotes by default), trailing commas in multi-line expressions (where valid in ES5+), line length (80 characters, wrapping long expressions), and object/array brace spacing.',
+          'Prettier does not change your logic — it only changes whitespace and punctuation. A function that works before formatting works identically after. This makes it safe to apply to any JavaScript or TypeScript code without introducing bugs. The Babel parser used here supports the full ES2024 syntax plus TypeScript, JSX, and decorators.',
+        ],
+      },
+      {
+        heading: 'Reading Minified JavaScript',
+        paragraphs: [
+          'Production JavaScript bundles are minified: variable names shortened to single letters, all whitespace removed, multiple statements collapsed onto one line. Formatting a minified bundle restores the whitespace and line breaks, making the code structure readable. The variable names remain shortened (renaming them is a separate deobfuscation step), but the control flow — if/else branches, loops, function calls — becomes clear.',
+          'This is useful when debugging a third-party script, understanding a bundled library, or auditing code for security. Paste the minified code, format it, then search for specific function names or string literals. For deeper analysis, follow the source map to the original unminified source if it is available.',
+        ],
+      },
+    ],
   },
 
   {
@@ -859,6 +1155,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['markdown-to-html', 'html-beautifier'],
     keywords: ['markdown preview online', 'markdown editor online', 'markdown renderer', 'live markdown preview'],
+    bodySections: [
+      {
+        heading: 'Markdown Syntax Cheat Sheet',
+        paragraphs: [
+          'Headings: prefix a line with # for H1, ## for H2, up to ###### for H6. Bold: **text** or __text__. Italic: *text* or _text_. Inline code: `code`. Code block: wrap in triple backticks (```), optionally followed by the language name for syntax highlighting. Links: [label](url). Images: ![alt text](url). Blockquote: prefix a line with >. Unordered list: prefix lines with - or *. Ordered list: prefix lines with 1. 2. 3. Horizontal rule: --- on its own line.',
+          'The live preview in SmartDevBox updates as you type, so you can see the rendered result in real time. This is useful for writing README files, documentation, blog posts, or any content where you want to see the formatted output before publishing.',
+        ],
+      },
+      {
+        heading: 'Markdown in Developer Workflows',
+        paragraphs: [
+          'GitHub, GitLab, and Bitbucket render README.md, CONTRIBUTING.md, and other Markdown files automatically. The preview here matches how GitHub renders standard CommonMark Markdown, making it useful for drafting and checking README content before committing. GitHub-specific extensions like task checkboxes (- [ ]) and emoji shortcodes (:rocket:) are not rendered here.',
+          'Markdown is also the native format for static site generators (Jekyll, Hugo, Astro, Docusaurus) and documentation tools (MkDocs, Docz, GitBook). Use this preview to check your content renders correctly before running the full build pipeline.',
+        ],
+      },
+    ],
   },
 
   // ── Conversion ─────────────────────────────────────────────────────────────
@@ -890,6 +1202,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['json-to-tsv', 'csv-to-json', 'json-formatter', 'json-to-yaml'],
     keywords: ['json to csv', 'json to csv converter online', 'convert json to csv', 'json array to csv'],
+    bodySections: [
+      {
+        heading: 'JSON Array Structure Requirements',
+        paragraphs: [
+          'The JSON to CSV converter expects a JSON array where every element is an object with the same keys. The keys of the first object become the CSV column headers. If subsequent objects have different keys, the extra keys are ignored and missing keys produce empty cells. This mirrors how most relational data is structured: rows are records, columns are fields.',
+          'If your JSON is a single object rather than an array, wrap it in an array: [...]. If it is a deeply nested document, use the JSONPath Evaluator first to extract the array you want to export. For example, if your API response has shape { "data": { "users": [...] } }, use the JSONPath expression $.data.users to extract the users array before converting.',
+        ],
+      },
+      {
+        heading: 'Using the Output in Spreadsheet Applications',
+        paragraphs: [
+          'The CSV output uses double-quote escaping per RFC 4180. It is compatible with Excel, Google Sheets, LibreOffice Calc, and any tool that imports standard CSV. Copy the output and paste directly into a blank Google Sheet, or save it as a .csv file and import with File → Import.',
+          'Excel on Windows may misinterpret UTF-8 CSV if you open it directly by double-clicking. To avoid this, use Excel\'s Data → From Text/CSV import wizard and explicitly select UTF-8 encoding. Google Sheets handles UTF-8 CSV correctly without any extra steps.',
+        ],
+      },
+    ],
   },
 
   {
@@ -942,6 +1270,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['yaml-to-json', 'json-formatter', 'json-to-csv'],
     keywords: ['json to yaml', 'json to yaml converter', 'convert json yaml online', 'json yaml tool'],
+    bodySections: [
+      {
+        heading: 'YAML Syntax Overview',
+        paragraphs: [
+          'YAML (YAML Ain\'t Markup Language) uses indentation to express structure, making it more readable than JSON for configuration files. A JSON object becomes a YAML mapping with key: value pairs on separate lines. A JSON array becomes a YAML sequence where each item is preceded by a dash (- ). Strings do not need quotes unless they contain special characters. Booleans are true/false; null is null or ~. Numbers are unquoted.',
+          'YAML is a strict superset of JSON — any valid JSON document is also valid YAML. The reverse is not true: YAML supports features JSON does not, including comments (#), multi-line strings (| for literal block, > for folded block), anchors (&) and aliases (*) for reusing values, and multiple documents in a single file (separated by ---).',
+        ],
+      },
+      {
+        heading: 'Real-World Migration Examples',
+        paragraphs: [
+          'Kubernetes manifests are YAML. When the kubectl CLI outputs resource definitions as JSON (kubectl get pod my-pod -o json), you may want to convert them to YAML to commit to a GitOps repository. Paste the JSON output here and the YAML is ready to save as a .yaml manifest.',
+          'GitHub Actions workflows use YAML. If you have a workflow definition in JSON (perhaps generated by a tool), converting to YAML makes it compatible with GitHub Actions. The reverse — YAML to JSON — is useful when you need to process the workflow programmatically with a JSON-only tool.',
+        ],
+      },
+    ],
   },
 
   {
@@ -991,6 +1335,23 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['json-to-csv', 'json-to-tsv', 'json-formatter'],
     keywords: ['csv to json', 'csv to json converter online', 'convert csv to json', 'csv json transformer'],
+    bodySections: [
+      {
+        heading: 'CSV Format and Parsing Rules',
+        paragraphs: [
+          'CSV (Comma-Separated Values) is the most widely-supported tabular data format: every spreadsheet application, database, and data analysis tool can import and export it. The de-facto standard is RFC 4180: the first row is the header (column names), subsequent rows are data records, fields are separated by commas, and fields containing commas or newlines are wrapped in double quotes. A literal double-quote within a quoted field is escaped as two double-quotes ("").',
+          'The conversion treats the first CSV row as keys for the JSON objects. Each subsequent row becomes one object in the output array. If a row has fewer fields than the header, the missing keys are set to an empty string. SmartDevBox\'s parser handles RFC 4180 quoting correctly, including multi-line field values enclosed in double quotes.',
+        ],
+      },
+      {
+        heading: 'Working with Spreadsheet Exports',
+        paragraphs: [
+          'When exporting from Google Sheets or Excel, always choose "CSV UTF-8" to preserve special characters. The default Windows Excel CSV format (CSV) uses a system-specific encoding that may corrupt accented letters and emoji. After exporting, paste the contents directly into SmartDevBox — no file upload needed.',
+          'Some CSV exports use semicolons (;) as separators instead of commas. This is common in European Excel configurations where the comma is used as the decimal separator. If the converter produces unexpected results, check whether your CSV uses semicolons and replace them with commas first (use the Find & Replace tool in your text editor).',
+          'After conversion, use the JSON Formatter to pretty-print the result and the JSONPath Evaluator to extract specific fields. For the reverse operation — JSON back to CSV — use the JSON to CSV tool.',
+        ],
+      },
+    ],
   },
 
   {
@@ -1016,6 +1377,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['json-to-xml', 'xml-formatter', 'json-formatter'],
     keywords: ['xml to json', 'xml to json converter', 'convert xml to json online', 'xml json tool'],
+    bodySections: [
+      {
+        heading: 'XML to JSON Mapping Rules',
+        paragraphs: [
+          'Converting XML to JSON requires decisions about how to represent XML-specific constructs that have no direct JSON equivalent. Attributes are represented as keys prefixed with @ (so the XML element <user id="42"> becomes {"@id":"42",...}). Text content of an element that also has attributes or child elements uses the key #text. An element with only text content becomes a simple string value. An element that repeats at the same level becomes a JSON array.',
+          'These conventions are widely used but not standardised — different libraries use different prefixes. SmartDevBox uses the common @/# convention from the fast-xml-parser library. If the consuming code expects a different convention, adjust the output accordingly.',
+        ],
+      },
+      {
+        heading: 'Processing SOAP and RSS Feeds',
+        paragraphs: [
+          'SOAP API responses are the most common reason developers need XML-to-JSON conversion. A SOAP envelope wraps the actual response in layers of namespace-qualified XML: <soap:Envelope><soap:Body><GetUserResponse xmlns="..."><User><Id>42</Id></User></GetUserResponse></soap:Body></soap:Envelope>. Converting to JSON first, then using the JSONPath Evaluator to navigate to the data you need, is far easier than traversing the XML directly.',
+          'RSS and Atom feeds are XML documents listing article titles, links, and descriptions. Converting to JSON makes them easy to process in JavaScript: iterate the items array, extract the title and link fields, and display or store the results. The channel element in RSS becomes a JSON object with item as an array of article objects.',
+        ],
+      },
+    ],
   },
 
   {
@@ -1236,6 +1613,23 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['date-formatter', 'seconds-to-hms'],
     keywords: ['unix timestamp converter', 'epoch converter online', 'timestamp to date', 'unix time converter', 'epoch to datetime'],
+    bodySections: [
+      {
+        heading: 'What Is a Unix Timestamp?',
+        paragraphs: [
+          'A Unix timestamp (also called a POSIX timestamp or epoch time) is the number of seconds that have elapsed since 00:00:00 UTC on Thursday, 1 January 1970 — the Unix epoch. It is the most portable way to represent an absolute point in time because it is timezone-independent: the same integer value means the same instant everywhere on Earth, regardless of local timezone or daylight-saving rules.',
+          'Unix timestamps are used pervasively in software: database columns storing creation or modification times, JWT "exp" and "iat" claims, HTTP response headers (Last-Modified, Expires), log timestamps, AWS event times, and API rate limit reset times. The value 0 represents 1970-01-01T00:00:00Z; 1700000000 represents 2023-11-14T22:13:20Z.',
+          'A 10-digit Unix timestamp counts whole seconds. A 13-digit timestamp counts milliseconds (multiply by 1000). JavaScript\'s Date.now() returns milliseconds; Python\'s time.time() and most Unix system calls return seconds. SmartDevBox auto-detects the scale from the number of digits.',
+        ],
+      },
+      {
+        heading: 'Timezone Gotchas',
+        paragraphs: [
+          'Unix timestamps are absolute — they represent a single moment in time. The ambiguity only arises when converting to a human-readable date, because that conversion depends on which timezone you apply. "1700000000 in UTC" is 2023-11-14 22:13:20. "1700000000 in US Eastern Time" is 2023-11-14 17:13:20 (UTC−5). SmartDevBox displays both UTC and your browser\'s local timezone so you can see both representations.',
+          'A common mistake is storing dates as local time strings instead of Unix timestamps. If a user in Berlin books an event "for 10:00 AM on 2024-03-31", and you store the string "2024-03-31T10:00:00", a server in New York will interpret that as 10:00 AM EST — two events on the same day at different times. The correct approach: convert to a Unix timestamp at the moment of input (using the user\'s timezone offset), store the integer, and convert back to local time for display in any timezone.',
+        ],
+      },
+    ],
   },
 
   {
@@ -1385,6 +1779,22 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['ulid-generator', 'random-string', 'hash-generator', 'uuid-hex-converter'],
     keywords: ['uuid generator', 'uuid generator online', 'generate uuid v4', 'uuid v4 online', 'guid generator'],
+    bodySections: [
+      {
+        heading: 'What Is a UUID and When Should You Use One?',
+        paragraphs: [
+          'A UUID (Universally Unique Identifier) is a 128-bit identifier standardised by RFC 4122. UUIDs are formatted as 32 hex digits grouped by hyphens: xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx, where M encodes the version and N encodes the variant. UUID v4 is the most commonly used version: 122 of the 128 bits are randomly generated, making collisions essentially impossible in practice (the probability of generating one duplicate among a billion UUIDs is about 1 in a billion billion).',
+          'UUIDs are used as primary keys in distributed databases, file names for uploaded assets, correlation IDs in distributed tracing, idempotency keys in payment APIs, and identifiers in any system where you need a unique ID without a central coordinator. They are preferred over auto-incrementing integers when: records are created on multiple machines simultaneously, the ID must not reveal the number of records, or records are merged from multiple databases.',
+        ],
+      },
+      {
+        heading: 'UUID Versions Explained',
+        paragraphs: [
+          'v1 UUIDs embed a timestamp and the generating machine\'s MAC address, making them sortable by creation time. However, embedding the MAC address raises privacy concerns — it identifies the machine. v3 and v5 are namespace-based deterministic UUIDs generated by hashing a namespace UUID and a name (MD5 for v3, SHA-1 for v5) — the same namespace+name always produces the same UUID, useful for creating stable identifiers for known entities. v4 is purely random. The newest v6, v7, and v8 (RFC 9562) bring sortability back without the MAC address: v7 uses a Unix timestamp milliseconds prefix, making UUIDs database-index-friendly like ULIDs.',
+          'If you need sortable IDs for a database, consider the ULID Generator instead of UUID v4. ULIDs sort lexicographically by creation time, which keeps database B-tree indexes efficient and avoids index fragmentation — a significant performance issue with random UUID v4 primary keys at scale.',
+        ],
+      },
+    ],
   },
 
   {
@@ -1445,6 +1855,24 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['uuid-generator', 'random-string', 'random-password'],
     keywords: ['hash generator online', 'sha256 hash online', 'md5 generator online', 'sha512 hash generator', 'checksum generator'],
+    bodySections: [
+      {
+        heading: 'How Cryptographic Hash Functions Work',
+        paragraphs: [
+          'A cryptographic hash function takes an input of any length and produces a fixed-length output (the hash or digest) that appears random. The function has three critical properties: it is deterministic (the same input always produces the same hash), it is one-way (you cannot reverse-engineer the input from the hash), and it is collision-resistant (it is computationally infeasible to find two different inputs that produce the same hash). These properties make hashes the foundation of data integrity checks, digital signatures, and password storage.',
+          'SHA-256 produces a 256-bit (32-byte, 64 hex character) digest. SHA-512 produces a 512-bit (64-byte, 128 hex character) digest — the larger output makes brute-force attacks twice as expensive per bit. MD5 and SHA-1 are legacy algorithms with known collision vulnerabilities; they should not be used for security-sensitive purposes but remain common for non-security checksums and legacy system compatibility.',
+          'Even a single character change in the input produces a completely different hash — this is called the avalanche effect. "Hello" and "hello" produce entirely different SHA-256 hashes. This property is what makes hashes useful for detecting any tampering: if you compare the SHA-256 of a downloaded file against the published checksum and they match, you know the file has not been modified in transit.',
+        ],
+      },
+      {
+        heading: 'Common Use Cases',
+        paragraphs: [
+          'File integrity verification: software download pages publish SHA-256 checksums alongside their downloads. After downloading, compute the SHA-256 of the file locally and compare it to the published value. A mismatch means the file was corrupted in transit or tampered with. Linux package managers (apt, yum, brew) do this check automatically.',
+          'Password hashing: web applications must never store passwords in plain text. Instead, they hash the password combined with a random salt value and store the hash. When a user logs in, the same operation is performed and the hashes are compared. A database breach exposes only hashes, not passwords. Note: SHA-256 alone is too fast for password hashing — use bcrypt, scrypt, or Argon2, which are designed to be slow and memory-intensive.',
+          'API request signing: some APIs (AWS Signature Version 4, for example) require you to include a SHA-256 HMAC signature of the request body in the request headers. The server recomputes the same signature with its copy of your secret key and rejects the request if the signatures do not match. This prevents both tampering and replay attacks.',
+        ],
+      },
+    ],
   },
 
   {
@@ -1632,6 +2060,31 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     relatedToolIds: ['jsonpath-evaluator', 'string-inspector'],
     keywords: ['regex tester online', 'regular expression tester', 'regex checker online', 'test regex javascript'],
+    bodySections: [
+      {
+        heading: 'Regular Expression Syntax Quick Reference',
+        paragraphs: [
+          'A regular expression is a pattern that describes a set of strings. The most fundamental building blocks: a literal character (a) matches itself; a dot (.) matches any character except newline; brackets ([abc]) match any one of the listed characters; a caret inside brackets ([^abc]) matches any character NOT listed. Quantifiers control repetition: ? means zero or one, + means one or more, * means zero or more, {n,m} means between n and m times.',
+          'Anchors constrain position rather than matching characters: ^ matches the start of a string (or line with the m flag), $ matches the end. \\b matches a word boundary (the transition between \\w and \\W). Groups ((...)) capture matched substrings for extraction; non-capturing groups (?:...) group without capturing. Alternation (|) matches either the left or right pattern.',
+          'Named capture groups (?<name>...) are supported in modern JavaScript and are particularly useful for extracting structured data: the regex (?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2}) extracts the year, month, and day of a date string into named properties of the match object, making the code self-documenting.',
+        ],
+      },
+      {
+        heading: 'Flags and Modes',
+        paragraphs: [
+          'The g (global) flag finds all matches in the input rather than stopping at the first. Without g, only the first match is returned. The i flag makes the pattern case-insensitive. The m flag makes ^ and $ match at the start and end of each line, not just the entire string — essential for processing multi-line text. The s flag (dotAll) makes . match newlines as well as other characters.',
+          'The u flag enables full Unicode support: patterns like \\p{Script=Greek} match all Greek Unicode characters, and surrogate pairs (emoji represented as two UTF-16 code units) are treated as a single character. Without u, a regex sees emoji as two separate characters and quantifiers may produce unexpected results.',
+        ],
+      },
+      {
+        heading: 'Practical Examples',
+        paragraphs: [
+          'Email validation (simplified): /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/. This is intentionally simplified — fully RFC 5321-compliant email validation via regex is notoriously complex. For production use, send a confirmation email instead.',
+          'Extracting version numbers: /v?(\\d+)\\.(\\d+)\\.(\\d+)/ matches "v1.2.3" and captures "1", "2", "3" as groups. With named groups: /v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)/.',
+          'Finding all URLs in a block of text (basic): /https?:\\/\\/[^\\s]+/g. Paste a block of log output or HTML source into the tester with this pattern and the g flag to extract every URL at once.',
+        ],
+      },
+    ],
   },
 
   {
@@ -1709,8 +2162,24 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
         a: 'SmartDevBox supports the standard 5-field cron format: minute (0–59), hour (0–23), day of month (1–31), month (1–12), day of week (0–6, where 0 is Sunday). It supports *, */n, ranges (a-b), and lists (a,b,c).',
       },
     ],
-    relatedToolIds: ['unix-timestamp', 'regex-tester'],
+    relatedToolIds: ['cron-parser', 'unix-timestamp', 'regex-tester'],
     keywords: ['cron expression parser', 'cron job parser online', 'decode cron expression', 'cron schedule explainer'],
+    bodySections: [
+      {
+        heading: 'Cron Expression Field Reference',
+        paragraphs: [
+          'A standard cron expression has five space-separated fields: minute (0–59), hour (0–23), day-of-month (1–31), month (1–12 or JAN–DEC), and day-of-week (0–6, where 0 and 7 both mean Sunday, or SUN–SAT). Each field accepts: a specific value (30), a wildcard (*), a step value (*/15 means every 15 units), a range (9-17), a list (1,3,5), or combinations of these.',
+          'Examples: "0 9 * * 1-5" runs at 09:00 every weekday. "*/15 * * * *" runs every 15 minutes. "0 0 1 * *" runs at midnight on the first day of every month. "0 0 * * 0" runs at midnight every Sunday. The parser shows all of these in plain English and lists the next five run times so you can verify the schedule is correct before deploying.',
+        ],
+      },
+      {
+        heading: 'Common Cron Pitfalls',
+        paragraphs: [
+          'Time zones: cron runs in the server\'s local timezone. If your server is in UTC and you want a job at 9 AM New York time (UTC−5), schedule it at "0 14 * * *" in winter and "0 13 * * *" in summer (UTC−4 during Daylight Saving Time). Alternatively, use a modern scheduler (Kubernetes CronJob, AWS EventBridge) that accepts a timezone parameter and handles DST automatically.',
+          'Day-of-month AND day-of-week: when both fields are set (neither is *), most cron implementations run the job when EITHER condition is true (OR logic), not when both are true (AND logic). "0 9 1 * 1" runs at 9 AM on the 1st of every month AND at 9 AM every Monday — not only on Mondays that fall on the 1st. This surprises many developers. To get AND logic, use a script that checks the date programmatically.',
+        ],
+      },
+    ],
   },
 
   {
@@ -1738,9 +2207,48 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
         q: 'Is it safe to paste a certificate into an online decoder?',
         a: 'X.509 public certificates are designed to be public — they contain no private key material. It is safe to decode them in any online tool. Never paste a private key into an online service.',
       },
+      {
+        q: 'What are Subject Alternative Names (SANs) in an SSL certificate?',
+        a: 'Subject Alternative Names (SANs) are the list of domain names and IP addresses a certificate is valid for. Modern browsers ignore the Subject CN field for hostname validation and rely entirely on SANs. A certificate for example.com will typically include SANs for both example.com and www.example.com.',
+      },
+      {
+        q: 'How do I get the PEM certificate from a live website?',
+        a: 'Run: openssl s_client -connect example.com:443 </dev/null 2>/dev/null | openssl x509 -outform PEM. This prints the server certificate in PEM format, which you can paste directly into the decoder.',
+      },
     ],
     relatedToolIds: ['base64-decode', 'jwt-inspector'],
     keywords: ['x509 certificate decoder', 'ssl certificate decoder online', 'pem certificate decoder', 'tls cert inspector'],
+    bodySections: [
+      {
+        heading: 'What Is an X.509 Certificate?',
+        paragraphs: [
+          'An X.509 certificate is the standard data structure that proves ownership of a public key. Every HTTPS website, code-signing package, and S/MIME email uses X.509 certificates defined by RFC 5280. The certificate binds a public key to an identity (a domain name, organisation, or individual) using a digital signature from a trusted Certificate Authority (CA).',
+          'When you see the padlock in your browser, the server has presented an X.509 certificate. Your browser checks that the certificate was signed by a CA it trusts, that the hostname matches a Subject Alternative Name in the certificate, and that the current date falls within the validity window. If any of those checks fail, the browser shows a warning.',
+          'On disk, certificates are usually stored in PEM format — a Base64-encoded DER structure wrapped in -----BEGIN CERTIFICATE----- and -----END CERTIFICATE----- headers. DER is the binary ASN.1 encoding of the certificate\'s fields. This decoder converts that Base64 text back to human-readable field values without sending anything to a server.',
+        ],
+      },
+      {
+        heading: 'Understanding the Output Fields',
+        paragraphs: [
+          'Version: X.509 v3 (value 2) is the current standard. v3 added the extensions mechanism, which carries SANs, key usage constraints, and CA path length limits. You will rarely see v1 certificates outside of self-signed root CAs.',
+          'Serial Number: A unique integer assigned by the CA. Certificate Transparency logs use the serial number to track issuance. If you are investigating a specific certificate in a CT log or revocation list, this is the field to match on.',
+          'Issuer: The Distinguished Name (DN) of the CA that signed the certificate. It is composed of sub-fields: Country (C), State (ST), Locality (L), Organisation (O), Organisational Unit (OU), and Common Name (CN). For a Let\'s Encrypt certificate the issuer CN is typically "R10" or "R11"; for DigiCert it may be "DigiCert TLS RSA SHA256 2020 CA1".',
+          'Subject: The DN of the entity the certificate was issued to. For domain certificates the CN is often the primary hostname, though browsers now require SANs for all hostname validation. For EV (Extended Validation) certificates the O field contains the verified legal organisation name.',
+          'Validity: Not Before and Not After timestamps define the certificate\'s lifetime. Domain Validation (DV) certificates from public CAs are currently capped at 398 days. Check this field when troubleshooting an expired certificate error.',
+          'Subject Alternative Names (SANs): A comma-separated list of DNS names and IP addresses the certificate covers. This is the definitive field for hostname matching. A wildcard SAN such as *.example.com covers one level of subdomain (api.example.com) but not two levels (v1.api.example.com).',
+          'Signature Algorithm: The algorithm the CA used to sign the certificate — typically sha256WithRSAEncryption or ecdsa-with-SHA256. SHA-1 signatures were deprecated in 2017; any certificate still showing sha1WithRSAEncryption should be replaced immediately.',
+        ],
+      },
+      {
+        heading: 'Worked Example',
+        paragraphs: [
+          'Below is a minimal self-signed certificate. Paste it into the decoder to follow along:',
+          '-----BEGIN CERTIFICATE-----\nMIICpDCCAYwCCQDU9pQ4pHgSpDANBgkqhkiG9w0BAQsFADAUMRIwEAYDVQQDDAls\nb2NhbGhvc3QwHhcNMjQwMTAxMDAwMDAwWhcNMjUwMTAxMDAwMDAwWjAUMRIwEAYD\nVQQDDAlsb2NhbGhvc3QwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC7\n-----END CERTIFICATE-----',
+          'The decoder will show: Version v3, a serial number, Issuer CN=localhost, Subject CN=localhost, a one-year validity window, and a 2048-bit RSA public key. Because this is self-signed, the issuer and subject DNs are identical — a pattern that immediately identifies root CAs and development certificates.',
+          'For a real production certificate you would typically see a multi-level issuer chain (root CA → intermediate CA → end-entity cert), an O field in the subject for OV/EV certificates, and a SANs extension listing every hostname the certificate is valid for.',
+        ],
+      },
+    ],
   },
 
   {
