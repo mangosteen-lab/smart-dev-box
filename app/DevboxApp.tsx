@@ -5,14 +5,16 @@ import dynamic from 'next/dynamic';
 import { useDevboxStore } from '@/store/devbox';
 import { runDetection } from '@/lib/tools';
 import { loadPlugins } from '@/lib/tools/plugin-registry';
-import { ToolSidebar } from '@/components/tools/ToolSidebar';
 import { UniversalInput } from '@/components/tools/UniversalInput';
 import { DetectionBar } from '@/components/tools/DetectionBar';
-import { OutputPanel } from '@/components/tools/OutputPanel';
 import { ResizablePanels } from '@/components/ResizablePanels';
-import { GeneratorBar } from '@/components/tools/GeneratorBar';
-import { CommandPalette } from '@/components/CommandPalette';
-import { PluginManager } from '@/components/tools/PluginManager';
+
+// Lazily loaded — these are not needed for initial paint
+const ToolSidebar  = dynamic(() => import('@/components/tools/ToolSidebar').then(m => ({ default: m.ToolSidebar })), { ssr: false });
+const OutputPanel  = dynamic(() => import('@/components/tools/OutputPanel').then(m => ({ default: m.OutputPanel })), { ssr: false });
+const GeneratorBar = dynamic(() => import('@/components/tools/GeneratorBar').then(m => ({ default: m.GeneratorBar })), { ssr: false });
+const CommandPalette = dynamic(() => import('@/components/CommandPalette').then(m => ({ default: m.CommandPalette })), { ssr: false });
+const PluginManager = dynamic(() => import('@/components/tools/PluginManager').then(m => ({ default: m.PluginManager })), { ssr: false });
 
 // Lazily loaded — only fetched when the panel is first activated
 const JwtEncoderPanel    = dynamic(() => import('@/components/tools/JwtEncoderPanel').then(m => ({ default: m.JwtEncoderPanel })), { ssr: false });

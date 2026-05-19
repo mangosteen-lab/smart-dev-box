@@ -7,9 +7,10 @@ import { Navbar } from '@/components/layout/Navbar';
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['500', '700'],
   variable: '--font-mono',
   display: 'swap',
+  preload: true,
 });
 
 const BASE_URL = 'https://smartdevbox.com';
@@ -115,9 +116,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className={jetbrainsMono.variable}>
-      {/* Google Analytics */}
-      <Script src="https://www.googletagmanager.com/gtag/js?id=G-6Q9YWVQLYN" strategy="afterInteractive" />
-      <Script id="gtag-init" strategy="afterInteractive">{`
+      <head>
+        {/* Preconnect to Google Analytics to reduce DNS/TLS latency */}
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+      </head>
+      {/* Google Analytics — loaded after page is interactive */}
+      <Script src="https://www.googletagmanager.com/gtag/js?id=G-6Q9YWVQLYN" strategy="lazyOnload" />
+      <Script id="gtag-init" strategy="lazyOnload">{`
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());

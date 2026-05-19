@@ -77,6 +77,32 @@ function normalizeForDiff(text: string): string {
   return text;
 }
 
+// Singleton highlighter — created once, reused for all renders
+let highlighterPromise: Promise<any> | null = null;
+function getHighlighter() {
+  if (!highlighterPromise) {
+    highlighterPromise = (async () => {
+      const { createHighlighterCore } = await import('@shikijs/core');
+      const { createOnigurumaEngine } = await import('shiki/engine/oniguruma');
+      return createHighlighterCore({
+        themes: [import('shiki/themes/github-dark.mjs')],
+        langs: [
+          import('shiki/langs/json.mjs'),
+          import('shiki/langs/xml.mjs'),
+          import('shiki/langs/sql.mjs'),
+          import('shiki/langs/css.mjs'),
+          import('shiki/langs/html.mjs'),
+          import('shiki/langs/diff.mjs'),
+        ],
+        engine: createOnigurumaEngine(),
+      });
+    })();
+  }
+  return highlighterPromise;
+}
+
+const SUPPORTED_LANGS = ['json', 'xml', 'sql', 'css', 'html', 'diff'];
+
 function HighlightedCode({ code, language }: { code: string; language?: string }) {
   const [html, setHtml] = useState<string | null>(null);
 
@@ -85,22 +111,8 @@ function HighlightedCode({ code, language }: { code: string; language?: string }
     let cancelled = false;
     (async () => {
       try {
-        const { createHighlighterCore } = await import('@shikijs/core');
-        const { createOnigurumaEngine } = await import('shiki/engine/oniguruma');
-        const highlighter = await createHighlighterCore({
-          themes: [import('shiki/themes/github-dark.mjs')],
-          langs: [
-            import('shiki/langs/json.mjs'),
-            import('shiki/langs/xml.mjs'),
-            import('shiki/langs/sql.mjs'),
-            import('shiki/langs/css.mjs'),
-            import('shiki/langs/html.mjs'),
-            import('shiki/langs/diff.mjs'),
-          ],
-          engine: createOnigurumaEngine(),
-        });
-        const supportedLangs = ['json', 'xml', 'sql', 'css', 'html', 'diff'];
-        const lang = supportedLangs.includes(language ?? '') ? (language ?? 'text') : 'text';
+        const highlighter = await getHighlighter();
+        const lang = SUPPORTED_LANGS.includes(language ?? '') ? (language ?? 'text') : 'text';
         const result = lang === 'text'
           ? null
           : highlighter.codeToHtml(code, { lang, theme: 'github-dark' });
@@ -149,13 +161,7 @@ function DiffView({ before, after }: { before: string; after: string }) {
       try {
         const { createPatch } = await import('diff');
         const patch = createPatch('output', normBefore, normAfter, 'input', 'output');
-        const { createHighlighterCore } = await import('@shikijs/core');
-        const { createOnigurumaEngine } = await import('shiki/engine/oniguruma');
-        const hl = await createHighlighterCore({
-          themes: [import('shiki/themes/github-dark.mjs')],
-          langs: [import('shiki/langs/diff.mjs')],
-          engine: createOnigurumaEngine(),
-        });
+        const hl = await getHighlighter();
         const result = hl.codeToHtml(patch, { lang: 'diff', theme: 'github-dark' });
         if (!cancelled) setDiffHtml(result);
       } catch {

@@ -17,6 +17,10 @@ const nextConfig = {
       'js-base64',
       'diff',
       'he',
+      'prettier',
+      'qrcode',
+      'jsonpath-plus',
+      'sql-formatter',
     ],
   },
 
