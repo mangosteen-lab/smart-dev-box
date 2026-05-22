@@ -308,7 +308,7 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
       },
     ],
     relatedToolIds: ['url-decode', 'url-parser', 'base64-encode', 'html-encode'],
-    keywords: ['url encode', 'url encoder online', 'percent encode string', 'uri encode', 'encode url online'],
+    keywords: ['url encode', 'url encoder online', 'percent encode string', 'uri encode', 'encode url online', 'percent encoding', 'percent encoding javascript', 'encodeuricomponent online', 'encode url component', 'url percent encoding'],
     bodySections: [
       {
         heading: 'How Percent-Encoding Works',
@@ -1129,7 +1129,7 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
       },
     ],
     relatedToolIds: ['js-beautifier', 'js-minifier'],
-    keywords: ['javascript validator', 'js syntax checker online', 'validate javascript online'],
+    keywords: ['javascript validator', 'js syntax checker online', 'validate javascript online', 'js validator', 'validate javascript syntax', 'js checker', 'javascript code checker', 'syntax checker js', 'check javascript online', 'verify javascript online', 'javascript mistake finder', 'javascript validation online', 'syntax validator'],
   },
 
   {
@@ -1533,7 +1533,7 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     ],
     faqs: [],
     relatedToolIds: ['json-escape', 'json-formatter', 'backslash-unescape'],
-    keywords: ['json unescape', 'json decode string', 'unescape json online'],
+    keywords: ['json unescape', 'json decode string', 'unescape json online', 'unescape json', 'json unescape online', 'json remove escape', 'escape unescape'],
   },
 
   {
@@ -1897,7 +1897,7 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
       },
     ],
     relatedToolIds: ['random-password', 'uuid-generator', 'hash-generator'],
-    keywords: ['random string generator', 'generate random string online', 'random token generator', 'random alphanumeric string'],
+    keywords: ['random string generator', 'generate random string online', 'random token generator', 'random alphanumeric string', 'get random string', 'random string gen', 'create random string', 'random generator string', 'string generator'],
   },
 
   {
@@ -2059,7 +2059,7 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
       },
     ],
     relatedToolIds: ['jsonpath-evaluator', 'string-inspector'],
-    keywords: ['regex tester online', 'regular expression tester', 'regex checker online', 'test regex javascript'],
+    keywords: ['regex tester online', 'regular expression tester', 'regex checker online', 'test regex javascript', 'javascript test regex online', 'online regex tester', 'regex check', 'check regex online', 'regular expressions test online', 'validate regular expression', 'regex interpreter', 'online regex'],
     bodySections: [
       {
         heading: 'Regular Expression Syntax Quick Reference',
@@ -2185,13 +2185,15 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
   {
     id: 'cert-decoder',
     slug: 'certificate-decoder',
-    heading: 'X.509 Certificate Decoder — Inspect SSL/TLS Certs Online',
-    primaryKeyword: 'x509 certificate decoder online',
+    heading: 'Certificate Decoder — Decode SSL/TLS X.509 Certs Online',
+    primaryKeyword: 'certificate decoder',
     metaDescription:
-      'Decode PEM-encoded X.509 certificates: subject, issuer, validity dates, serial, and signature algorithm. Free, no sign-up, 100% client-side.',
+      'Decode SSL/TLS certificates online. Paste a PEM certificate to inspect subject, issuer, validity dates, serial, and algorithm. Free, no sign-up, 100% client-side.',
     intro:
       'Certificate Decoder parses PEM-encoded X.509 certificates (SSL/TLS certificates starting with -----BEGIN CERTIFICATE-----) and extracts the subject, issuer, validity period, serial number, and signature algorithm. ' +
-      'All parsing runs via a pure-JavaScript ASN.1 DER decoder entirely in the browser.',
+      'You can also paste a raw Base64-encoded certificate (without the PEM headers) — the decoder wraps it automatically. ' +
+      'All parsing runs via a pure-JavaScript ASN.1 DER decoder entirely in the browser. ' +
+      'No certificate data is sent to a server.',
     useCases: [
       'Checking certificate expiry dates before renewal',
       'Verifying the Subject CN and SAN fields of a certificate',
@@ -2217,7 +2219,7 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
       },
     ],
     relatedToolIds: ['base64-decode', 'jwt-inspector'],
-    keywords: ['x509 certificate decoder', 'ssl certificate decoder online', 'pem certificate decoder', 'tls cert inspector'],
+    keywords: ['x509 certificate decoder', 'ssl certificate decoder online', 'pem certificate decoder', 'tls cert inspector', 'certificate decoder', 'ssl decoder', 'ssl certificate decode', 'cert decoder', 'x509 decoder', 'ssl decode', 'decoding certificate', 'decode ssl online', 'tls cert decoder', 'decode base64 certificate', 'online certificate decoder', 'cert decode', 'decode cert', 'decode ssl', 'ssl cert decoder', 'cer decode', 'crt decoder', 'decode certificate', 'certificate viewer', 'read cert', 'ssl certificate decrypt'],
     bodySections: [
       {
         heading: 'What Is an X.509 Certificate?',

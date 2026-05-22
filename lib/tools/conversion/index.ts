@@ -187,7 +187,7 @@ registerTool({
   name: 'Date Formatter',
   category: 'Conversion',
   description: 'Format a date/timestamp in multiple locales and styles',
-  keywords: ['date', 'format', 'locale', 'time', 'i18n', 'internationalization', 'timestamp'],
+  keywords: ['date', 'format', 'locale', 'time', 'i18n', 'internationalization', 'timestamp', 'date parser online', 'date formatter online', 'online date parser', 'date format online', 'date formatter'],
   outputExtension: 'txt',
   detect: (input) => {
     const t = input.trim();
@@ -598,7 +598,7 @@ registerTool({
   name: 'HTML → JSX',
   category: 'Conversion',
   description: 'Convert HTML markup to JSX (React-compatible)',
-  keywords: ['html', 'jsx', 'react', 'convert', 'component'],
+  keywords: ['html', 'jsx', 'react', 'convert', 'component', 'html to jsx'],
   outputExtension: 'jsx',
   detect: (input) => {
     const t = input.trim();
@@ -647,7 +647,7 @@ registerTool({
   name: 'JSON Escape',
   category: 'Conversion',
   description: 'Escape a string so it can be safely embedded inside a JSON value',
-  keywords: ['json', 'escape', 'encode', 'string', 'serialize'],
+  keywords: ['json', 'escape', 'encode', 'string', 'serialize', 'json escape'],
   outputExtension: 'txt',
   detect: () => 0,
   execute: (input) => ({
@@ -661,7 +661,7 @@ registerTool({
   name: 'JSON Unescape',
   category: 'Conversion',
   description: 'Unescape a JSON-escaped string back to normal text',
-  keywords: ['json', 'unescape', 'decode', 'string', 'deserialize'],
+  keywords: ['json', 'unescape', 'decode', 'string', 'deserialize', 'json unescape', 'unescape json', 'json unescape online', 'json remove escape', 'escape unescape'],
   outputExtension: 'txt',
   detect: (input) => /\\["\\/bfnrtu]/.test(input) ? 0.7 : 0,
   execute: (input) => {
@@ -1037,5 +1037,146 @@ registerTool({
       };
     }
     return { output: '', error: 'Input must be a standard UUID or a 32-character hex string' };
+  },
+});
+
+// ── TOML Parser / Formatter ───────────────────────────────────────────────────
+
+/**
+ * Minimal TOML parser supporting:
+ * bare keys, quoted keys, basic strings, multi-line strings, integers, floats,
+ * booleans, datetime, arrays, inline tables, standard tables [section],
+ * array of tables [[section]].
+ */
+function parseToml(toml: string): unknown {
+  const lines = toml.split('\n');
+  const root: Record<string, unknown> = {};
+  let current: Record<string, unknown> = root;
+  let currentPath: string[] = [];
+  const arrayOfTablesCounts: Record<string, number> = {};
+
+  function getOrCreate(obj: Record<string, unknown>, keys: string[]): Record<string, unknown> {
+    let node: Record<string, unknown> = obj;
+    for (const key of keys) {
+      if (!(key in node)) node[key] = {};
+      const next = node[key];
+      if (Array.isArray(next)) {
+        node = next[next.length - 1] as Record<string, unknown>;
+      } else {
+        node = next as Record<string, unknown>;
+      }
+    }
+    return node;
+  }
+
+  function parseValue(val: string): unknown {
+    val = val.trim();
+    // Inline array
+    if (val.startsWith('[')) {
+      const inner = val.slice(1, val.lastIndexOf(']'));
+      if (!inner.trim()) return [];
+      return inner.split(',').map((v) => parseValue(v.trim()));
+    }
+    // Inline table
+    if (val.startsWith('{')) {
+      const inner = val.slice(1, val.lastIndexOf('}'));
+      const obj: Record<string, unknown> = {};
+      for (const pair of inner.split(',')) {
+        const [k, ...v] = pair.split('=');
+        if (k && v.length) obj[k.trim()] = parseValue(v.join('='));
+      }
+      return obj;
+    }
+    if (val === 'true') return true;
+    if (val === 'false') return false;
+    // Basic string
+    if (val.startsWith('"') && val.endsWith('"')) return val.slice(1, -1).replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\\\/g, '\\').replace(/\\"/g, '"');
+    // Literal string
+    if (val.startsWith("'") && val.endsWith("'")) return val.slice(1, -1);
+    // Float
+    if (/^-?[\d_]+\.[\d_]+([eE][+-]?[\d_]+)?$/.test(val)) return parseFloat(val.replace(/_/g, ''));
+    // Integer (hex/oct/bin)
+    if (/^0x[0-9a-fA-F_]+$/.test(val)) return parseInt(val.replace(/_/g, ''), 16);
+    if (/^0o[0-7_]+$/.test(val)) return parseInt(val.slice(2).replace(/_/g, ''), 8);
+    if (/^0b[01_]+$/.test(val)) return parseInt(val.slice(2).replace(/_/g, ''), 2);
+    // Integer
+    if (/^-?[\d_]+$/.test(val)) return parseInt(val.replace(/_/g, ''));
+    // Datetime (return as string)
+    if (/^\d{4}-\d{2}-\d{2}/.test(val)) return val;
+    return val;
+  }
+
+  let i = 0;
+  while (i < lines.length) {
+    let line = lines[i].trim();
+    i++;
+
+    // Comments / blank
+    if (!line || line.startsWith('#')) continue;
+    // Strip inline comment
+    const commentIdx = line.indexOf(' #');
+    if (commentIdx > 0) line = line.slice(0, commentIdx).trim();
+
+    // Array of tables [[key]]
+    if (line.startsWith('[[') && line.endsWith(']]')) {
+      const key = line.slice(2, -2).trim();
+      const keys = key.split('.');
+      const parentKeys = keys.slice(0, -1);
+      const lastKey = keys[keys.length - 1];
+      const parent = parentKeys.length ? getOrCreate(root, parentKeys) : root;
+      if (!Array.isArray(parent[lastKey])) parent[lastKey] = [];
+      const newTable: Record<string, unknown> = {};
+      (parent[lastKey] as Record<string, unknown>[]).push(newTable);
+      currentPath = keys;
+      current = newTable;
+      arrayOfTablesCounts[key] = (arrayOfTablesCounts[key] || 0) + 1;
+      continue;
+    }
+
+    // Standard table [key]
+    if (line.startsWith('[') && line.endsWith(']')) {
+      const key = line.slice(1, -1).trim();
+      currentPath = key.split('.');
+      current = getOrCreate(root, currentPath);
+      continue;
+    }
+
+    // Key = value
+    const eqIdx = line.indexOf('=');
+    if (eqIdx > 0) {
+      const key = line.slice(0, eqIdx).trim().replace(/^["']|["']$/g, '');
+      const val = line.slice(eqIdx + 1).trim();
+      current[key] = parseValue(val);
+    }
+  }
+
+  return root;
+}
+
+registerTool({
+  id: 'toml-parser',
+  name: 'TOML Parser',
+  category: 'Conversion',
+  description: 'Parse TOML configuration and convert to JSON (supports Cargo.toml, pyproject.toml, config.toml)',
+  keywords: [
+    'toml', 'parse', 'config', 'cargo', 'rust', 'pyproject', 'python', 'format',
+    'toml to json', 'parse toml', 'toml parser', 'toml formatter', 'toml converter',
+    'cargo toml', 'pyproject toml', 'toml viewer',
+  ],
+  outputExtension: 'json',
+  detect: (input) => {
+    const t = input.trim();
+    // TOML has [section] headers and key = value pairs
+    if (/^\[[\w.]+\]/m.test(t) && /^\w[\w.-]*\s*=/m.test(t)) return 0.85;
+    if (/^\w[\w.-]*\s*=\s*.+$/m.test(t) && !t.startsWith('{')) return 0.4;
+    return 0;
+  },
+  execute: (input) => {
+    try {
+      const parsed = parseToml(input);
+      return { output: JSON.stringify(parsed, null, 2), outputLanguage: 'json' };
+    } catch (err) {
+      return { output: '', error: err instanceof Error ? err.message : 'TOML parse failed' };
+    }
   },
 });

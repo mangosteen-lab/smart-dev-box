@@ -6,6 +6,8 @@ import './conversion';
 import './generation';
 import './inspection';
 import './text';
+import './security';
+import './networking';
 
 export * from './registry';
 export * from './types';

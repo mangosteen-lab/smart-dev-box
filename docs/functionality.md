@@ -73,25 +73,29 @@ Complete inventory of all tools, their IDs, categories, and what they do.
 | `decimal-to-roman` | Decimal to Roman | Converts a decimal integer to Roman numerals |
 | `roman-to-decimal` | Roman to Decimal | Converts Roman numerals to a decimal integer |
 | `uuid-hex-converter` | UUID ↔ Hex | Converts between UUID format and raw hex string |
+| `toml-parser` | TOML Parser | Parses TOML (Cargo.toml, pyproject.toml, etc.) and converts it to formatted JSON |
 
 ---
 
 ## Generation
 
-These tools produce output without requiring user input and are shown in the **GeneratorBar**.
+These tools produce output without requiring user input and are accessible via the **Generator Hub** (the `Generate ▾` button in the toolbar).
 
 | ID | Name | Description |
 |---|---|---|
-| `uuid-generator` | UUID Generator | Generates a random UUID v4 |
-| `hash-generator` | Hash Generator | Computes MD5, SHA-1, SHA-256, SHA-512 hashes of input text |
-| `random-string` | Random String | Generates a random string with configurable length and character set |
-| `lorem-ipsum` | Lorem Ipsum | Generates placeholder Lorem Ipsum text |
-| `ulid-generator` | ULID Generator | Generates a random ULID |
-| `qr-code` | QR Code | Generates a QR code from text or URL (special panel) |
-| `random-number` | Random Number | Generates a random number within a configurable range |
-| `random-password` | Random Password | Generates a secure random password |
-| `random-ip` | Random IP | Generates a random IPv4 address |
-| `random-mac` | Random MAC | Generates a random MAC address |
+| `uuid-generator` | UUID Generator | Generates a random UUID v4; supports bulk count, format (hyphens/braces/no-hyphens), encoding (Base64, RFC 7515, URL-encode), and uppercase/quote options |
+| `ulid-generator` | ULID Generator | Generates Universally Unique Lexicographically Sortable Identifiers |
+| `nanoid-generator` | Nano ID Generator | Generates compact URL-safe unique IDs with configurable size, count, and custom alphabet |
+| `hash-generator` | Hash Generator | Computes MD5, SHA-1, SHA-256, and SHA-512 hashes of input text |
+| `hmac-generator` | HMAC Generator | Generates HMAC-SHA-256/384/512 signatures for API request signing and webhook verification; outputs hex, Base64, and Base64URL |
+| `totp-generator` | TOTP Generator | Generates Time-based One-Time Passwords (RFC 6238) from a Base32 secret; shows current, previous, and next codes with remaining seconds |
+| `random-string` | Random String | Generates a cryptographically random string with configurable length and character set (alphanumeric, hex, symbols, etc.) |
+| `random-password` | Random Password Generator | Generates a secure random password with configurable length and character classes (uppercase, lowercase, digits, symbols) |
+| `random-number` | Random Number Generator | Generates random integers or decimals within a configurable min/max range |
+| `random-ip` | Random IP Generator | Generates random IPv4 addresses |
+| `random-mac` | Random MAC Generator | Generates random locally-administered MAC addresses |
+| `lorem-ipsum` | Lorem Ipsum Generator | Generates placeholder Lorem Ipsum text (paragraphs, sentences, or words) |
+| `qr-code` | QR Code Generator | Generates a QR code from text or a URL (special panel) |
 
 ---
 
@@ -105,6 +109,14 @@ These tools produce output without requiring user input and are shown in the **G
 | `cron-parser` | Cron Parser | Parses a cron expression and lists the next N scheduled times |
 | `cert-decoder` | Cert Decoder | Decodes a PEM X.509 certificate and displays its fields |
 | `html-preview` | HTML Preview | Renders HTML in a sandboxed iframe (special panel) |
+| `json-schema-validator` | JSON Schema Validator | Validates a JSON document against a JSON Schema (Draft-07 subset: type, required, properties, format, enum, allOf/anyOf/oneOf/not) |
+| `mongodb-objectid` | MongoDB ObjectID Inspector | Decodes a MongoDB ObjectID and extracts its embedded timestamp, machine ID, and age |
+| `ulid-inspector` | ULID Inspector | Decodes a ULID and extracts its embedded timestamp and random component |
+| `semver-calculator` | Semver Calculator | Compares two versions, checks whether a version satisfies a range (^, ~, >=, <, ||), and inspects individual version parts |
+| `dotenv-parser` | .env Parser | Parses `.env` files, extracts key-value pairs, warns on duplicates and convention violations, and masks secret values |
+| `cidr-calculator` | CIDR / Subnet Calculator | Calculates subnet details from CIDR notation (e.g. `192.168.1.0/24`): network address, broadcast, host range, subnet mask, wildcard mask, and usable host count |
+| `ip-inspector` | IP Inspector | Classifies an IPv4 or IPv6 address: type (public/private/loopback/link-local/multicast/etc.), class, and binary representation |
+| `http-status-reference` | HTTP Status Reference | Looks up any HTTP status code (1xx–5xx) and returns its official name and description |
 
 ---
 
@@ -152,7 +164,7 @@ Return a confidence score 0–1. Use content analysis (e.g. try `JSON.parse`, ch
 Return `{ output: string, outputType?, error? }`. Always handle exceptions and return `{ output: '', error: message }` on failure.
 
 ### Generator tools
-Set `detect` to always return `0` (generators ignore input). Add the tool ID to the `GeneratorBar` component if it should appear in the generator strip.
+Set `detect` to always return `0` (generators ignore input). Add the tool ID to `GENERATOR_TOOL_IDS` in `lib/tools/registry.ts`. Add a `GeneratorDef` entry inside `buildBuiltinGroups()` in `components/tools/GeneratorBar.tsx` — the generic `GenericDetail` renderer will handle the options panel automatically via the `GeneratorOption[]` config.
 
 ### Special panels
 If the tool needs a custom UI (not textarea-in/text-out), add a lazy-loaded component and register it in `DevboxApp.tsx`'s special panel switch.

@@ -52,7 +52,7 @@ registerTool({
   name: 'URL Encode',
   category: 'Encoding / Decoding',
   description: 'Percent-encode a string for use in URLs',
-  keywords: ['url', 'encode', 'percent', 'uri'],
+  keywords: ['url', 'encode', 'percent', 'uri', 'percent encode', 'percent encoding', 'percent encoding javascript', 'encodeuricomponent online', 'encode url component', 'url percent encoding'],
   outputExtension: 'txt',
   detect: (input) => {
     const hasSpecial = /[^A-Za-z0-9\-_.~]/.test(input);

@@ -280,7 +280,7 @@ registerTool({
   name: 'JS Validate',
   category: 'Formatting',
   description: 'Validate JavaScript syntax and report errors',
-  keywords: ['javascript', 'js', 'validate', 'syntax', 'lint', 'check'],
+  keywords: ['javascript', 'js', 'validate', 'syntax', 'lint', 'check', 'javascript validator', 'js validator', 'validate javascript syntax', 'validate javascript online', 'js checker', 'javascript code checker', 'syntax checker js', 'check javascript online', 'verify javascript online', 'javascript mistake finder', 'javascript validation online', 'syntax validator'],
   outputExtension: 'txt',
   detect: (input) => {
     const t = input.trim();

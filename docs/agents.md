@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**SmartDevBox** is a browser-based developer toolbox built with Next.js 15 (App Router), deployed on Cloudflare via OpenNext. It provides 80+ utility tools for encoding, formatting, conversion, generation, inspection, and text manipulation — all running client-side with no data leaving the browser (except optional AI routing).
+**SmartDevBox** is a browser-based developer toolbox built with Next.js 15 (App Router), deployed on Cloudflare via OpenNext. It provides 100+ utility tools for encoding, formatting, conversion, generation, inspection, and text manipulation — all running client-side with no data leaving the browser (except optional AI routing).
 
 Live URL: `https://smartdevbox.com`
 
@@ -39,14 +39,16 @@ store/
 
 lib/tools/
   types.ts            # Core types: ToolDefinition, ToolResult, DetectionResult, ToolOutput
-  registry.ts         # registerTool(), runDetection(), executeTool()
+  registry.ts         # registerTool(), runDetection(), executeTool(), GENERATOR_TOOL_IDS
   index.ts            # Imports all category indexes to populate registry
   utils.ts            # Shared utilities for tool implementations
   encoding/index.ts   # Encoding/decoding tools
   formatting/index.ts # Formatting/validation tools
-  conversion/index.ts # Conversion tools
-  generation/index.ts # Generator tools (no input required)
-  inspection/index.ts # Inspection/analysis tools
+  conversion/index.ts # Conversion tools (incl. TOML parser)
+  generation/index.ts # Generator tools (UUID, ULID, Nano ID, random, Lorem, QR code)
+  inspection/index.ts # Inspection/analysis tools (incl. JSON Schema, semver, .env, CIDR, IP, HTTP status)
+  security/index.ts   # Security generators: HMAC, TOTP
+  networking/index.ts # Networking inspection: CIDR calculator, IP inspector, HTTP status reference
   text/index.ts       # Text manipulation tools
 
 components/
@@ -56,7 +58,7 @@ components/
     UniversalInput.tsx       # Main textarea with detection + AI bar
     DetectionBar.tsx         # Detected format chips
     OutputPanel.tsx          # Syntax-highlighted output + actions
-    GeneratorBar.tsx         # One-click generator tools UI
+    GeneratorBar.tsx         # Generator Hub — single button opens a master-detail search panel
   CommandPalette.tsx         # ⌘K search palette
   ResizablePanels.tsx        # Drag-to-resize input/output split
 
@@ -150,9 +152,9 @@ Zustand store with `persist` (localStorage). Key fields:
 |---|---|---|
 | Encoding / Decoding | 18 | Includes JWT inspector/encoder, Base64, URL, HTML, Hex, Base32 |
 | Formatting | 12 | JSON/XML/SQL/CSS/HTML/JS format + minify + validate, Markdown preview |
-| Conversion | 21 | JSON↔CSV/TSV/YAML/XML, dates, colors, number bases, Markdown→HTML, Roman numerals, UUID↔hex |
-| Generation | 10 | UUID, ULID, hash, random string/number/password/IP/MAC, Lorem Ipsum, QR code |
-| Inspection | 6 | Regex tester, JSONPath, string inspector, cron parser, cert decoder, HTML preview |
+| Conversion | 22 | JSON↔CSV/TSV/YAML/XML, dates, colors, number bases, Markdown→HTML, Roman numerals, UUID↔hex, TOML→JSON |
+| Generation | 13 | UUID, ULID, Nano ID, HMAC, TOTP, hash, random string/number/password/IP/MAC, Lorem Ipsum, QR code |
+| Inspection | 14 | Regex tester, JSONPath, string inspector, cron parser, cert decoder, HTML preview, JSON Schema validator, MongoDB ObjectID, ULID inspector, semver calculator, .env parser, CIDR calculator, IP inspector, HTTP status reference |
 | Text | 24 | Case conversion, line ops, word count, extract emails/URLs/numbers/sections, trim, prefix/suffix, invert case |
 
 ---
@@ -174,9 +176,13 @@ All special panels are **lazy-loaded** (`React.lazy` / dynamic import).
 
 ## Generator Tools
 
-Tools that produce output without requiring input. Rendered in the `GeneratorBar` component:
+Tools that produce output without requiring input. Accessible via the **Generator Hub** (`Generate ▾` button in the toolbar), which uses a master-detail layout with search:
 
-`uuid-generator`, `ulid-generator`, `random-string`, `lorem-ipsum`, `hash-generator`, `qr-code`, `random-number`, `random-password`, `random-ip`, `random-mac`
+`uuid-generator`, `ulid-generator`, `nanoid-generator`, `hmac-generator`, `totp-generator`, `random-string`, `random-password`, `random-number`, `random-ip`, `random-mac`, `hash-generator`, `lorem-ipsum`, `qr-code`
+
+New generators can be added by:
+1. Registering the tool with `detect: () => 0` and adding the ID to `GENERATOR_TOOL_IDS` in `registry.ts`.
+2. Adding a `GeneratorDef` entry in `buildBuiltinGroups()` inside `GeneratorBar.tsx` — the generic `GenericDetail` renderer handles all standard option types (`number`, `text`, `select`, `toggle`) automatically.
 
 ---
 

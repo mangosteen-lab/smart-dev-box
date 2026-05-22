@@ -147,7 +147,7 @@ registerTool({
   name: 'Random String Generator',
   category: 'Generation',
   description: 'Generate random strings with configurable charset and length',
-  keywords: ['random', 'string', 'generate', 'password', 'token', 'secret', 'alphanumeric'],
+  keywords: ['random', 'string', 'generate', 'password', 'token', 'secret', 'alphanumeric', 'random string generator', 'generate random string', 'get random string', 'random string gen', 'create random string', 'random generator string', 'string generator'],
   outputExtension: 'txt',
   detect: () => 0,
   execute: (_input, options) => {
@@ -400,5 +400,42 @@ registerTool({
       results.push(Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(':'));
     }
     return { output: results.join('\n'), outputLanguage: 'text' };
+  },
+});
+
+// ── Nano ID Generator ─────────────────────────────────────────────────────────
+
+registerTool({
+  id: 'nanoid-generator',
+  name: 'Nano ID Generator',
+  category: 'Generation',
+  description: 'Generate Nano IDs — a compact, URL-safe unique ID alternative to UUID (popular in JS/TS backends)',
+  keywords: [
+    'nanoid', 'nano id', 'uuid', 'generate', 'random', 'id', 'url-safe', 'unique',
+    'javascript', 'typescript', 'backend', 'nano id generator', 'generate nanoid',
+    'short id', 'compact id', 'url safe id',
+  ],
+  outputExtension: 'txt',
+  detect: () => 0,
+  execute: (_input, options) => {
+    const size = typeof options?.size === 'number' ? Math.min(Math.max(options.size, 1), 256) : 21;
+    const count = typeof options?.count === 'number' ? Math.min(Math.max(options.count, 1), 1000) : 1;
+    const alphabet = (options?.alphabet as string) ||
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+
+    const results: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const bytes = crypto.getRandomValues(new Uint8Array(size));
+      results.push(Array.from(bytes, (b) => alphabet[b % alphabet.length]).join(''));
+    }
+
+    const lines = [
+      `Size:      ${size}`,
+      `Count:     ${count}`,
+      `Alphabet:  ${alphabet.length} chars`,
+      '',
+      ...results,
+    ];
+    return { output: lines.join('\n'), outputLanguage: 'text' };
   },
 });

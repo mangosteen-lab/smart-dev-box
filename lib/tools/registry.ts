@@ -50,6 +50,9 @@ const GENERATOR_TOOL_IDS = new Set([
   'lorem-ipsum',
   'hash-generator',
   'qr-code',
+  'hmac-generator',
+  'totp-generator',
+  'nanoid-generator',
 ]);
 
 export async function executeTool(
