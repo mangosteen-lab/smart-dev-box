@@ -97,6 +97,9 @@ const TOOLS: Array<{
       { name: 'Random Number',           desc: 'Generate random integers or decimals within a custom range.',             slug: 'random-number-generator' },
       { name: 'Random IP Generator',     desc: 'Generate random IPv4 addresses.',                                         slug: 'random-ip-generator' },
       { name: 'Random MAC Generator',    desc: 'Generate random MAC addresses.',                                          slug: 'random-mac-generator' },
+      { name: 'HMAC Generator',          desc: 'Generate HMAC-SHA256/384/512 signatures for API signing and webhook verification.', slug: 'hmac-generator' },
+      { name: 'TOTP Generator',          desc: 'Generate Time-based One-Time Passwords (RFC 6238) for debugging 2FA flows.', slug: 'totp-generator' },
+      { name: 'Nano ID Generator',       desc: 'Generate compact, URL-safe Nano IDs — a modern UUID alternative.',        slug: 'nanoid-generator' },
     ],
   },
   {
@@ -110,6 +113,9 @@ const TOOLS: Array<{
       { name: 'Cron Job Parser',           desc: 'Parse cron expressions in plain English with next N scheduled run times.',               slug: 'cron-parser' },
       { name: 'Certificate Decoder',       desc: 'Decode PEM X.509 certificates: subject, issuer, validity, public key, SANs.',           slug: 'certificate-decoder' },
       { name: 'HTML Preview',              desc: 'Live preview HTML in a sandboxed iframe alongside the source editor.',                   slug: 'html-preview' },
+      { name: 'CIDR / Subnet Calculator',  desc: 'Calculate subnet details from CIDR notation: network, broadcast, host range, mask.',     slug: 'cidr-calculator' },
+      { name: 'IP Address Inspector',      desc: 'Inspect an IPv4 or IPv6 address: class, type, private/public, binary representation.',   slug: 'ip-inspector' },
+      { name: 'HTTP Status Reference',     desc: 'Look up any HTTP status code: phrase, meaning, and usage notes.',                        slug: 'http-status-reference' },
     ],
   },
   {

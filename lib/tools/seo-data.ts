@@ -2277,6 +2277,387 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
     relatedToolIds: ['html-beautifier', 'css-beautifier', 'markdown-preview'],
     keywords: ['html preview online', 'live html preview', 'html renderer online', 'html editor preview'],
   },
+
+  // ── Security / Generation (new) ─────────────────────────────────────────────
+
+  {
+    id: 'hmac-generator',
+    slug: 'hmac-generator',
+    heading: 'HMAC Generator — Generate HMAC-SHA256/512 Signatures Online',
+    primaryKeyword: 'hmac generator online',
+    metaDescription:
+      'Generate HMAC-SHA256, SHA-384, and SHA-512 signatures for API request signing and webhook verification. Free, no sign-up, 100% client-side.',
+    intro:
+      'HMAC Generator computes Hash-based Message Authentication Codes using the Web Crypto API entirely in your browser. ' +
+      'Provide a message and a secret key, choose your algorithm (HMAC-SHA256, SHA-384, or SHA-512), and get the signature in hex, Base64, and Base64URL formats instantly. ' +
+      'Used for signing API requests (AWS Signature v4, Stripe webhooks) and verifying data integrity. ' +
+      'Your message and secret key never leave your machine.',
+    useCases: [
+      'Generating HMAC-SHA256 signatures for AWS Signature Version 4',
+      'Computing webhook signatures for Stripe, GitHub, and Shopify event verification',
+      'Signing API requests that require HMAC authentication',
+      'Testing and debugging HMAC implementations in your backend code',
+      'Verifying that two HMAC implementations produce identical output',
+    ],
+    faqs: [
+      {
+        q: 'What is HMAC?',
+        a: 'HMAC (Hash-based Message Authentication Code) is a cryptographic algorithm that combines a hash function (like SHA-256) with a secret key to produce a signature. It proves both integrity (the message was not tampered with) and authenticity (the signer knows the secret key).',
+      },
+      {
+        q: 'What is the difference between HMAC-SHA256 and a plain SHA-256 hash?',
+        a: 'A plain SHA-256 hash is deterministic and public: anyone can compute the same hash for the same input. HMAC-SHA256 mixes in a secret key, so only someone who knows the key can produce or verify the correct signature. This makes HMAC suitable for authentication, while plain hashes are used for checksums and deduplication.',
+      },
+      {
+        q: 'How do I verify a Stripe webhook signature with HMAC?',
+        a: 'Stripe signs webhook payloads with HMAC-SHA256 using your webhook signing secret. Concatenate the timestamp and raw request body as "timestamp.body", compute HMAC-SHA256 with your signing secret, and compare the hex digest to the v1 value in the Stripe-Signature header. SmartDevBox generates the HMAC so you can verify the expected value during debugging.',
+      },
+      {
+        q: 'Which HMAC algorithm should I use?',
+        a: 'HMAC-SHA256 is the industry standard and sufficient for virtually all use cases. HMAC-SHA512 provides a larger output (512 bits vs 256 bits) which is useful if you need a longer key derivation output. HMAC-SHA1 is still used in some legacy systems (TOTP, OAuth 1.0) but should be avoided for new designs.',
+      },
+    ],
+    relatedToolIds: ['hash-generator', 'jwt-encoder', 'totp-generator', 'base64-encode'],
+    keywords: [
+      'hmac generator online', 'hmac sha256 online', 'hmac sha512 generator', 'generate hmac signature',
+      'hmac calculator', 'api request signing tool', 'webhook signature generator', 'hmac-sha256 calculator',
+      'compute hmac online', 'message authentication code generator',
+    ],
+    bodySections: [
+      {
+        heading: 'How HMAC Works',
+        paragraphs: [
+          'HMAC is defined in RFC 2104. Given a key K and a message M, HMAC computes: HMAC(K, M) = H((K XOR opad) || H((K XOR ipad) || M)) where H is the underlying hash function (SHA-256, SHA-512, etc.), ipad is 0x36 repeated, and opad is 0x5C repeated. The key is padded or hashed to match the hash function\'s block size. The double-hashing structure prevents length-extension attacks that affect plain Merkle–Damgård hash functions like SHA-256.',
+          'In practice: to sign an API request with HMAC-SHA256, the server and client share a secret key. The client computes HMAC-SHA256(secret, canonical_request) and sends the hex or Base64 result in an Authorization or X-Signature header. The server recomputes the same HMAC and does a constant-time comparison. If they match, the request is authentic and unmodified.',
+          'Constant-time comparison is critical: a naive string equality check leaks timing information that allows an attacker to brute-force the signature byte by byte. All production HMAC verification libraries use constant-time comparison (e.g. crypto.timingSafeEqual in Node.js, hmac.compare_digest in Python).',
+        ],
+      },
+      {
+        heading: 'Output Formats Explained',
+        paragraphs: [
+          'SmartDevBox outputs the HMAC signature in three formats. Hex (lowercase hexadecimal) is the most common format for API authentication headers — AWS Signature v4, for example, uses hex. Base64 is common in HTTP Authorization headers and JWT libraries. Base64URL (Base64 with + replaced by - and / replaced by _, and padding stripped) is used in JWTs and URLs where + and / would need percent-encoding.',
+          'All three formats represent the same underlying bytes; they are simply different text encodings of the raw binary signature. When comparing HMACs across different systems, make sure both sides use the same encoding format before comparing.',
+        ],
+      },
+      {
+        heading: 'Security Best Practices',
+        paragraphs: [
+          'Secret key length: HMAC is as secure as the key entropy. For HMAC-SHA256, use a randomly-generated key of at least 32 bytes (256 bits). Shorter keys or low-entropy keys (human-chosen passwords) significantly weaken the authentication guarantee. Use a CSPRNG (Cryptographically Secure Pseudo-Random Number Generator) to generate keys — the SmartDevBox Random Password Generator can produce a suitable key.',
+          'Never hardcode HMAC secrets in source code. Store them in environment variables, a secrets manager (AWS Secrets Manager, HashiCorp Vault), or a key management service. Rotate secrets periodically and immediately after any suspected compromise.',
+          'HMAC does not encrypt the message — it authenticates it. The message content is still visible to anyone who intercepts the request. Use HTTPS (TLS) to provide confidentiality in addition to HMAC for integrity and authenticity.',
+        ],
+      },
+    ],
+  },
+
+  {
+    id: 'totp-generator',
+    slug: 'totp-generator',
+    heading: 'TOTP Generator — Generate Time-Based OTPs (RFC 6238) Online',
+    primaryKeyword: 'totp generator online',
+    metaDescription:
+      'Generate Time-based One-Time Passwords (TOTP) for debugging 2FA implementations. RFC 6238 compliant. Free, no sign-up, 100% client-side.',
+    intro:
+      'TOTP Generator computes Time-based One-Time Passwords (TOTP) from a Base32-encoded shared secret, following RFC 6238. ' +
+      'Paste the Base32 secret from your authenticator app (the same string you would scan as a QR code) and receive the current 6-digit code, the previous code, and the next code along with the seconds remaining in the current period. ' +
+      'All computation runs in the browser using the Web Crypto API — your secret never leaves your device.',
+    useCases: [
+      'Debugging 2FA/MFA implementations without a physical authenticator device',
+      'Testing TOTP-protected APIs in automated test suites',
+      'Recovering an OTP when your authenticator app is unavailable',
+      'Verifying that your server correctly validates TOTP codes',
+      'Learning how TOTP works by inspecting current, previous, and next codes',
+    ],
+    faqs: [
+      {
+        q: 'What is TOTP?',
+        a: 'TOTP (Time-based One-Time Password) is a two-factor authentication algorithm defined in RFC 6238. It generates a short-lived numeric code (usually 6 digits) by computing HMAC-SHA1 of the current Unix time divided by a period (usually 30 seconds), using a shared secret. The code changes every 30 seconds.',
+      },
+      {
+        q: 'Where do I find the Base32 TOTP secret?',
+        a: 'When you set up 2FA on a website, you are shown a QR code and usually a "manual entry" key — that key is the Base32-encoded TOTP secret. Copy that string (e.g. JBSWY3DPEHPK3PXP) and paste it into the TOTP Generator.',
+      },
+      {
+        q: 'Why does the TOTP Generator show three codes?',
+        a: 'To handle clock skew between the client and server, most TOTP implementations accept a ±1 window — the previous code and the next code in addition to the current one. SmartDevBox shows all three so you can test your server\'s window handling.',
+      },
+      {
+        q: 'Is it safe to paste a TOTP secret into SmartDevBox?',
+        a: 'SmartDevBox runs 100% in your browser with no server communication. Your TOTP secret is never transmitted. That said, you should only use SmartDevBox with test/development secrets or with a 2FA secret for an account you are currently debugging.',
+      },
+    ],
+    relatedToolIds: ['hmac-generator', 'base32-decode', 'base64-decode', 'hash-generator'],
+    keywords: [
+      'totp generator online', 'otp generator', 'totp code generator', 'rfc 6238 totp', '2fa code generator',
+      'two factor authentication generator', 'mfa code generator', 'google authenticator online',
+      'totp tester', 'time-based otp generator',
+    ],
+    bodySections: [
+      {
+        heading: 'How TOTP Works (RFC 6238)',
+        paragraphs: [
+          'TOTP is built on HOTP (HMAC-based One-Time Password, RFC 4226), which generates a code from a counter value. TOTP replaces the incrementing counter with a time-based counter: T = floor(current_unix_time / period), where the period is typically 30 seconds. This means the code changes every 30 seconds and any client and server with a synchronised clock will independently compute the same code.',
+          'The algorithm: (1) Decode the Base32 secret to raw bytes. (2) Compute T = floor(Unix time / 30). (3) Encode T as a big-endian 8-byte integer. (4) Compute HMAC-SHA1(secret, T). (5) Dynamic truncation: take the last nibble of the HMAC output as an offset, extract 4 bytes starting at that offset, mask the high bit, interpret as a 31-bit integer, and take it modulo 10^digits (usually 10^6 = 1,000,000). (6) Zero-pad to digits characters.',
+          'RFC 6238 mandates HMAC-SHA1 for interoperability with Google Authenticator and similar apps. Some implementations (e.g. Steam, some enterprise MFA systems) use HMAC-SHA256 or HMAC-SHA512 with longer codes — SmartDevBox uses the standard HMAC-SHA1 with configurable digits and period.',
+        ],
+      },
+      {
+        heading: 'Implementing TOTP Server-Side',
+        paragraphs: [
+          'To add TOTP to your application: (1) Generate a cryptographically random 20-byte secret. (2) Base32-encode it and store it securely associated with the user\'s account. (3) Present the Base32 secret as a QR code (format: otpauth://totp/YourApp:username?secret=BASE32&issuer=YourApp) so the user can scan it into their authenticator app. (4) On login, compute the expected TOTP using the stored secret and accept the user\'s code if it matches the current, previous, or next window.',
+          'Clock skew allowance: accept codes from the window T-1 and T+1 in addition to T. This tolerates up to 30 seconds of clock difference between client and server. Do not accept a wider window (T±2 or more) as it reduces the security benefit. Many implementations also track used codes in a short-lived cache to prevent replay attacks within the same window.',
+          'Secret storage: the TOTP secret is equivalent to a password. Store it encrypted at rest (AES-256-GCM with a key from your KMS), not as plain text. If your database is breached, an attacker with the encrypted secrets still cannot generate OTPs without the encryption key.',
+        ],
+      },
+    ],
+  },
+
+  {
+    id: 'nanoid-generator',
+    slug: 'nanoid-generator',
+    heading: 'Nano ID Generator — Generate Compact URL-Safe IDs Online',
+    primaryKeyword: 'nanoid generator online',
+    metaDescription:
+      'Generate Nano IDs — compact, URL-safe unique identifiers for JavaScript and TypeScript backends. Free, no sign-up, 100% client-side.',
+    intro:
+      'Nano ID Generator creates short, URL-safe unique identifiers using a cryptographically random alphabet of 64 characters (A–Z, a–z, 0–9, _, -). ' +
+      'The default size of 21 characters gives the same collision probability as UUID v4 (126 bits of randomness). ' +
+      'Nano IDs are smaller than UUIDs (21 vs 36 characters), URL-safe without encoding, and widely used in JavaScript and TypeScript backends. ' +
+      'All generation runs in the browser using the Web Crypto API.',
+    useCases: [
+      'Generating short unique IDs for database primary keys',
+      'Creating URL-safe identifiers for shareable links and slugs',
+      'Generating short session or token IDs for web applications',
+      'Creating unique filenames for user-uploaded content',
+      'Replacing UUID v4 with a more compact identifier format',
+    ],
+    faqs: [
+      {
+        q: 'What is a Nano ID?',
+        a: 'Nano ID is a compact, URL-safe unique identifier. The default 21-character Nano ID uses 64 possible characters (A–Z, a–z, 0–9, _, -), giving 64^21 ≈ 2^126 possible values — the same collision probability as UUID v4. It was created by Andrey Sitnik and is widely used in the JavaScript/TypeScript ecosystem.',
+      },
+      {
+        q: 'How does Nano ID compare to UUID v4?',
+        a: 'Both have the same collision probability (~2^122 for UUID v4, ~2^126 for 21-character Nano ID). Nano ID is shorter (21 vs 36 characters), URL-safe without encoding (no hyphens that need to be escaped), and has a simpler structure. UUID v4 is more universally supported in databases and tools.',
+      },
+      {
+        q: 'Can I use a custom alphabet with Nano ID?',
+        a: 'Yes. SmartDevBox allows you to set a custom alphabet. You can restrict to alphanumeric-only (no _ or -), use only lowercase, or use any set of characters. Longer alphabets with the same size produce more entropy; shorter alphabets require a longer size for the same collision probability.',
+      },
+      {
+        q: 'Is Nano ID cryptographically random?',
+        a: 'Yes. SmartDevBox uses crypto.getRandomValues() (the Web Crypto API) to generate random bytes, which is cryptographically secure. The bytes are mapped to the alphabet using rejection sampling to avoid modulo bias.',
+      },
+    ],
+    relatedToolIds: ['uuid-generator', 'ulid-generator', 'random-string', 'random-password'],
+    keywords: [
+      'nanoid generator online', 'nano id generator', 'generate nano id', 'short unique id generator',
+      'url safe id generator', 'compact id generator', 'nanoid online', 'javascript unique id generator',
+    ],
+    bodySections: [
+      {
+        heading: 'Nano ID vs UUID vs ULID',
+        paragraphs: [
+          'UUID v4 is the most portable format: 32 hex digits in 8-4-4-4-12 groups (xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx). It is natively supported in PostgreSQL, MySQL, and most ORMs. The hyphenated format is 36 characters; without hyphens it is 32. The 4 and y prefix digits are version/variant markers, leaving 122 bits of actual randomness.',
+          'ULID (Universally Unique Lexicographically Sortable Identifier) encodes a 48-bit millisecond timestamp in the first 10 characters and 80 random bits in the remaining 16 characters. ULIDs sort chronologically in string order, making them useful for time-series data in systems that sort by primary key (e.g. DynamoDB). They use the Crockford Base32 alphabet (uppercase, no ambiguous characters like I, L, O, U).',
+          'Nano ID uses 64 URL-safe characters to pack more entropy per character than hex or Base32. At 21 characters it matches UUID v4\'s collision resistance while being 42% shorter. It has no timestamp component, so it does not sort chronologically — use ULID if ordered IDs matter. Nano ID is the best choice when you need short, dense, URL-safe identifiers for database keys, links, and slugs.',
+        ],
+      },
+      {
+        heading: 'Collision Probability',
+        paragraphs: [
+          'The collision probability for N generated IDs of size S over an alphabet of A characters is approximately N² / (2 × A^S). For the default 21-character Nano ID (A=64): to reach a 1% collision probability you would need to generate 2.71 × 10^18 IDs — roughly 2.7 quintillion. At a rate of one million IDs per second, that would take about 86,000 years.',
+          'If you need shorter IDs (say, 12 characters for a URL slug), the collision probability rises significantly. At 12 characters (A=64): a 1% collision threshold is reached at ~3.9 × 10^10 IDs (~39 billion). For most applications this is still more than sufficient, but for extremely high-volume systems or globally shared namespaces, use the default 21 characters.',
+        ],
+      },
+    ],
+  },
+
+  // ── Networking / Inspection (new) ──────────────────────────────────────────
+
+  {
+    id: 'cidr-calculator',
+    slug: 'cidr-calculator',
+    heading: 'CIDR / Subnet Calculator — Calculate Subnet Details Online',
+    primaryKeyword: 'cidr calculator online',
+    metaDescription:
+      'Calculate subnet details from CIDR notation: network address, broadcast, host range, subnet mask, and usable hosts. Free, no sign-up, 100% client-side.',
+    intro:
+      'CIDR / Subnet Calculator takes an IPv4 CIDR block (e.g. 192.168.1.0/24) and computes: network address, subnet mask, wildcard mask, broadcast address, first and last usable host, number of usable hosts, IP class, and whether the address is in a private RFC 1918 range. ' +
+      'It also displays the subnet mask in binary for visualising the prefix boundary. ' +
+      'All calculation runs in the browser with no server communication.',
+    useCases: [
+      'Planning IP address allocation for VPC subnets in AWS, GCP, or Azure',
+      'Verifying firewall rules and security group CIDR ranges',
+      'Designing network topologies for on-premises infrastructure',
+      'Learning subnetting and binary mask calculations',
+      'Checking whether two IP addresses are in the same subnet',
+    ],
+    faqs: [
+      {
+        q: 'What is CIDR notation?',
+        a: 'CIDR (Classless Inter-Domain Routing) notation represents an IP address and a network prefix length as a single string: IP/prefix, e.g. 10.0.0.0/8. The prefix length (0–32) specifies how many leading bits are fixed (the network part); the remaining bits are free (the host part).',
+      },
+      {
+        q: 'How many hosts does a /24 subnet have?',
+        a: 'A /24 subnet has 2^(32-24) = 256 total IP addresses. Two are reserved: the network address (e.g. 192.168.1.0) and the broadcast address (192.168.1.255). That leaves 254 usable host addresses.',
+      },
+      {
+        q: 'What is the difference between subnet mask and wildcard mask?',
+        a: 'The subnet mask has 1s for the network bits and 0s for the host bits (e.g. 255.255.255.0 for /24). The wildcard mask is the bitwise inverse: 0s for the network bits and 1s for the host bits (e.g. 0.0.0.255 for /24). Wildcard masks are used in Cisco ACLs and OSPF area definitions.',
+      },
+      {
+        q: 'What are the private IP address ranges?',
+        a: 'RFC 1918 defines three private ranges: 10.0.0.0/8 (Class A, 16.7M addresses), 172.16.0.0/12 (Class B, 1M addresses), and 192.168.0.0/16 (Class C, 65K addresses). These addresses are not routed on the public internet and are used in private networks and cloud VPCs.',
+      },
+    ],
+    relatedToolIds: ['ip-inspector', 'random-ip', 'string-inspector'],
+    keywords: [
+      'cidr calculator', 'subnet calculator online', 'cidr subnet calculator', 'ip subnet calculator',
+      'network calculator', 'subnet mask calculator', 'calculate cidr range', 'ip range calculator',
+      'cidr to subnet mask', 'subnet calculator ipv4',
+    ],
+    bodySections: [
+      {
+        heading: 'Understanding CIDR and Subnetting',
+        paragraphs: [
+          'Before CIDR (introduced in 1993), IP addresses were divided into fixed classes: Class A (/8, 16.7M hosts), Class B (/16, 65K hosts), Class C (/24, 254 hosts). This was wasteful — an organisation needing 1000 hosts had to take a Class B (65K addresses) because Class C was too small. CIDR replaced classes with a variable-length prefix that can be any value from /0 to /32, allowing exact-fit allocation.',
+          'A subnet is a logical subdivision of a larger network. In a /24 network (256 addresses), you might carve out a /26 (64 addresses) for web servers, a /27 (32 addresses) for database servers, and reserve the rest for future use. Cloud providers use this extensively: AWS VPCs are typically /16 or /24, with individual subnets as /24 or /28 per availability zone.',
+          'The subnet mask encodes the prefix in dotted-decimal: a /24 prefix means the first 24 bits are 1s, or 11111111.11111111.11111111.00000000 = 255.255.255.0. A /19 prefix is 11111111.11111111.11100000.00000000 = 255.255.224.0. Routers use the mask to determine whether a destination IP is on the local network (AND with mask = network address) or must be forwarded.',
+        ],
+      },
+      {
+        heading: 'Common Subnet Sizes Reference',
+        paragraphs: [
+          '/32 — Single host (1 IP). Used in host routes and /32 security group rules. /31 — Point-to-point links (2 IPs, RFC 3021). No broadcast or network address in /31. /30 — 4 IPs, 2 usable. Classic WAN link size. /29 — 8 IPs, 6 usable. Smallest typical customer allocation. /28 — 16 IPs, 14 usable. AWS minimum subnet size. /27 — 32 IPs, 30 usable. /26 — 64 IPs, 62 usable. /25 — 128 IPs, 126 usable. /24 — 256 IPs, 254 usable. The most common subnet in LANs and cloud VPCs.',
+          '/23 — 512 IPs, 510 usable. /22 — 1024 IPs, 1022 usable. /21 — 2048 IPs, 2046 usable. /20 — 4096 IPs. /16 — 65536 IPs. Typical VPC size. /10 — 4.2M IPs. /8 — 16.7M IPs. Class A range. Note: /0 covers the entire IPv4 address space (0.0.0.0/0), used in default routes.',
+        ],
+      },
+    ],
+  },
+
+  {
+    id: 'ip-inspector',
+    slug: 'ip-inspector',
+    heading: 'IP Address Inspector — Analyze IPv4 & IPv6 Addresses Online',
+    primaryKeyword: 'ip address inspector online',
+    metaDescription:
+      'Inspect an IPv4 or IPv6 address: class, type, private/public, loopback, multicast, binary representation. Free, no sign-up, 100% client-side.',
+    intro:
+      'IP Address Inspector analyses any IPv4 or IPv6 address and returns: IP class (A/B/C/D/E for IPv4), private/public classification, loopback status, link-local status, multicast membership, the decimal integer representation, hexadecimal notation, and dotted-binary representation. ' +
+      'Useful for understanding address properties at a glance without looking up RFC tables.',
+    useCases: [
+      'Checking whether an IP from a log file is private or public',
+      'Verifying that a generated IP is in the expected class and range',
+      'Understanding the binary structure of an IP address for subnetting study',
+      'Debugging firewall rules by confirming address type classifications',
+      'Quickly checking if an IPv6 address is loopback, link-local, or multicast',
+    ],
+    faqs: [
+      {
+        q: 'What are the IPv4 address classes?',
+        a: 'Class A: first octet 1–126 (default mask /8, up to 16.7M hosts). Class B: first octet 128–191 (default mask /16, up to 65K hosts). Class C: first octet 192–223 (default mask /24, 254 hosts). Class D: first octet 224–239 (multicast). Class E: first octet 240–255 (reserved/experimental).',
+      },
+      {
+        q: 'What is a link-local IPv4 address?',
+        a: 'Link-local addresses (169.254.0.0/16) are automatically assigned when a device cannot obtain an address from a DHCP server. On Windows this is called APIPA (Automatic Private IP Addressing). A 169.254.x.x address usually means DHCP failed.',
+      },
+      {
+        q: 'What does the IPv6 loopback address look like?',
+        a: 'The IPv6 loopback address is ::1 (equivalent to 127.0.0.1 in IPv4). It refers to the local machine and never leaves the network interface.',
+      },
+    ],
+    relatedToolIds: ['cidr-calculator', 'random-ip', 'string-inspector'],
+    keywords: [
+      'ip address inspector', 'ip address analyzer online', 'check ip address class', 'ip address info',
+      'ipv4 inspector', 'ipv6 inspector', 'ip address lookup tool', 'ip private public checker',
+      'what class is ip address', 'ip address binary',
+    ],
+    bodySections: [
+      {
+        heading: 'IPv4 Address Structure',
+        paragraphs: [
+          'An IPv4 address is a 32-bit number displayed in dotted-decimal notation: four 8-bit octets separated by dots (e.g. 192.168.0.1). The address space is divided into two logical parts: network bits (prefix) and host bits, determined by the subnet mask or CIDR prefix. Within the same subnet, devices communicate directly; across subnets, traffic is routed.',
+          'Special ranges include: 0.0.0.0/8 (this network), 10.0.0.0/8 (private — RFC 1918), 100.64.0.0/10 (shared address space — RFC 6598, used by ISPs for carrier-grade NAT), 127.0.0.0/8 (loopback — 127.0.0.1 is the standard loopback address), 169.254.0.0/16 (link-local / APIPA), 172.16.0.0/12 (private — RFC 1918), 192.168.0.0/16 (private — RFC 1918), 224.0.0.0/4 (multicast), 255.255.255.255/32 (limited broadcast).',
+          'The decimal integer representation (also called the network byte order integer) is computed as: (octet1 × 2^24) + (octet2 × 2^16) + (octet3 × 2^8) + octet4. This is useful for range comparisons without converting to binary. The hex representation prefixes the 8-digit hex value with 0x, which is often seen in C, low-level networking code, and packet captures.',
+        ],
+      },
+      {
+        heading: 'IPv6 Address Structure',
+        paragraphs: [
+          'IPv6 addresses are 128 bits displayed as eight groups of four hexadecimal digits separated by colons (e.g. 2001:0db8:85a3:0000:0000:8a2e:0370:7334). Consecutive all-zero groups can be collapsed to :: (but only once per address). The ::1 loopback and :: unspecified addresses are important special cases.',
+          'IPv6 address types: Link-local addresses (fe80::/10) are auto-configured on all IPv6-capable interfaces and used for neighbor discovery; they are not routable. Multicast addresses (ff00::/8) replace IPv4 broadcast. Global unicast addresses (2000::/3) are routable on the public internet. Unique local addresses (fc00::/7) are the IPv6 equivalent of RFC 1918 private addresses.',
+        ],
+      },
+    ],
+  },
+
+  {
+    id: 'http-status-reference',
+    slug: 'http-status-reference',
+    heading: 'HTTP Status Code Reference — Look Up HTTP Codes Online',
+    primaryKeyword: 'http status codes',
+    metaDescription:
+      'Look up any HTTP status code: phrase, meaning, category, and usage notes. All 1xx–5xx codes explained. Free, no sign-up, 100% client-side.',
+    intro:
+      'HTTP Status Code Reference explains every HTTP response status code: its standard phrase, which category it belongs to (1xx Informational, 2xx Success, 3xx Redirection, 4xx Client Error, 5xx Server Error), and a plain-English description of when and why it is returned. ' +
+      'Paste a bare code (404), a full HTTP response line (HTTP/1.1 404 Not Found), or leave the input empty to see all codes grouped by category.',
+    useCases: [
+      'Looking up the meaning of an unfamiliar HTTP status code in logs or API responses',
+      'Understanding the difference between 301 and 308, or 401 and 403',
+      'Debugging REST API errors by identifying the correct status code to return',
+      'Reviewing all 5xx codes when investigating a production incident',
+      'Learning HTTP semantics for API design',
+    ],
+    faqs: [
+      {
+        q: 'What is the difference between 401 Unauthorized and 403 Forbidden?',
+        a: '401 means authentication is required and has not been provided (or the credentials are invalid). The client should re-authenticate. 403 means the server knows who you are but will not allow the action — the identity is authenticated but lacks permission. A 403 should not prompt re-authentication.',
+      },
+      {
+        q: 'What is the difference between 301 and 302 redirects?',
+        a: '301 is a permanent redirect — the browser and search engines update their stored URL to the new location. 302 is temporary — the original URL should be used for future requests. For SEO, use 301 when permanently moving a page. In practice, both 301 and 302 typically change a POST to GET on redirect; use 307/308 to preserve the HTTP method.',
+      },
+      {
+        q: 'When should an API return 422 vs 400?',
+        a: '400 Bad Request covers syntactically malformed requests (unparseable JSON, missing Content-Type). 422 Unprocessable Entity is used when the request is syntactically valid but fails semantic validation — for example, a JSON body with the correct structure but invalid field values. Many REST APIs use 422 for all input validation errors.',
+      },
+      {
+        q: 'What causes a 502 Bad Gateway?',
+        a: 'A 502 is returned by a reverse proxy (nginx, load balancer, API gateway) when the upstream server (your application) returned an invalid or no response. Common causes: the app crashed, the app is restarting, the app is overloaded and closing connections, or there is a network partition between the proxy and the app.',
+      },
+      {
+        q: 'What is HTTP 429 Too Many Requests?',
+        a: '429 indicates that the client has exceeded a rate limit. The server may include a Retry-After header specifying when the client can make another request. Always handle 429 in API clients with exponential back-off and jitter.',
+      },
+    ],
+    relatedToolIds: ['url-parser', 'jwt-inspector', 'cron-parser'],
+    keywords: [
+      'http status codes', 'http status code reference', 'http error codes', 'http response codes',
+      'http status code lookup', '404 meaning', '401 vs 403', '500 error meaning',
+      'rest api status codes', 'http codes list', '4xx 5xx http codes', 'http status explained',
+    ],
+    bodySections: [
+      {
+        heading: 'HTTP Status Code Categories',
+        paragraphs: [
+          '1xx Informational: the server has received the request headers and the client should proceed. Used primarily for connection upgrades (101 Switching Protocols for WebSockets) and early hints (103 for resource preloading). Rarely seen in typical REST API work.',
+          '2xx Success: the request was received, understood, and accepted. 200 OK is the standard success response. 201 Created is returned when a resource is newly created (POST to a collection). 204 No Content is used when the operation succeeds but there is nothing to return in the body (DELETE, some PATCHes). 206 Partial Content is used for ranged requests (resumable downloads).',
+          '3xx Redirection: the client must take further action to complete the request. 301 Moved Permanently and 308 Permanent Redirect are for permanent URL changes (301 may change method to GET; 308 preserves it). 302 Found and 307 Temporary Redirect are for temporary redirects. 304 Not Modified tells the client to use its cached version.',
+          '4xx Client Error: the request contains bad syntax or cannot be fulfilled by the server. These are the client\'s fault. 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 405 Method Not Allowed, 409 Conflict, 422 Unprocessable Entity, 429 Too Many Requests.',
+          '5xx Server Error: the server failed to fulfil an apparently valid request. These are the server\'s fault. 500 Internal Server Error (catch-all), 502 Bad Gateway (upstream failure), 503 Service Unavailable (overload/maintenance), 504 Gateway Timeout (upstream timeout).',
+        ],
+      },
+      {
+        heading: 'API Design Guidance',
+        paragraphs: [
+          'Choosing the right status code makes your API self-documenting and easier to debug. Return 201 (not 200) when creating resources so clients know a new resource was created and can find its URL in the Location header. Return 204 (not 200 with an empty body) for successful deletes. Return 409 Conflict for duplicate-key violations rather than 500, so clients know it is a data conflict they can resolve.',
+          'For validation errors, return 422 with a body that lists each invalid field and its error message. This allows clients to display field-level error messages without parsing the error text. Structure the body consistently — for example: {"errors": [{"field": "email", "message": "Invalid format"}]}.',
+          'Never return 200 with an error body. Some legacy APIs return 200 with {"status": "error", "message": "..."}. This breaks every HTTP client and monitoring tool that uses the status code to determine success. Always use 4xx or 5xx for errors.',
+        ],
+      },
+    ],
+  },
 ];
 
 /**

@@ -15,8 +15,8 @@ const CATEGORY_PREFIXES: { label: string; test: (id: string) => boolean }[] = [
   { label: 'Encoding & Decoding', test: (id) => /base64|base32|url-enc|url-dec|url-pars|jwt|html-enc|html-dec|hex-|ascii-|backslash|rot1|rot4|image-dec/.test(id) },
   { label: 'Formatting',          test: (id) => /format|beautif|minif|validat|prettif/.test(id) },
   { label: 'Conversion',          test: (id) => /to-|csv|yaml|markdown|color|number-base|unix|timestamp|seconds|roman|uuid-hex|hex-uuid/.test(id) },
-  { label: 'Generation',          test: (id) => /generat|uuid$|ulid|hash|random|lorem|qr-code/.test(id) },
-  { label: 'Inspection',          test: (id) => /regex|jsonpath|string-inspect|cron|cert|preview/.test(id) },
+  { label: 'Generation',          test: (id) => /generat|uuid$|ulid|hash|random|lorem|qr-code|hmac|totp|nanoid/.test(id) },
+  { label: 'Inspection',          test: (id) => /regex|jsonpath|string-inspect|cron|cert|preview|cidr|ip-inspect|http-status/.test(id) },
   { label: 'Text',                test: (id) => /case|sort|dedup|reverse|word-count|trim|empty|number-lines|prefix|suffix|join|extract/.test(id) },
 ];
 
@@ -80,7 +80,7 @@ export default function ToolsIndexPage() {
               </li>
               <li className="feat-tool-row">
                 <Link href="/vs/jwt-io" className="feat-tool-name">SmartDevBox vs jwt.io</Link>
-                <span className="feat-tool-desc">A single-purpose JWT decoder vs a 91-tool all-in-one toolkit.</span>
+                <span className="feat-tool-desc">A single-purpose JWT decoder vs a 97-tool all-in-one toolkit.</span>
               </li>
               <li className="feat-tool-row">
                 <Link href="/alternatives/base64decode-org" className="feat-tool-name">SmartDevBox vs base64decode.org</Link>
@@ -122,7 +122,7 @@ export default function ToolsIndexPage() {
         <p className="feat-toc-title" style={{ marginTop: '1.5rem' }}>Quick links</p>
         <ul className="feat-toc-list">
           <li className="feat-toc-item"><Link href="/">Open SmartDevBox</Link></li>
-          <li className="feat-toc-item"><Link href="/features/tools">All 91+ Tools</Link></li>
+          <li className="feat-toc-item"><Link href="/features/tools">All 97+ Tools</Link></li>
           <li className="feat-toc-item"><a href="#more">vs &amp; Glossary</a></li>
         </ul>
         <p className="feat-toc-title" style={{ marginTop: '1.5rem' }}>vs Alternatives</p>
