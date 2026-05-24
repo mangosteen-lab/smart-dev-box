@@ -5,7 +5,7 @@ import { RelatedArticles } from '@/components/features/RelatedArticles';
 export const metadata: Metadata = {
   title: 'Plugin System — Extend SmartDevBox with Custom Tools | SmartDevBox',
   description:
-    'SmartDevBox has a rich plugin system that lets you add custom tools, transformers, and detectors without forking the codebase. Ship your own tools alongside the 91+ built-in ones.',
+    'SmartDevBox has a rich plugin system that lets you add custom tools, transformers, and detectors without forking the codebase. Ship your own tools alongside the 97+ built-in ones.',
   keywords: [
     'developer tools plugin system',
     'custom dev tools',
@@ -20,14 +20,14 @@ export const metadata: Metadata = {
     siteName: 'SmartDevBox',
     title: 'Plugin System | SmartDevBox',
     description:
-      'Add your own tools to SmartDevBox with the built-in plugin system. Write a detector and a transformer, register it, and it appears alongside all 91+ built-in tools.',
+      'Add your own tools to SmartDevBox with the built-in plugin system. Write a detector and a transformer, register it, and it appears alongside all 97+ built-in tools.',
     url: 'https://smartdevbox.com/features/plugins',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Plugin System — Add Custom Tools to SmartDevBox',
     description:
-      'Register your own detectors and transformers alongside the 91+ built-in tools. No fork required — just write a plugin and load it.',
+      'Register your own detectors and transformers alongside the 97+ built-in tools. No fork required — just write a plugin and load it.',
   },
 };
 
@@ -95,7 +95,7 @@ export default function PluginsPage() {
           </div>
           <h1 className="feat-h1">Plugin System</h1>
           <p className="feat-lead">
-            91+ tools built in. Unlimited tools with plugins. Add your own
+            97+ tools built in. Unlimited tools with plugins. Add your own
             transformers, detectors, and generators — they appear and behave exactly
             like built-in tools.
           </p>

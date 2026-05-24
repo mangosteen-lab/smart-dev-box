@@ -151,7 +151,7 @@ export default function AutoDetectionPage() {
           <p>
             SmartDevBox includes a real-time format detection engine that runs the
             moment you paste or type text into the input area. It scores your input
-            against every one of the 91+ built-in tools simultaneously, identifies the
+            against every one of the 97+ built-in tools simultaneously, identifies the
             most likely format with a confidence percentage, and automatically applies
             the correct tool — all before you have time to look for a menu.
           </p>
@@ -211,7 +211,7 @@ export default function AutoDetectionPage() {
             </span>
             <p>
               AI mode is <strong>disabled by default</strong> and requires your own OpenAI
-              API key. All 91+ tools work fully without it.
+              API key. All 97+ tools work fully without it.
             </p>
           </div>
           <p>

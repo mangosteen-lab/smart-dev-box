@@ -45,7 +45,7 @@ export default function ToolsLayout({ children }: { children: React.ReactNode })
             <polyline points="12 5 19 12 12 19" />
           </svg>
         </Link>
-        <span className="feat-hero-sub">91+ tools · 100% client-side · no account required</span>
+        <span className="feat-hero-sub">97+ tools · 100% client-side · no account required</span>
       </div>
 
       {/* ── Two-column body (article + TOC slot) ─────────────────────────── */}
@@ -63,7 +63,7 @@ export default function ToolsLayout({ children }: { children: React.ReactNode })
             <polyline points="12 5 19 12 12 19" />
           </svg>
         </Link>
-        <p className="feat-footer-sub">91+ tools · 100% client-side · no account required</p>
+        <p className="feat-footer-sub">97+ tools · 100% client-side · no account required</p>
       </footer>
     </div>
   );

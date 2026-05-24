@@ -14,7 +14,7 @@ const softwareAppJsonLd = {
   operatingSystem: 'Any (browser-based)',
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   description:
-    'SmartDevBox is a free browser-based developer toolbox with 91+ built-in tools. It automatically detects input formats and applies the correct tool instantly. No sign-up. 100% client-side.',
+    'SmartDevBox is a free browser-based developer toolbox with 97+ built-in tools. It automatically detects input formats and applies the correct tool instantly. No sign-up. 100% client-side.',
 };
 
 const NAV_LINKS = [
@@ -72,7 +72,7 @@ export default function GlossaryLayout({ children }: { children: React.ReactNode
             <polyline points="12 5 19 12 12 19"/>
           </svg>
         </Link>
-        <span className="feat-hero-sub">91+ tools · 100% client-side · no account required</span>
+        <span className="feat-hero-sub">97+ tools · 100% client-side · no account required</span>
       </div>
 
       {/* ── Two-column body (article + TOC slot) ───────────────────────────── */}
@@ -90,7 +90,7 @@ export default function GlossaryLayout({ children }: { children: React.ReactNode
             <polyline points="12 5 19 12 12 19"/>
           </svg>
         </Link>
-        <p className="feat-footer-sub">91+ tools · 100% client-side · no account required</p>
+        <p className="feat-footer-sub">97+ tools · 100% client-side · no account required</p>
       </footer>
     </div>
   );

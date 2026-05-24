@@ -4,7 +4,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'SmartDevBox vs jwt.io — Best Free JWT Decoder Alternatives',
   description:
-    'Comparing SmartDevBox and jwt.io for JWT decoding. SmartDevBox auto-detects JWTs on paste and includes 91+ other dev tools. jwt.io is a single-purpose JWT decoder/verifier with algorithm support.',
+    'Comparing SmartDevBox and jwt.io for JWT decoding. SmartDevBox auto-detects JWTs on paste and includes 97+ other dev tools. jwt.io is a single-purpose JWT decoder/verifier with algorithm support.',
   keywords: [
     'jwt.io alternative',
     'best jwt decoder online',
@@ -21,14 +21,14 @@ export const metadata: Metadata = {
     siteName: 'SmartDevBox',
     title: 'SmartDevBox vs jwt.io — Best JWT Decoder Alternatives',
     description:
-      'SmartDevBox auto-decodes JWTs on paste alongside 91+ dev tools. jwt.io offers signature verification. Full comparison inside.',
+      'SmartDevBox auto-decodes JWTs on paste alongside 97+ dev tools. jwt.io offers signature verification. Full comparison inside.',
     url: 'https://smartdevbox.com/vs/jwt-io',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'SmartDevBox vs jwt.io — Best JWT Decoder Alternatives',
     description:
-      'SmartDevBox: auto-detect JWTs on paste, 91+ tools. jwt.io: signature verification, algorithm support. See the full comparison.',
+      'SmartDevBox: auto-detect JWTs on paste, 97+ tools. jwt.io: signature verification, algorithm support. See the full comparison.',
   },
 };
 
@@ -41,7 +41,7 @@ const faqJsonLd = {
       name: 'Is there a good jwt.io alternative?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Yes. SmartDevBox is a strong jwt.io alternative for JWT decoding. It auto-detects JWT tokens the moment you paste them and displays the decoded header and payload without any manual steps. Unlike jwt.io it also includes 91+ other developer tools, so you can decode a JWT, format the JSON payload, and convert the exp timestamp all in one tab.',
+        text: 'Yes. SmartDevBox is a strong jwt.io alternative for JWT decoding. It auto-detects JWT tokens the moment you paste them and displays the decoded header and payload without any manual steps. Unlike jwt.io it also includes 97+ other developer tools, so you can decode a JWT, format the JSON payload, and convert the exp timestamp all in one tab.',
       },
     },
     {
@@ -104,7 +104,7 @@ const COMPARISON_ROWS = [
   },
   {
     feature: 'Other tools beyond JWT',
-    smartdevbox: '91+ tools (JSON, Base64, URL, hash, regex, cron, XML, SQL, and more)',
+    smartdevbox: '97+ tools (JSON, Base64, URL, hash, regex, cron, XML, SQL, and more)',
     jwtio: 'JWT only',
   },
   {
@@ -356,7 +356,7 @@ export default function VsJwtIoPage() {
               <p className="feat-faq-a">
                 Yes. SmartDevBox is a strong alternative for JWT decoding. It auto-detects
                 JWT tokens on paste and displays the decoded header and payload without any
-                manual steps. Unlike jwt.io it also includes 91+ other developer tools.
+                manual steps. Unlike jwt.io it also includes 97+ other developer tools.
               </p>
             </div>
             <div className="feat-faq-item">
@@ -453,7 +453,7 @@ export default function VsJwtIoPage() {
         <ul className="feat-toc-list">
           <li className="feat-toc-item"><Link href="/">Open SmartDevBox</Link></li>
           <li className="feat-toc-item"><Link href="/tools/jwt-decoder">JWT Decoder</Link></li>
-          <li className="feat-toc-item"><Link href="/features/tools">All 91+ Tools</Link></li>
+          <li className="feat-toc-item"><Link href="/features/tools">All 97+ Tools</Link></li>
         </ul>
       </aside>
     </>

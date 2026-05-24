@@ -26,7 +26,7 @@ const ALL_PAGES: Record<
   },
   'tools': {
     href: '/features/tools',
-    label: 'All 91+ Tools',
+    label: 'All 97+ Tools',
     desc: 'Browse the complete built-in tool list across all 6 categories.',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"

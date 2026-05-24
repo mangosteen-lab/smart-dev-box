@@ -132,7 +132,7 @@ export default function Home() {
 
         <h2>Learn More About SmartDevBox Features</h2>
         <ul>
-          <li><Link href="/features/tools">All 91+ Built-in Tools</Link> — complete list of every tool across all 6 categories.</li>
+          <li><Link href="/features/tools">All 97+ Built-in Tools</Link> — complete list of every tool across all 6 categories.</li>
           <li><Link href="/tools">Tool Guides</Link> — in-depth reference articles for every tool: what it does, worked examples, and FAQs.</li>
           <li><Link href="/features/auto-detection">Auto Format Detection</Link> — how SmartDevBox detects Base64, JSON, JWT, XML, and 80+ formats automatically.</li>
           <li><Link href="/features/smart-extract">Smart Extract</Link> — extract emails, URLs, and numbers from any block of text.</li>

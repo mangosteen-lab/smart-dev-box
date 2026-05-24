@@ -48,7 +48,7 @@ const faqJsonLd = {
       name: 'Does SmartDevBox work offline like CyberChef?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Yes. SmartDevBox is a Progressive Web App. All 91+ tools run client-side with no server dependency. Once loaded, every tool works without an internet connection.',
+        text: 'Yes. SmartDevBox is a Progressive Web App. All 97+ tools run client-side with no server dependency. Once loaded, every tool works without an internet connection.',
       },
     },
     {
@@ -88,7 +88,7 @@ const COMPARISON_ROWS = [
   },
   {
     feature: 'Number of built-in tools',
-    smartdevbox: '91+ across 6 categories',
+    smartdevbox: '97+ across 6 categories',
     cyberchef: '300+ operations',
   },
   {
@@ -200,7 +200,7 @@ export default function VsCyberChefPage() {
           {/* What is SmartDevBox */}
           <h2 id="what-is-smartdevbox">What Is SmartDevBox?</h2>
           <p>
-            SmartDevBox is a browser-based developer toolkit with 91+ tools across encoding,
+            SmartDevBox is a browser-based developer toolkit with 97+ tools across encoding,
             formatting, generation, conversion, and inspection categories. Its defining feature
             is automatic format detection: paste any text and the tool identifies the format
             (Base64, JSON, JWT, XML, SQL, Unix timestamp, URL, X.509 certificate, cron
@@ -359,7 +359,7 @@ export default function VsCyberChefPage() {
             <div className="feat-faq-item">
               <h3 className="feat-faq-q">Does SmartDevBox work offline like CyberChef?</h3>
               <p className="feat-faq-a">
-                Yes. SmartDevBox is a Progressive Web App. All 91+ tools run client-side
+                Yes. SmartDevBox is a Progressive Web App. All 97+ tools run client-side
                 with no server dependency. Once loaded, every tool works without an
                 internet connection. CyberChef can also be downloaded as a standalone
                 HTML file for offline use.
@@ -451,7 +451,7 @@ export default function VsCyberChefPage() {
         <p className="feat-toc-title" style={{ marginTop: '1.5rem' }}>Quick links</p>
         <ul className="feat-toc-list">
           <li className="feat-toc-item"><Link href="/">Open SmartDevBox</Link></li>
-          <li className="feat-toc-item"><Link href="/features/tools">All 91+ Tools</Link></li>
+          <li className="feat-toc-item"><Link href="/features/tools">All 97+ Tools</Link></li>
         </ul>
       </aside>
     </>

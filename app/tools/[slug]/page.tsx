@@ -293,7 +293,7 @@ export default async function ToolPage({
         <p className="feat-toc-title" style={{ marginTop: '1.5rem' }}>Quick links</p>
         <ul className="feat-toc-list">
           <li className="feat-toc-item"><Link href="/">Open SmartDevBox</Link></li>
-          <li className="feat-toc-item"><Link href="/features/tools">All 91+ Tools</Link></li>
+          <li className="feat-toc-item"><Link href="/features/tools">All 97+ Tools</Link></li>
         </ul>
       </aside>
     </>

@@ -4,7 +4,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'SmartDevBox vs base64decode.org — Best Free Base64 Decoder Alternatives',
   description:
-    'Comparing SmartDevBox and base64decode.org for Base64 decoding. SmartDevBox auto-detects Base64 on paste alongside 91+ other dev tools. No sign-up, 100% client-side.',
+    'Comparing SmartDevBox and base64decode.org for Base64 decoding. SmartDevBox auto-detects Base64 on paste alongside 97+ other dev tools. No sign-up, 100% client-side.',
   keywords: [
     'base64decode.org alternative',
     'best base64 decoder online',
@@ -21,14 +21,14 @@ export const metadata: Metadata = {
     siteName: 'SmartDevBox',
     title: 'SmartDevBox vs base64decode.org — Best Base64 Decoder Alternatives',
     description:
-      'SmartDevBox auto-decodes Base64 on paste alongside 91+ dev tools. base64decode.org is a focused single-purpose decoder. Full comparison inside.',
+      'SmartDevBox auto-decodes Base64 on paste alongside 97+ dev tools. base64decode.org is a focused single-purpose decoder. Full comparison inside.',
     url: 'https://smartdevbox.com/alternatives/base64decode-org',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'SmartDevBox vs base64decode.org — Best Base64 Decoder Alternatives',
     description:
-      'SmartDevBox: auto-detect Base64 on paste, 91+ tools. base64decode.org: single-purpose decoder. See the full comparison.',
+      'SmartDevBox: auto-detect Base64 on paste, 97+ tools. base64decode.org: single-purpose decoder. See the full comparison.',
   },
 };
 
@@ -41,7 +41,7 @@ const faqJsonLd = {
       name: 'Is there a good base64decode.org alternative?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Yes. SmartDevBox is a strong alternative to base64decode.org. It auto-detects Base64 strings on paste and decodes them immediately — no button click, no page load. It also includes 91+ other developer tools so you can decode Base64, format the JSON inside, and convert a timestamp all in one browser tab.',
+        text: 'Yes. SmartDevBox is a strong alternative to base64decode.org. It auto-detects Base64 strings on paste and decodes them immediately — no button click, no page load. It also includes 97+ other developer tools so you can decode Base64, format the JSON inside, and convert a timestamp all in one browser tab.',
       },
     },
     {
@@ -99,7 +99,7 @@ const COMPARISON_ROWS = [
   },
   {
     feature: 'Other tools beyond Base64',
-    smartdevbox: '91+ tools (JSON, JWT, URL, hash, regex, cron, XML, SQL, and more)',
+    smartdevbox: '97+ tools (JSON, JWT, URL, hash, regex, cron, XML, SQL, and more)',
     b64org: 'Base64 encode/decode only',
   },
   {
@@ -356,7 +356,7 @@ export default function VsBase64DecodeOrgPage() {
                 Yes. SmartDevBox is a strong alternative. It auto-detects Base64 strings
                 on paste and decodes them immediately with no button click. Unlike
                 base64decode.org, it is fully client-side (your data is never sent to a
-                server), has no ads, and includes 91+ other developer tools.
+                server), has no ads, and includes 97+ other developer tools.
               </p>
             </div>
             <div className="feat-faq-item">
@@ -453,7 +453,7 @@ export default function VsBase64DecodeOrgPage() {
         <ul className="feat-toc-list">
           <li className="feat-toc-item"><Link href="/">Open SmartDevBox</Link></li>
           <li className="feat-toc-item"><Link href="/tools/base64-decoder">Base64 Decoder</Link></li>
-          <li className="feat-toc-item"><Link href="/features/tools">All 91+ Tools</Link></li>
+          <li className="feat-toc-item"><Link href="/features/tools">All 97+ Tools</Link></li>
         </ul>
       </aside>
     </>

@@ -21,14 +21,14 @@ export const metadata: Metadata = {
     siteName: 'SmartDevBox',
     title: 'Client-Side Privacy & Security | SmartDevBox',
     description:
-      'All 91+ SmartDevBox tools run entirely in your browser. Your JWTs, certificates, API keys, and code never touch a server.',
+      'All 97+ SmartDevBox tools run entirely in your browser. Your JWTs, certificates, API keys, and code never touch a server.',
     url: 'https://smartdevbox.com/features/privacy',
   },
   twitter: {
     card: 'summary_large_image',
     title: '100% Client-Side — Your Data Never Leaves Your Browser | SmartDevBox',
     description:
-      'All 91+ SmartDevBox tools run in the browser. No server. No account. Safe for JWTs, certificates, API keys, and sensitive internal data.',
+      'All 97+ SmartDevBox tools run in the browser. No server. No account. Safe for JWTs, certificates, API keys, and sensitive internal data.',
   },
 };
 
@@ -94,7 +94,7 @@ export default function PrivacyPage() {
           <h1 className="feat-h1">100% Client-Side</h1>
           <p className="feat-lead">
             Your data never leaves your browser — not even a byte. Every one of the
-            91+ tools runs entirely in the browser using client-side JavaScript.
+            97+ tools runs entirely in the browser using client-side JavaScript.
           </p>
         </div>
 
@@ -170,7 +170,7 @@ export default function PrivacyPage() {
           </ul>
           <p>
             If your data must never leave your machine under any circumstances, keep AI
-            mode disabled (the default). All 91+ tools work fully without it.
+            mode disabled (the default). All 97+ tools work fully without it.
           </p>
 
           <h2 id="offline">Offline Use</h2>
