@@ -1,6 +1,5 @@
-import type { Config } from 'jest';
-
-const config: Config = {
+/** @type {import('jest').Config} */
+const config = {
   testEnvironment: 'node',
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: { target: 'es2017' } }],
@@ -14,4 +13,4 @@ const config: Config = {
   watchPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/.open-next/'],
 };
 
-export default config;
+module.exports = config;
