@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from 'next';
-import { JetBrains_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import Script from 'next/script';
 import './globals.css';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import { Navbar } from '@/components/layout/Navbar';
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['500', '700'],
+const geistMono = localFont({
+  src: './fonts/GeistMonoVF.woff',
+  weight: '100 900',
   variable: '--font-mono',
   display: 'swap',
   preload: true,
@@ -115,7 +115,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={jetbrainsMono.variable}>
+    <html lang="en" suppressHydrationWarning className={geistMono.variable}>
       <head>
         {/* Preconnect to Google Analytics to reduce DNS/TLS latency */}
         <link rel="preconnect" href="https://www.googletagmanager.com" />

@@ -9,6 +9,20 @@ import '@/lib/tools';
 const PLACEHOLDER = `Paste anything here — JSON, Base64, XML, timestamps, JWT tokens, UUIDs, URLs…`;
 
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/bmp', 'image/gif', 'image/tiff'];
+const LARGE_INPUT_WARNING_BYTES = 1 * 1024 * 1024;
+const MAX_TEXT_FILE_BYTES = 5 * 1024 * 1024;
+const AI_INPUT_CONTEXT_CHARS = 8_000;
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+function isTextFileTooLarge(file: File): boolean {
+  if (file.size <= MAX_TEXT_FILE_BYTES) return false;
+  alert(`File is too large (${formatBytes(file.size)}). Please upload a text file smaller than ${formatBytes(MAX_TEXT_FILE_BYTES)}.`);
+  return true;
+}
 
 /** Run Tesseract OCR on an image File/Blob. Returns extracted text. */
 async function runOCR(
@@ -93,7 +107,7 @@ export function UniversalInput() {
   }, [input]);
 
   const inputBytes = new TextEncoder().encode(input).length;
-  const isLarge = inputBytes > 1_048_576;
+  const isLarge = inputBytes > LARGE_INPUT_WARNING_BYTES;
 
   const handleInputChange = useCallback(
     (value: string) => {
@@ -165,10 +179,7 @@ export function UniversalInput() {
       handleImageFile(file);
       return;
     }
-    if (file.size > 1024 * 1024) {
-      alert(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please upload a file smaller than 1 MB.`);
-      return;
-    }
+    if (isTextFileTooLarge(file)) return;
     const reader = new FileReader();
     reader.onload = (ev) => handleInputChange(ev.target?.result as string);
     reader.readAsText(file);
@@ -187,8 +198,7 @@ export function UniversalInput() {
       e.target.value = '';
       return;
     }
-    if (file.size > 1024 * 1024) {
-      alert(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please upload a file smaller than 1 MB.`);
+    if (isTextFileTooLarge(file)) {
       e.target.value = '';
       return;
     }
@@ -201,16 +211,19 @@ export function UniversalInput() {
   const handleRunCommand = async () => {
     if (!command.trim() || !aiEnabled) return;
     setIsAiLoading(true);
+    const aiInput = input.length > AI_INPUT_CONTEXT_CHARS ? input.slice(0, AI_INPUT_CONTEXT_CHARS) : input;
+    const aiInputWasTruncated = aiInput.length !== input.length;
     try {
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input, userCommand: command }),
+        body: JSON.stringify({ input: aiInput, userCommand: command }),
       });
       const data = await res.json();
       if (data.toolId) {
-        const effectiveInput = data.correctedInput || input;
-        if (data.correctedInput) setInput(data.correctedInput);
+        const correctedInput = aiInputWasTruncated ? undefined : data.correctedInput;
+        const effectiveInput = correctedInput || input;
+        if (correctedInput) setInput(correctedInput);
         useDevboxStore.getState().setActiveToolId(data.toolId);
         const result = await executeTool(data.toolId, effectiveInput);
         addOutput({
@@ -242,7 +255,7 @@ export function UniversalInput() {
             fontSize: 'var(--fs-xs)',
           }}
         >
-          ⚠ Large input ({(inputBytes / 1024 / 1024).toFixed(1)} MB) — performance may be affected
+          ⚠ Large input ({formatBytes(inputBytes)}) — performance may be affected
         </div>
       )}
 
@@ -257,6 +270,7 @@ export function UniversalInput() {
         onDrop={handleDrop}
       >
         <textarea
+          data-testid="universal-input"
           ref={textareaRef}
           value={input}
           onChange={(e) => handleInputChange(e.target.value)}
@@ -291,7 +305,7 @@ export function UniversalInput() {
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
             <span style={{ fontWeight: 600 }}>Drop file or image to load</span>
-            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)' }}>Text files (max 1 MB) · Images (OCR)</span>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)' }}>Text files (max {formatBytes(MAX_TEXT_FILE_BYTES)}) · Images (OCR)</span>
           </div>
         )}
         {/* OCR progress overlay */}
@@ -421,7 +435,7 @@ export function UniversalInput() {
         {/* Actions */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center' }}>
           <span style={{ color: inputBytes > 512_000 ? 'var(--amber)' : 'var(--text4)', fontSize: 'var(--fs-2xs)', paddingRight: '6px' }}>
-            {input.length.toLocaleString()} chars &nbsp;·&nbsp; {inputBytes > 1_048_576 ? (inputBytes / 1024 / 1024).toFixed(1) + ' MB' : (inputBytes / 1024).toFixed(1) + ' KB'}
+            {input.length.toLocaleString()} chars &nbsp;·&nbsp; {formatBytes(inputBytes)}
           </span>
           <button onClick={handleClear} style={{ color: 'var(--text3)', background: 'none', border: '1px solid transparent', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 10px', minHeight: '36px' }}
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.background = 'var(--bg2)'; }}

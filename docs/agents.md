@@ -17,7 +17,7 @@ Live URL: `https://smartdevbox.com`
 | Styling | CSS Modules + CSS custom properties (dark-first) |
 | State | Zustand with `persist` middleware (localStorage) |
 | Deployment | Cloudflare Pages via OpenNext |
-| Font | JetBrains Mono |
+| Font | Local Geist Mono |
 | Syntax highlighting | Shiki (lazy-loaded) |
 | AI routing | OpenAI API (optional, gated by `OPENAI_API_KEY` env var) |
 

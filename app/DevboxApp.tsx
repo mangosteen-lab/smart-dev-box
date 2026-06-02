@@ -129,6 +129,7 @@ export default function DevboxApp() {
           <GeneratorBar />
           {/* Plugin Manager button */}
           <button
+            data-testid="plugin-manager-button"
             onClick={() => setPluginManagerOpen(true)}
             title="Manage user-defined plugin tools"
             className="flex items-center"
@@ -234,7 +235,7 @@ export default function DevboxApp() {
           style={{ padding: '10px', gap: '8px', display: 'flex', flexDirection: 'column' }}
         >
           {customPanel ? (
-            <section className="flex flex-col gap-3 animate-fade-in flex-1 overflow-hidden">
+            <section data-testid="custom-panel" className="flex flex-col gap-3 animate-fade-in flex-1 overflow-hidden">
               {/* Panel header */}
               <div
                 className="flex items-center"
@@ -319,6 +320,7 @@ export default function DevboxApp() {
               top={
                 /* Input pane */
                 <div
+                  data-testid="input-panel"
                   data-onboard-input
                   className="flex flex-col"
                   style={{

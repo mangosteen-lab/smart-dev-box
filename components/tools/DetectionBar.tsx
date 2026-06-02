@@ -49,7 +49,7 @@ export function DetectionBar() {
   const overflow = significant.slice(4);
 
   return (
-    <div className="flex flex-wrap items-center" style={{ gap: '6px' }}>
+    <div data-testid="detection-bar" className="flex flex-wrap items-center" style={{ gap: '6px' }}>
       <span style={{ color: 'var(--text3)', fontSize: 'var(--fs-2xs)', fontWeight: 600 }}>Detected:</span>
 
       {/* Primary chip — larger, color-coded with pulse animation */}

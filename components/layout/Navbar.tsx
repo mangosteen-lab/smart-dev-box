@@ -15,7 +15,7 @@ const FEATURE_LINKS = [
 ];
 
 export function Navbar() {
-  const { isDark, toggleTheme, toggleMobileSidebar, toggleSidebar, sidebarOpen } = useDevboxStore();
+  const { isDark, toggleTheme, toggleMobileSidebar, toggleSidebar, sidebarOpen, toggleCommandPalette } = useDevboxStore();
   const [featuresOpen, setFeaturesOpen] = useState(false);
   const featuresRef = useRef<HTMLDivElement>(null);
 
@@ -157,11 +157,9 @@ export function Navbar() {
       </div>
       {/* Always-visible search trigger */}
       <button
+        data-testid="command-palette-trigger"
         className="hidden md:flex search-trigger"
-        onClick={() => {
-          // Trigger ⌘K
-          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }));
-        }}
+        onClick={toggleCommandPalette}
         title="Search tools (⌘K)"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

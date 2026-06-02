@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SmartDevBox
 
-## Getting Started
+SmartDevBox is a browser-based developer toolbox built with Next.js App Router and deployed to Cloudflare through OpenNext. It provides client-side tools for encoding, formatting, conversion, generation, inspection, text manipulation, plugin-defined tools, and optional AI-assisted tool routing.
 
-First, run the development server:
+Live site: https://smartdevbox.com
+
+## Stack
+
+- Next.js 15, React 19, TypeScript
+- Zustand for persisted client state
+- Tailwind CSS plus global CSS design tokens
+- Jest and ts-jest for unit tests
+- OpenNext and Wrangler for Cloudflare builds/deploys
+- Optional OpenAI routing through `OPENAI_API_KEY`
+
+## Daily Commands
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev          # local dev server on 0.0.0.0
+npm run check        # typecheck + lint + unit tests
+npm run test:e2e     # Playwright browser smoke tests
+npm run build        # production Next.js build
+npm run build:cloudflare
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The Playwright config uses `/usr/bin/google-chrome` when present. On machines without a system Chrome/Chromium install, run `npx playwright install chromium` once before `npm run test:e2e`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Make targets are available for the same daily loop:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+make dev
+make check
+make test
+make test-e2e
+make typecheck
+make lint
+```
 
-## Learn More
+## Project Shape
 
-To learn more about Next.js, take a look at the following resources:
+- `app/` contains App Router pages, API routes, metadata, and the `DevboxApp` client shell.
+- `components/tools/` contains the main tool UI panels.
+- `lib/tools/` contains the tool registry and category implementations.
+- `store/devbox.ts` owns shared Zustand state.
+- `plugins/` contains bundled plugin JSON.
+- `docs/` and `openspec/` document behavior and feature specs.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To add a standard tool, register it in the right `lib/tools/<category>/index.ts` file with `registerTool({ id, name, category, description, keywords, detect, execute })`. It will appear in detection, the sidebar, and the command palette.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment
 
-## Deploy on Vercel
+Copy `.env.local.example` to `.env.local` for local optional settings.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+OPENAI_API_KEY=...
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+When `OPENAI_API_KEY` is absent, AI routing is disabled and the core toolbox still works.

@@ -6,8 +6,20 @@ import { getAllTools, executeTool } from '@/lib/tools';
 import type { ToolDefinition } from '@/lib/tools/types';
 
 export function CommandPalette() {
-  const { input, activeToolId, addOutput, setActiveToolId, addRecentTool, setMobileSidebarOpen, pinnedToolIds, recentToolIds, togglePinnedTool } = useDevboxStore();
-  const [open, setOpen] = useState(false);
+  const {
+    input,
+    activeToolId,
+    addOutput,
+    setActiveToolId,
+    addRecentTool,
+    setMobileSidebarOpen,
+    commandPaletteOpen: open,
+    setCommandPaletteOpen,
+    toggleCommandPalette,
+    pinnedToolIds,
+    recentToolIds,
+    togglePinnedTool,
+  } = useDevboxStore();
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -18,13 +30,13 @@ export function CommandPalette() {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setOpen((o) => !o);
+        toggleCommandPalette();
       }
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') setCommandPaletteOpen(false);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [setCommandPaletteOpen, toggleCommandPalette]);
 
   useEffect(() => {
     if (open) {
@@ -63,13 +75,13 @@ export function CommandPalette() {
     setActiveToolId(toolId);
     addRecentTool(toolId);
     setMobileSidebarOpen(false);
-    setOpen(false);
+    setCommandPaletteOpen(false);
     if (input.trim()) {
       const tool = allTools.find((t) => t.id === toolId);
       const result = await executeTool(toolId, input);
       addOutput({ toolId, toolName: tool?.name ?? toolId, result, timestamp: Date.now() });
     }
-  }, [input, allTools, setActiveToolId, addRecentTool, setMobileSidebarOpen, addOutput]);
+  }, [input, allTools, setActiveToolId, addRecentTool, setMobileSidebarOpen, setCommandPaletteOpen, addOutput]);
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setHighlighted((h) => Math.min(h + 1, displayTools.length - 1)); }
@@ -92,6 +104,7 @@ export function CommandPalette() {
 
   return (
     <div
+      data-testid="command-palette"
       style={{
         position: 'fixed', inset: 0, zIndex: 200,
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
@@ -99,7 +112,7 @@ export function CommandPalette() {
         background: 'rgba(0,0,0,0.55)',
         backdropFilter: 'blur(2px)',
       }}
-      onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) setCommandPaletteOpen(false); }}
     >
       <div
         style={{
@@ -125,6 +138,7 @@ export function CommandPalette() {
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input
+            data-testid="command-palette-search"
             ref={inputRef}
             value={query}
             onChange={(e) => { setQuery(e.target.value); setHighlighted(0); }}

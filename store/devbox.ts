@@ -13,6 +13,7 @@ interface DevboxState {
   sidebarOpen: boolean;
   sidebarMini: boolean;
   mobileSidebarOpen: boolean;
+  commandPaletteOpen: boolean;
   isDark: boolean;
   isAiLoading: boolean;
   aiEnabled: boolean;
@@ -32,6 +33,8 @@ interface DevboxState {
   toggleSidebarMini: () => void;
   setMobileSidebarOpen: (open: boolean) => void;
   toggleMobileSidebar: () => void;
+  setCommandPaletteOpen: (open: boolean) => void;
+  toggleCommandPalette: () => void;
   setIsDark: (dark: boolean) => void;
   toggleTheme: () => void;
   setIsAiLoading: (loading: boolean) => void;
@@ -56,6 +59,7 @@ export const useDevboxStore = create<DevboxState>()(
       sidebarOpen: false,
       sidebarMini: false,
       mobileSidebarOpen: false,
+      commandPaletteOpen: false,
       isDark: true,
       isAiLoading: false,
       aiEnabled: false,
@@ -85,6 +89,8 @@ export const useDevboxStore = create<DevboxState>()(
       toggleSidebarMini: () => set((state) => ({ sidebarMini: !state.sidebarMini })),
       setMobileSidebarOpen: (open) => set({ mobileSidebarOpen: open }),
       toggleMobileSidebar: () => set((state) => ({ mobileSidebarOpen: !state.mobileSidebarOpen })),
+      setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
+      toggleCommandPalette: () => set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
       setIsDark: (dark) => set({ isDark: dark }),
       toggleTheme: () => set((state) => ({ isDark: !state.isDark })),
       setIsAiLoading: (loading) => set({ isAiLoading: loading }),

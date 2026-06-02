@@ -66,7 +66,7 @@ function ToggleChip({ label, active, onClick }: { label: string; active: boolean
 function ResultBox({ value, onUse }: { value: string; onUse: (v: string) => void }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div style={{ border: '1px solid var(--border)', background: 'var(--bg3)', borderRadius: '4px', marginTop: '2px' }}>
+    <div data-testid="generator-result" style={{ border: '1px solid var(--border)', background: 'var(--bg3)', borderRadius: '4px', marginTop: '2px' }}>
       <div className="flex items-center justify-between px-3 py-1.5" style={{ borderBottom: '1px solid var(--border)', color: 'var(--text3)', fontSize: 'var(--fs-2xs)' }}>
         <span>Result</span>
         <div className="flex gap-2">
@@ -80,7 +80,7 @@ function ResultBox({ value, onUse }: { value: string; onUse: (v: string) => void
           >Use as input →</button>
         </div>
       </div>
-      <pre style={{ padding: '8px 12px', fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)', color: 'var(--text)', maxHeight: '160px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', overflow: 'auto' }}>
+      <pre data-testid="generator-result-value" style={{ padding: '8px 12px', fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)', color: 'var(--text)', maxHeight: '160px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', overflow: 'auto' }}>
         {value}
       </pre>
     </div>
@@ -967,6 +967,7 @@ export function GeneratorBar() {
       {/* Dropdown hub */}
       {open && (
         <div
+          data-testid="generator-hub"
           className="absolute top-full left-0 z-40"
           style={{
             marginTop: '4px',

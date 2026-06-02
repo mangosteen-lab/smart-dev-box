@@ -397,7 +397,7 @@ function OutputTab({ output, onUseAsInput, inputSnapshot }: { output: ToolOutput
       </div>
 
       {/* Output content */}
-      <div className="flex-1 overflow-auto" style={{ padding: '14px' }}>
+      <div data-testid="output-content" className="flex-1 overflow-auto" style={{ padding: '14px' }}>
         {output.result.error ? (
           <div
             style={{
@@ -487,7 +487,7 @@ export function OutputPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div data-testid="output-panel" className="flex flex-col h-full">
       {/* Tab bar */}
       {outputs.length > 1 && (
         <div

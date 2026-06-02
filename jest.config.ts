@@ -9,6 +9,9 @@ const config: Config = {
     '^@/(.*)$': '<rootDir>/$1',
   },
   testMatch: ['**/__tests__/**/*.test.ts'],
+  testPathIgnorePatterns: ['/node_modules/', '/.next/', '/.open-next/'],
+  modulePathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/.open-next/'],
+  watchPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/.open-next/'],
 };
 
 export default config;
