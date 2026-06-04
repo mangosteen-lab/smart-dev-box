@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TOOL_SEO_DATA } from '@/lib/tools/seo-data';
+import { ENGINEERING_RECIPES } from '@/lib/recipes';
 
 export const metadata: Metadata = {
   title: 'Tool Guides — SmartDevBox',
@@ -86,6 +87,32 @@ export default function ToolsIndexPage() {
                 <Link href="/alternatives/base64decode-org" className="feat-tool-name">SmartDevBox vs base64decode.org</Link>
                 <span className="feat-tool-desc">Why a dedicated Base64 site is no longer necessary.</span>
               </li>
+              <li className="feat-tool-row">
+                <Link href="/vs/jsonlint" className="feat-tool-name">SmartDevBox vs JSONLint</Link>
+                <span className="feat-tool-desc">Compare a broad developer toolbox with a JSON-focused suite.</span>
+              </li>
+              <li className="feat-tool-row">
+                <Link href="/vs/transform-tools" className="feat-tool-name">SmartDevBox vs Transform.tools</Link>
+                <span className="feat-tool-desc">Everyday developer utilities compared with code and schema transforms.</span>
+              </li>
+              <li className="feat-tool-row">
+                <Link href="/alternatives/cyberchef" className="feat-tool-name">CyberChef Alternative</Link>
+                <span className="feat-tool-desc">A simpler option for common single-step developer tasks.</span>
+              </li>
+            </ul>
+
+            <h3 className="feat-h3">Engineering Recipes</h3>
+            <ul className="feat-tool-list">
+              <li className="feat-tool-row">
+                <Link href="/recipes" className="feat-tool-name">All Engineering Recipes</Link>
+                <span className="feat-tool-desc">Workflow-first guides for API debugging, logs, DevOps, security, and AI prompts.</span>
+              </li>
+              {ENGINEERING_RECIPES.map((recipe) => (
+                <li key={recipe.slug} className="feat-tool-row">
+                  <Link href={`/recipes/${recipe.slug}`} className="feat-tool-name">{recipe.shortTitle}</Link>
+                  <span className="feat-tool-desc">{recipe.summary}</span>
+                </li>
+              ))}
             </ul>
 
             <h3 className="feat-h3">Developer Glossary</h3>
@@ -129,6 +156,9 @@ export default function ToolsIndexPage() {
         <ul className="feat-toc-list">
           <li className="feat-toc-item"><Link href="/vs/cyberchef">vs CyberChef</Link></li>
           <li className="feat-toc-item"><Link href="/vs/jwt-io">vs jwt.io</Link></li>
+          <li className="feat-toc-item"><Link href="/vs/jsonlint">vs JSONLint</Link></li>
+          <li className="feat-toc-item"><Link href="/vs/transform-tools">vs Transform.tools</Link></li>
+          <li className="feat-toc-item"><Link href="/alternatives/cyberchef">CyberChef alternative</Link></li>
           <li className="feat-toc-item"><Link href="/alternatives/base64decode-org">vs base64decode.org</Link></li>
         </ul>
         <p className="feat-toc-title" style={{ marginTop: '1.5rem' }}>Glossary</p>

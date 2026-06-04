@@ -86,7 +86,7 @@ const howToJsonLd = {
       '@type': 'HowToStep',
       position: 3,
       name: 'Wait 600 ms',
-      text: 'After a 600 ms debounce, the detection engine scores your input against all 91 tools. The highest-scoring tool (above 0.8 confidence) runs automatically.',
+      text: 'After a 600 ms debounce, the detection engine scores your input against all 98+ tools. The highest-scoring tool (above 0.8 confidence) runs automatically.',
     },
     {
       '@type': 'HowToStep',

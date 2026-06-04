@@ -100,6 +100,7 @@ const TOOLS: Array<{
       { name: 'HMAC Generator',          desc: 'Generate HMAC-SHA256/384/512 signatures for API signing and webhook verification.', slug: 'hmac-generator' },
       { name: 'TOTP Generator',          desc: 'Generate Time-based One-Time Passwords (RFC 6238) for debugging 2FA flows.', slug: 'totp-generator' },
       { name: 'Nano ID Generator',       desc: 'Generate compact, URL-safe Nano IDs — a modern UUID alternative.',        slug: 'nanoid-generator' },
+      { name: 'Regex Generator',         desc: 'Build regex patterns from selected sample text with snippets for JS, Python, Java, C#, C++, Go, Ruby, grep, and PHP.', slug: 'regex-generator' },
     ],
   },
   {

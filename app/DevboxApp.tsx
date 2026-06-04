@@ -13,6 +13,7 @@ import { ResizablePanels } from '@/components/ResizablePanels';
 const ToolSidebar  = dynamic(() => import('@/components/tools/ToolSidebar').then(m => ({ default: m.ToolSidebar })), { ssr: false });
 const OutputPanel  = dynamic(() => import('@/components/tools/OutputPanel').then(m => ({ default: m.OutputPanel })), { ssr: false });
 const GeneratorBar = dynamic(() => import('@/components/tools/GeneratorBar').then(m => ({ default: m.GeneratorBar })), { ssr: false });
+const SmartRegexBuilderPanel = dynamic(() => import('@/components/tools/GeneratorBar').then(m => ({ default: m.SmartRegexBuilderPanel })), { ssr: false });
 const CommandPalette = dynamic(() => import('@/components/CommandPalette').then(m => ({ default: m.CommandPalette })), { ssr: false });
 const PluginManager = dynamic(() => import('@/components/tools/PluginManager').then(m => ({ default: m.PluginManager })), { ssr: false });
 
@@ -49,6 +50,11 @@ const CUSTOM_PANELS: Record<string, { title: string; badge?: string; component: 
     title: 'Extract Sections',
     badge: 'JSON · XML · HTML · DATE · URL · EMAIL',
     component: () => <ExtractorPanel />,
+  },
+  'regex-generator': {
+    title: 'Smart Regex Builder',
+    badge: 'Select text · Suggestions · Multi-language export',
+    component: () => <SmartRegexBuilderPanel />,
   },
 };
 
@@ -127,6 +133,48 @@ export default function DevboxApp() {
           }}
         >
           <GeneratorBar />
+          <button
+            data-testid="smart-regex-button"
+            onClick={() => {
+              setSplitMode(false);
+              setActiveToolId('regex-generator');
+            }}
+            title="Open Smart Regex Builder"
+            className="flex items-center"
+            style={{
+              gap: '6px',
+              fontSize: 'var(--fs-xs)',
+              background: activeToolId === 'regex-generator' ? 'var(--green-bg)' : 'var(--bg2)',
+              border: `1px solid ${activeToolId === 'regex-generator' ? 'var(--green)' : 'var(--border)'}`,
+              color: activeToolId === 'regex-generator' ? 'var(--green)' : 'var(--text2)',
+              padding: '4px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontFamily: 'var(--font)',
+              transition: 'color .12s, border-color .12s, background .12s',
+              fontWeight: activeToolId === 'regex-generator' ? 700 : 500,
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.borderColor = 'var(--green)';
+              el.style.color = 'var(--green)';
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement;
+              if (activeToolId !== 'regex-generator') {
+                el.style.borderColor = 'var(--border)';
+                el.style.color = 'var(--text2)';
+              }
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 7h16"/>
+              <path d="M4 17h16"/>
+              <path d="M8 3v18"/>
+              <path d="M16 3v18"/>
+            </svg>
+            Smart Regex
+          </button>
           {/* Plugin Manager button */}
           <button
             data-testid="plugin-manager-button"

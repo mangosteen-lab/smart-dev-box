@@ -862,6 +862,26 @@ textarea, pre, code {
   white-space: nowrap;
 }
 
+.feat-code-block {
+  margin: 0.75rem 0 1.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-width: 100%;
+}
+
+.feat-code-block code {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text2);
+  white-space: pre;
+  line-height: 1.65;
+}
+
 /* Links */
 .feat-prose a {
   color: var(--accent);
@@ -962,6 +982,23 @@ textarea, pre, code {
 .feat-card:hover {
   border-color: var(--border2);
   background: var(--bg3);
+}
+
+.recipe-card-link {
+  text-decoration: none;
+  border-bottom: 1px solid var(--border) !important;
+  color: inherit;
+}
+
+.recipe-card-link:hover {
+  border-color: var(--green) !important;
+}
+
+.recipe-card-meta {
+  font-size: var(--fs-2xs);
+  color: var(--green);
+  line-height: 1.45;
+  margin-top: 0.25rem;
 }
 
 .feat-card-label {

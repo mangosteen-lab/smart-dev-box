@@ -2058,7 +2058,7 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
         a: 'SmartDevBox uses the JavaScript RegExp engine, which supports most standard regex syntax including lookahead, lookbehind (ES2018+), named capture groups, character classes, quantifiers, and all standard flags.',
       },
     ],
-    relatedToolIds: ['jsonpath-evaluator', 'string-inspector'],
+    relatedToolIds: ['regex-generator', 'jsonpath-evaluator', 'string-inspector'],
     keywords: ['regex tester online', 'regular expression tester', 'regex checker online', 'test regex javascript', 'javascript test regex online', 'online regex tester', 'regex check', 'check regex online', 'regular expressions test online', 'validate regular expression', 'regex interpreter', 'online regex'],
     bodySections: [
       {
@@ -2082,6 +2082,74 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
           'Email validation (simplified): /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/. This is intentionally simplified — fully RFC 5321-compliant email validation via regex is notoriously complex. For production use, send a confirmation email instead.',
           'Extracting version numbers: /v?(\\d+)\\.(\\d+)\\.(\\d+)/ matches "v1.2.3" and captures "1", "2", "3" as groups. With named groups: /v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)/.',
           'Finding all URLs in a block of text (basic): /https?:\\/\\/[^\\s]+/g. Paste a block of log output or HTML source into the tester with this pattern and the g flag to extract every URL at once.',
+        ],
+      },
+    ],
+  },
+
+  {
+    id: 'regex-generator',
+    slug: 'regex-generator',
+    heading: 'Regex Generator — Generate Regular Expressions from Sample Text',
+    primaryKeyword: 'regex generator online',
+    metaDescription:
+      'Generate a starter regex from sample text and get snippets for JavaScript, Python, Java, C#, C++, Go, Ruby, grep, and PHP. Free and client-side.',
+    intro:
+      'Regex Generator turns an example string into a starter regular expression. ' +
+      'It generalizes obvious parts of the sample — numbers, letter runs, dates, URLs, emails, UUIDs, and IP addresses — and produces language-specific snippets for common regex engines. ' +
+      'Use it as a first draft, then test and refine the result with the Regex Tester.',
+    useCases: [
+      'Creating a first regex draft from a known sample string',
+      'Generating language snippets for JavaScript, Python, Java, C#, C++, Go, Ruby, grep, and PHP',
+      'Turning dates, IDs, log fragments, emails, URLs, or IPs into matchable patterns',
+      'Learning how literal text maps to regex character classes and quantifiers',
+    ],
+    faqs: [
+      {
+        q: 'Can a regex generator infer every valid input from one example?',
+        a: 'No. A single sample can only reveal the shape of that sample. SmartDevBox generates a conservative starter regex and an exact literal fallback, then expects you to review and test the result.',
+      },
+      {
+        q: 'Which languages does the Regex Generator support?',
+        a: 'It generates snippets for JavaScript, Python, Java, C#, C++, Go, Ruby, grep, and PHP. Regex engine behavior differs by language, so always test edge cases in the target runtime.',
+      },
+      {
+        q: 'Does the regex generation run on the server?',
+        a: 'No. Pattern generation runs in your browser using local JavaScript. The sample text is not uploaded.',
+      },
+    ],
+    relatedToolIds: ['regex-tester', 'string-inspector'],
+    keywords: [
+      'regex generator online',
+      'regular expression generator',
+      'generate regex from string',
+      'regex from sample text',
+      'python regex generator',
+      'java regex generator',
+      'javascript regex generator',
+      'grep regex generator',
+    ],
+    bodySections: [
+      {
+        heading: 'How the Regex Generator Works',
+        paragraphs: [
+          'The generator starts by checking whether the entire sample matches a well-known shape: email address, URL, UUID, IPv4 address, ISO date, or ISO timestamp. When it finds one of those shapes, it emits a reusable pattern for that data type rather than escaping every character literally.',
+          'For other input, SmartDevBox scans the sample into runs of digits, letters, whitespace, and literal separators. Digits become \\d with an exact quantifier, letter runs become [A-Za-z] or [a-z], whitespace becomes \\s or \\s+, and punctuation is escaped as literal text. This produces a regex that matches the same structure as the sample without over-generalizing every character into a dot.',
+          'The output also includes an exact literal fallback. If the generated pattern is too broad for your use case, the fallback shows the fully escaped expression that matches only the original sample text.',
+        ],
+      },
+      {
+        heading: 'Language Snippet Differences',
+        paragraphs: [
+          'Different languages wrap regular expressions differently. JavaScript, Ruby, and PHP often use slash-delimited regex literals. Python uses re.compile(), Java uses Pattern.compile(), C# uses Regex, Go uses regexp.MustCompile(), C++ uses std::regex, and grep uses command-line flags.',
+          'Flags also differ. Case-insensitive matching maps to i in JavaScript/Ruby/PHP, re.IGNORECASE in Python, Pattern.CASE_INSENSITIVE in Java, RegexOptions.IgnoreCase in C#, and -i in grep. Dot-all and multiline modes are available in many engines but not always with identical behavior.',
+        ],
+      },
+      {
+        heading: 'Recommended Workflow',
+        paragraphs: [
+          'Paste one or more representative samples into SmartDevBox, choose Regex Generator, and select the target language. Start with Match Whole Line enabled when validating an entire field, or disable it when extracting a substring from logs or prose.',
+          'After generating the pattern, copy it into the Regex Tester and test both matching and non-matching examples. Add edge cases manually: empty values, long values, invalid separators, mixed case, Unicode, and strings with extra surrounding text.',
         ],
       },
     ],

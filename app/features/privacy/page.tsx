@@ -194,7 +194,7 @@ export default function PrivacyPage() {
             Many developer utility sites process your input on their servers — your JWT, certificate,
             or JSON is sent over the network, logged in access logs, and potentially retained.
             SmartDevBox is architected to make server transmission architecturally impossible for
-            the 91 built-in tools:
+            the 98+ built-in tools:
           </p>
           <div className="feat-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
             <div className="feat-card">
@@ -203,7 +203,7 @@ export default function PrivacyPage() {
             </div>
             <div className="feat-card">
               <span className="feat-card-label">SmartDevBox (client-side)</span>
-              <span className="feat-card-desc">All 91 tools run in your browser tab. No HTTP request is made when you paste. There is no server to receive or log your input.</span>
+              <span className="feat-card-desc">All 98+ tools run in your browser tab. No HTTP request is made when you paste. There is no server to receive or log your input.</span>
             </div>
           </div>
           <p>

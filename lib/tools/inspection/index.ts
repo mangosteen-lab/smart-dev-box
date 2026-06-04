@@ -1,5 +1,248 @@
 import { registerTool } from '../registry';
 
+export const REGEX_GENERATOR_LANGUAGES = [
+  'javascript',
+  'python',
+  'java',
+  'csharp',
+  'cpp',
+  'go',
+  'ruby',
+  'grep',
+  'php',
+] as const;
+
+export type RegexGeneratorLanguage = typeof REGEX_GENERATOR_LANGUAGES[number] | 'all';
+
+export interface RegexGeneratorOptions {
+  language?: RegexGeneratorLanguage;
+  matchWholeLine?: boolean;
+  caseInsensitive?: boolean;
+  dotAll?: boolean;
+  multiline?: boolean;
+  lowerCaseClasses?: boolean;
+}
+
+const REGEX_META = /[\\^$.*+?()[\]{}|]/g;
+
+function escapeRegexLiteral(value: string): string {
+  return value.replace(REGEX_META, '\\$&');
+}
+
+function escapeForDoubleQuotedString(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t');
+}
+
+function escapeForSingleQuotedShell(value: string): string {
+  return value.replace(/'/g, "'\"'\"'");
+}
+
+function escapeForRegexLiteral(value: string): string {
+  return value.replace(/\//g, '\\/');
+}
+
+function toPosixExtendedRegex(pattern: string): string {
+  return pattern
+    .replace(/\(\?:/g, '(')
+    .replace(/\(\?<([A-Za-z_][A-Za-z0-9_]*)>/g, '(')
+    .replace(/\\s/g, '[[:space:]]')
+    .replace(/\\d/g, '[0-9]')
+    .replace(/\\w/g, '[A-Za-z0-9_]');
+}
+
+function quantifier(count: number): string {
+  return count === 1 ? '' : `{${count}}`;
+}
+
+function classifyChar(char: string): 'digit' | 'lower' | 'upper' | 'alpha' | 'space' | 'other' {
+  if (/[0-9]/.test(char)) return 'digit';
+  if (/[a-z]/.test(char)) return 'lower';
+  if (/[A-Z]/.test(char)) return 'upper';
+  if (/[A-Za-z]/.test(char)) return 'alpha';
+  if (/\s/.test(char)) return 'space';
+  return 'other';
+}
+
+function classForRun(run: string, lowerCaseClasses: boolean): string {
+  if (/^\d+$/.test(run)) return `\\d${quantifier(run.length)}`;
+  if (/^[a-z]+$/.test(run)) return `[a-z]${quantifier(run.length)}`;
+  if (/^[A-Z]+$/.test(run)) return lowerCaseClasses ? `[a-z]${quantifier(run.length)}` : `[A-Z]${quantifier(run.length)}`;
+  if (/^[A-Za-z]+$/.test(run)) return lowerCaseClasses ? `[a-z]${quantifier(run.length)}` : `[A-Za-z]${quantifier(run.length)}`;
+  if (/^\s+$/.test(run)) return run.length === 1 ? `\\s` : `\\s+`;
+  return escapeRegexLiteral(run);
+}
+
+function detectWholeSamplePattern(sample: string, lowerCaseClasses: boolean): string | null {
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sample)) {
+    return lowerCaseClasses
+      ? '[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}'
+      : '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}';
+  }
+  if (/^https?:\/\/\S+$/i.test(sample)) return 'https?:\\/\\/[^\\s]+';
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sample)) {
+    return '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}';
+  }
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(sample)) {
+    return '(?:\\d{1,3}\\.){3}\\d{1,3}';
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(sample)) return '\\d{4}-\\d{2}-\\d{2}';
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(sample)) {
+    return '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z';
+  }
+  return null;
+}
+
+function buildShapePattern(sample: string, lowerCaseClasses = false): string {
+  const known = detectWholeSamplePattern(sample, lowerCaseClasses);
+  if (known) return known;
+
+  const parts: string[] = [];
+  let run = '';
+  let runType: ReturnType<typeof classifyChar> | null = null;
+
+  for (const char of sample) {
+    const type = classifyChar(char);
+    const compatible =
+      runType === type ||
+      (runType === 'alpha' && (type === 'lower' || type === 'upper' || type === 'alpha'));
+
+    if (run && !compatible) {
+      parts.push(classForRun(run, lowerCaseClasses));
+      run = '';
+    }
+
+    run += char;
+    runType = type === 'lower' || type === 'upper' ? 'alpha' : type;
+  }
+
+  if (run) parts.push(classForRun(run, lowerCaseClasses));
+  return parts.join('');
+}
+
+function flagsFor(options: RegexGeneratorOptions): string {
+  return [
+    options.caseInsensitive ? 'i' : '',
+    options.dotAll ? 's' : '',
+    options.multiline ? 'm' : '',
+  ].join('');
+}
+
+function withAnchors(pattern: string, matchWholeLine = true): string {
+  return matchWholeLine ? `^${pattern}$` : pattern;
+}
+
+function snippetForLanguage(language: RegexGeneratorLanguage, pattern: string, flags: string): string {
+  const hasI = flags.includes('i');
+  const hasS = flags.includes('s');
+  const hasM = flags.includes('m');
+  const inlineFlags = flags ? `(?${flags})` : '';
+  const inlinePattern = `${inlineFlags}${pattern}`;
+
+  switch (language) {
+    case 'javascript':
+      return `const regex = /${escapeForRegexLiteral(pattern)}/${flags};`;
+    case 'python': {
+      const pyFlags = [
+        hasI ? 're.IGNORECASE' : '',
+        hasS ? 're.DOTALL' : '',
+        hasM ? 're.MULTILINE' : '',
+      ].filter(Boolean).join(' | ') || '0';
+      return `import re\nregex = re.compile(r"${pattern}", ${pyFlags})`;
+    }
+    case 'java': {
+      const javaFlags = [
+        hasI ? 'Pattern.CASE_INSENSITIVE' : '',
+        hasS ? 'Pattern.DOTALL' : '',
+        hasM ? 'Pattern.MULTILINE' : '',
+      ].filter(Boolean).join(' | ');
+      return `Pattern regex = Pattern.compile("${escapeForDoubleQuotedString(pattern)}"${javaFlags ? `, ${javaFlags}` : ''});`;
+    }
+    case 'csharp': {
+      const csFlags = [
+        hasI ? 'RegexOptions.IgnoreCase' : '',
+        hasS ? 'RegexOptions.Singleline' : '',
+        hasM ? 'RegexOptions.Multiline' : '',
+      ].filter(Boolean).join(' | ') || 'RegexOptions.None';
+      return `var regex = new Regex(@"${pattern.replace(/"/g, '""')}", ${csFlags});`;
+    }
+    case 'cpp':
+      return `std::regex regex(R"(${inlinePattern})"${hasI ? ', std::regex::icase' : ''});`;
+    case 'go':
+      return `re := regexp.MustCompile(\`${inlinePattern}\`)`;
+    case 'ruby':
+      return `regex = /${escapeForRegexLiteral(pattern)}/${flags}`;
+    case 'grep':
+      return `grep -E${hasI ? ' -i' : ''} '${escapeForSingleQuotedShell(toPosixExtendedRegex(pattern))}' file.txt`;
+    case 'php':
+      return `$regex = '/${escapeForRegexLiteral(pattern)}/${flags}';`;
+    default:
+      return pattern;
+  }
+}
+
+export function generateRegexFromSample(input: string, options: RegexGeneratorOptions = {}) {
+  const sample = input.length > 1000 ? input.slice(0, 1000) : input;
+  const shapePattern = withAnchors(
+    buildShapePattern(sample, options.lowerCaseClasses),
+    options.matchWholeLine !== false
+  );
+  const exactPattern = withAnchors(escapeRegexLiteral(sample), options.matchWholeLine !== false);
+  const flags = flagsFor(options);
+  const snippets = buildRegexLanguageSnippets(shapePattern, options);
+
+  return {
+    pattern: shapePattern,
+    exactPattern,
+    flags,
+    truncated: input.length > sample.length,
+    snippets,
+  };
+}
+
+export function buildRegexLanguageSnippets(pattern: string, options: RegexGeneratorOptions = {}) {
+  const flags = flagsFor(options);
+  const language = options.language ?? 'all';
+  const languages = language === 'all' ? REGEX_GENERATOR_LANGUAGES : [language];
+
+  return Object.fromEntries(
+    languages.map((lang) => [lang, snippetForLanguage(lang, pattern, flags)])
+  ) as Record<string, string>;
+}
+
+function formatRegexGeneratorOutput(input: string, options: RegexGeneratorOptions = {}): string {
+  const generated = generateRegexFromSample(input, options);
+  const snippetEntries = Object.entries(generated.snippets);
+
+  return [
+    'Regex Generator',
+    '===============',
+    '',
+    ...(generated.truncated ? ['Note: input was shortened to 1000 characters before generation.', ''] : []),
+    `Recommended pattern: ${generated.pattern}`,
+    `Exact literal fallback: ${generated.exactPattern}`,
+    `Flags: ${generated.flags || '(none)'}`,
+    '',
+    'Language snippets',
+    '-----------------',
+    ...snippetEntries.flatMap(([language, snippet]) => [
+      '',
+      `${language}:`,
+      snippet,
+    ]),
+    '',
+    'Notes',
+    '-----',
+    '- Generated from one sample, so review the pattern before production use.',
+    '- The recommended pattern generalizes obvious numbers, letters, dates, URLs, emails, UUIDs, and IP addresses.',
+    '- The exact literal fallback matches only the sample text shape exactly.',
+  ].join('\n');
+}
+
 registerTool({
   id: 'regex-tester',
   name: 'Regex Tester',
@@ -36,6 +279,33 @@ registerTool({
     } catch (err) {
       return { output: '', error: err instanceof Error ? err.message : 'Regex error' };
     }
+  },
+});
+
+registerTool({
+  id: 'regex-generator',
+  name: 'Regex Generator',
+  category: 'Generation',
+  description: 'Generate a starter regular expression and language snippets from sample text',
+  keywords: [
+    'regex generator',
+    'regular expression generator',
+    'generate regex from string',
+    'regex from sample',
+    'create regex',
+    'java regex generator',
+    'python regex generator',
+    'javascript regex generator',
+    'grep regex generator',
+  ],
+  outputExtension: 'txt',
+  detect: (input) => input.trim().length >= 3 ? 0.2 : 0,
+  execute: (input, options) => {
+    if (!input.trim()) return { output: '', error: undefined };
+    return {
+      output: formatRegexGeneratorOutput(input.trim(), options as RegexGeneratorOptions),
+      outputLanguage: 'text',
+    };
   },
 });
 

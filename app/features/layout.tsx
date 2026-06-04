@@ -18,9 +18,9 @@ const softwareAppJsonLd = {
     priceCurrency: 'USD',
   },
   description:
-    'SmartDevBox is a free browser-based developer toolbox with 91 built-in tools across 6 categories. It automatically detects input formats — Base64, JSON, JWT, XML, SQL, Unix timestamps, X.509 certificates, and 80+ more — and applies the correct tool instantly. No sign-up. 100% client-side.',
+    'SmartDevBox is a free browser-based developer toolbox with 98+ built-in tools across 6 categories. It automatically detects input formats — Base64, JSON, JWT, XML, SQL, Unix timestamps, X.509 certificates, and 80+ more — and applies the correct tool instantly. No sign-up. 100% client-side.',
   featureList: [
-    '91 built-in developer tools',
+    '98+ built-in developer tools',
     'Automatic format detection across 19 format families',
     '600 ms debounce with two-tier confidence scoring',
     '100% client-side — no server, no data upload',

@@ -11,7 +11,9 @@ jest.mock('js-base64', () => ({
 import '../lib/tools/encoding';
 import '../lib/tools/formatting';
 import '../lib/tools/conversion';
+import '../lib/tools/inspection';
 import { executeTool } from '../lib/tools/registry';
+import { buildRegexLanguageSnippets } from '../lib/tools/inspection';
 
 describe('JSON Formatter', () => {
   test('formats valid JSON', async () => {
@@ -122,5 +124,53 @@ describe('Number Base Converter', () => {
   test('converts hex to all bases', async () => {
     const result = await executeTool('number-base-converter', '0xFF');
     expect(result.output).toContain('255');
+  });
+});
+
+describe('Regex Generator', () => {
+  test('generates a starter regex from a sample string', async () => {
+    const result = await executeTool('regex-generator', 'user-123');
+    expect(result.error).toBeUndefined();
+    expect(result.output).toContain('Recommended pattern: ^[a-z]{4}-\\d{3}$');
+    expect(result.output).toContain('javascript:');
+  });
+
+  test('generates language-specific snippets with flags', async () => {
+    const result = await executeTool('regex-generator', 'Order-123', {
+      language: 'python',
+      caseInsensitive: true,
+      matchWholeLine: true,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.output).toContain('python:');
+    expect(result.output).toContain('re.IGNORECASE');
+    expect(result.output).not.toContain('javascript:');
+  });
+
+  test('recognizes common whole-sample patterns', async () => {
+    const result = await executeTool('regex-generator', 'ada@example.com');
+    expect(result.error).toBeUndefined();
+    expect(result.output).toContain('[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}');
+  });
+
+  test('handles empty input gracefully', async () => {
+    const result = await executeTool('regex-generator', '');
+    expect(result.error).toBeUndefined();
+    expect(result.output).toBe('');
+  });
+
+  test('generated raw pattern matches the log sample in JavaScript regex', () => {
+    const pattern = String.raw`^2020-03-12T13:34:56\.123Z\s+(?:TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|CRITICAL|NOTICE)\s+\[org\.example\.Class\]: This is a #simple #logline containing a 'value'\.$`;
+    const sample = "2020-03-12T13:34:56.123Z INFO [org.example.Class]: This is a #simple #logline containing a 'value'.";
+    expect(new RegExp(pattern).test(sample)).toBe(true);
+  });
+
+  test('exports grep-compatible syntax for whitespace and noncapturing groups', () => {
+    const pattern = String.raw`^2020-03-12T13:34:56\.123Z\s+(?:TRACE|DEBUG|INFO|WARN)\s+\[org\.example\.Class\]$`;
+    const snippets = buildRegexLanguageSnippets(pattern, { language: 'grep' });
+    expect(snippets.grep).toContain('[[:space:]]+');
+    expect(snippets.grep).toContain('(TRACE|DEBUG|INFO|WARN)');
+    expect(snippets.grep).not.toContain('\\s');
+    expect(snippets.grep).not.toContain('(?:');
   });
 });

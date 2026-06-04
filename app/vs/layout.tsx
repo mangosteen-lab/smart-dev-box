@@ -41,6 +41,8 @@ export default function VsLayout({ children }: { children: React.ReactNode }) {
         <div className="feat-subnav-links" role="list">
           <Link href="/vs/cyberchef"                    className="feat-subnav-link" role="listitem">vs CyberChef</Link>
           <Link href="/vs/jwt-io"                       className="feat-subnav-link" role="listitem">vs jwt.io</Link>
+          <Link href="/vs/jsonlint"                     className="feat-subnav-link" role="listitem">vs JSONLint</Link>
+          <Link href="/vs/transform-tools"              className="feat-subnav-link" role="listitem">vs Transform.tools</Link>
           <Link href="/alternatives/base64decode-org"   className="feat-subnav-link" role="listitem">vs base64decode.org</Link>
           <Link href="/features/tools"                  className="feat-subnav-link" role="listitem">All Tools</Link>
         </div>

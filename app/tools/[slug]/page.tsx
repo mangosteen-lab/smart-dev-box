@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { TOOL_SEO_DATA, TOOL_SLUG_MAP } from '@/lib/tools/seo-data';
+import { ENGINEERING_RECIPES } from '@/lib/recipes';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Static params — Next.js generates one page per slug at build time.
@@ -53,8 +54,9 @@ function buildJsonLd(tool: (typeof TOOL_SEO_DATA)[number]) {
   const BASE = 'https://smartdevbox.com';
   const url = `${BASE}/tools/${tool.slug}`;
   const toolName = tool.heading.split(' — ')[0].trim();
+  const faqs = getToolFaqs(tool);
 
-  // SoftwareApplication — Google's preferred type for App rich results
+  // SoftwareApplication — identifies each browser tool as an application
   const softwareApp = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
@@ -88,7 +90,7 @@ function buildJsonLd(tool: (typeof TOOL_SEO_DATA)[number]) {
     },
   };
 
-  // BreadcrumbList — enables breadcrumb rich results in SERPs
+  // BreadcrumbList — describes the tool's place in the site hierarchy
   const breadcrumb = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -114,21 +116,34 @@ function buildJsonLd(tool: (typeof TOOL_SEO_DATA)[number]) {
     ],
   };
 
-  // FAQPage — triggers "People Also Ask" / FAQ rich results
-  const faqPage =
-    tool.faqs.length > 0
-      ? {
-          '@context': 'https://schema.org',
-          '@type': 'FAQPage',
-          mainEntity: tool.faqs.map((faq) => ({
-            '@type': 'Question',
-            name: faq.q,
-            acceptedAnswer: { '@type': 'Answer', text: faq.a },
-          })),
-        }
-      : null;
+  // FAQPage — wraps the visible question-and-answer content
+  const faqPage = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.q,
+      acceptedAnswer: { '@type': 'Answer', text: faq.a },
+    })),
+  };
 
   return { softwareApp, webApp, breadcrumb, faqPage };
+}
+
+function getToolFaqs(tool: (typeof TOOL_SEO_DATA)[number]) {
+  if (tool.faqs.length > 0) return tool.faqs;
+
+  const toolName = tool.heading.split(' — ')[0].trim();
+  return [
+    {
+      q: `What does the ${toolName} do?`,
+      a: tool.metaDescription,
+    },
+    {
+      q: `Does the ${toolName} send my input to a server?`,
+      a: `No. The ${toolName} runs in your browser, so your input stays on your device.`,
+    },
+  ];
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -145,15 +160,21 @@ export default async function ToolPage({
   if (!tool) notFound();
 
   const { softwareApp, webApp, breadcrumb, faqPage } = buildJsonLd(tool);
+  const faqs = getToolFaqs(tool);
 
   const relatedTools = tool.relatedToolIds
     .map((id) => TOOL_SEO_DATA.find((t) => t.id === id))
     .filter(Boolean) as typeof TOOL_SEO_DATA;
 
+  const toolHref = `/tools/${tool.slug}`;
+  const relatedRecipes = ENGINEERING_RECIPES.filter((recipe) =>
+    recipe.relatedLinks.some((link) => link.href === toolHref)
+  );
+
   return (
     <>
       {/* ── Structured data ──────────────────────────────────────────────── */}
-      {/* SoftwareApplication — Google App rich results */}
+      {/* SoftwareApplication */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApp) }}
@@ -163,18 +184,16 @@ export default async function ToolPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webApp) }}
       />
-      {/* BreadcrumbList — breadcrumb rich results in SERPs */}
+      {/* BreadcrumbList */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
       />
-      {/* FAQPage — People Also Ask / FAQ rich results */}
-      {faqPage && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPage) }}
-        />
-      )}
+      {/* FAQPage */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPage) }}
+      />
 
       {/* ── Article ──────────────────────────────────────────────────────── */}
       <article
@@ -214,29 +233,27 @@ export default async function ToolPage({
           )}
 
           {/* FAQ */}
-          {tool.faqs.length > 0 && (
-            <section
-              className="feat-section"
-              aria-labelledby="faq-heading"
-              itemScope
-              itemType="https://schema.org/FAQPage"
-            >
-              <h2 id="faq-heading" className="feat-h2">Frequently Asked Questions</h2>
-              {tool.faqs.map((faq) => (
-                <div
-                  key={faq.q}
-                  itemScope
-                  itemType="https://schema.org/Question"
-                  itemProp="mainEntity"
-                >
-                  <h3 className="feat-h3" itemProp="name">{faq.q}</h3>
-                  <div itemScope itemType="https://schema.org/Answer" itemProp="acceptedAnswer">
-                    <p itemProp="text">{faq.a}</p>
-                  </div>
+          <section
+            className="feat-section"
+            aria-labelledby="faq-heading"
+            itemScope
+            itemType="https://schema.org/FAQPage"
+          >
+            <h2 id="faq-heading" className="feat-h2">Frequently Asked Questions</h2>
+            {faqs.map((faq) => (
+              <div
+                key={faq.q}
+                itemScope
+                itemType="https://schema.org/Question"
+                itemProp="mainEntity"
+              >
+                <h3 className="feat-h3" itemProp="name">{faq.q}</h3>
+                <div itemScope itemType="https://schema.org/Answer" itemProp="acceptedAnswer">
+                  <p itemProp="text">{faq.a}</p>
                 </div>
-              ))}
-            </section>
-          )}
+              </div>
+            ))}
+          </section>
 
           {/* Privacy */}
           <section className="feat-section" aria-labelledby="privacy-heading">
@@ -266,6 +283,23 @@ export default async function ToolPage({
               </ul>
             </section>
           )}
+
+          {/* Related recipes */}
+          {relatedRecipes.length > 0 && (
+            <section className="feat-section" aria-labelledby="related-recipes-heading">
+              <h2 id="related-recipes-heading" className="feat-h2">Related Recipes</h2>
+              <ul className="feat-tool-list">
+                {relatedRecipes.map((recipe) => (
+                  <li key={recipe.slug} className="feat-tool-row">
+                    <Link href={`/recipes/${recipe.slug}`} className="feat-tool-name">
+                      {recipe.shortTitle}
+                    </Link>
+                    <span className="feat-tool-desc">{recipe.summary}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
       </article>
 
@@ -281,12 +315,13 @@ export default async function ToolPage({
           {tool.useCases.length > 0 && (
             <li className="feat-toc-item"><a href="#use-cases-heading">Use Cases</a></li>
           )}
-          {tool.faqs.length > 0 && (
-            <li className="feat-toc-item"><a href="#faq-heading">FAQ</a></li>
-          )}
+          <li className="feat-toc-item"><a href="#faq-heading">FAQ</a></li>
           <li className="feat-toc-item"><a href="#privacy-heading">Privacy</a></li>
           {relatedTools.length > 0 && (
             <li className="feat-toc-item"><a href="#related-heading">Related Tools</a></li>
+          )}
+          {relatedRecipes.length > 0 && (
+            <li className="feat-toc-item"><a href="#related-recipes-heading">Related Recipes</a></li>
           )}
         </ul>
 

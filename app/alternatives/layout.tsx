@@ -40,7 +40,9 @@ export default function AlternativesLayout({ children }: { children: React.React
         </Link>
         <div className="feat-subnav-links" role="list">
           <Link href="/alternatives/base64decode-org"  className="feat-subnav-link" role="listitem">vs base64decode.org</Link>
+          <Link href="/alternatives/cyberchef"         className="feat-subnav-link" role="listitem">CyberChef alternative</Link>
           <Link href="/vs/cyberchef"                   className="feat-subnav-link" role="listitem">vs CyberChef</Link>
+          <Link href="/vs/jsonlint"                    className="feat-subnav-link" role="listitem">vs JSONLint</Link>
           <Link href="/vs/jwt-io"                      className="feat-subnav-link" role="listitem">vs jwt.io</Link>
           <Link href="/features/tools"                 className="feat-subnav-link" role="listitem">All Tools</Link>
         </div>

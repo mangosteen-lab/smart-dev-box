@@ -31,7 +31,7 @@ Available tool IDs:
 - hash-generator
 - lorem-ipsum
 - random-number, random-password, random-ip, random-mac
-- regex-tester
+- regex-tester, regex-generator
 - jsonpath-evaluator
 - word-count, text-reverse, text-trim
 - remove-empty-lines, number-lines, prefix-lines, suffix-lines

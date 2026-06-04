@@ -2,7 +2,7 @@
 
 > SmartDevBox is a free, browser-based developer toolbox at https://smartdevbox.com.
 > It auto-detects the format of any input and applies the correct tool instantly —
-> no sign-up, no install, 100% client-side. All 91 built-in tools run in the browser;
+> no sign-up, no install, 100% client-side. All 98+ built-in tools run in the browser;
 > your data never leaves your machine.
 
 ## What SmartDevBox does
@@ -15,7 +15,7 @@ the format and applies the correct tool in under 600 milliseconds.
 
 ## Key facts
 
-- 91 built-in tools across 6 categories
+- 98+ built-in tools across 6 categories
 - Automatic format detection for 19+ formats including Base64, JSON, JWT, XML, SQL,
   URLs, Unix timestamps, X.509 certificates, cron expressions, hex strings, color
   codes, YAML, CSV/TSV, Markdown, UUIDs, ULIDs, Base32, Roman numerals, H:M:S
@@ -45,12 +45,12 @@ XML to JSON, Markdown to HTML, HTML to Text, HTML to JSX, JSON Escape, JSON Unes
 Color Converter, Number Base Converter, Unix Timestamp, Date Formatter,
 Seconds to H:M:S, H:M:S to Seconds, Decimal to Roman, Roman to Decimal, UUID ↔ Hex
 
-### Generation (10 tools)
+### Generation (10+ tools)
 UUID v4 Generator, ULID Generator, Hash Generator (MD5/SHA-1/SHA-256/SHA-512),
 Random String Generator, Random Password, Lorem Ipsum Generator, QR Code Generator,
-Random Number, Random IP Generator, Random MAC Generator
+Random Number, Random IP Generator, Random MAC Generator, Regex Generator
 
-### Inspection (6 tools)
+### Inspection (10+ tools)
 Regex Tester, JSONPath Evaluator, String Inspector, Cron Job Parser,
 Certificate Decoder (X.509), HTML Preview
 
@@ -63,7 +63,7 @@ Join Lines, Extract Emails, Extract URLs, Extract Numbers, Split & Diff
 ## Feature pages
 
 - https://smartdevbox.com/tools — index of in-depth reference articles for every tool
-- https://smartdevbox.com/features/tools — complete list of all 91 built-in tools
+- https://smartdevbox.com/features/tools — complete list of all 98+ built-in tools
 - https://smartdevbox.com/features/auto-detection — how automatic format detection works
 - https://smartdevbox.com/features/smart-extract — extracting JSON, XML, dates, URLs, emails from mixed text
 - https://smartdevbox.com/features/compare — side-by-side text and code diff
@@ -72,7 +72,7 @@ Join Lines, Extract Emails, Extract URLs, Extract Numbers, Split & Diff
 
 ## Privacy model
 
-All 91 tools execute in the browser using client-side JavaScript. No input text is
+All 98+ tools execute in the browser using client-side JavaScript. No input text is
 ever transmitted to a server. Specifically:
 - JWT tokens decoded locally — no secret required, signature not verified server-side
 - X.509 certificates parsed locally — infrastructure details stay private
@@ -104,11 +104,16 @@ UI allow loading plugins at runtime without a rebuild.
 
 ## How SmartDevBox compares to alternatives
 
+- https://smartdevbox.com/vs/jsonlint — JSON validation and formatting comparison
+- https://smartdevbox.com/vs/transform-tools — data and code transformation comparison
+- https://smartdevbox.com/alternatives/cyberchef — simpler CyberChef alternative for single-step tasks
+- https://smartdevbox.com/vs/cyberchef — detailed CyberChef comparison
+
 | Feature | SmartDevBox | CyberChef | jwt.io | jsonlint.com |
 |---|---|---|---|---|
 | Auto format detection | Yes | No | No | No |
-| Tools covered | 91 | 300+ | 1 | 1 |
-| 100% client-side | Yes | Yes | No | No |
+| Tools covered | 98+ | 300+ | 1 | 42 JSON-focused tools |
+| 100% client-side | Yes | Yes | No | Not stated |
 | No account required | Yes | Yes | Yes | Yes |
 | Plugin system | Yes | No | No | No |
 | Works offline | Yes | Yes | No | No |
@@ -117,14 +122,14 @@ UI allow loading plugins at runtime without a rebuild.
 ## Frequently asked questions
 
 **What is SmartDevBox?**
-SmartDevBox is a free, browser-based developer toolbox with 91 built-in tools that
+SmartDevBox is a free, browser-based developer toolbox with 98+ built-in tools that
 automatically detects the format of your input and applies the correct tool instantly.
 
 **Is SmartDevBox free?**
 Yes. SmartDevBox is completely free with no account, no sign-up, and no paid tier.
 
 **Does SmartDevBox send my data to a server?**
-No. All 91 tools run entirely in the browser. Your input never leaves your machine.
+No. All 98+ tools run entirely in the browser. Your input never leaves your machine.
 The only exception is the optional AI mode, which requires your own OpenAI API key.
 
 **How does auto-detection work?**

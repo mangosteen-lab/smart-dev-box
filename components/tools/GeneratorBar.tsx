@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, useRef, useEffect, useSyncExternalStore } from 'react';
+import { useState, useRef, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useDevboxStore } from '@/store/devbox';
 import { runDetection } from '@/lib/tools';
 import { getGeneratorPlugins, subscribeGenerators } from '@/lib/tools/plugin-registry';
 import type { GeneratorOption } from '@/lib/tools/types';
+import {
+  REGEX_GENERATOR_LANGUAGES,
+  buildRegexLanguageSnippets,
+  generateRegexFromSample,
+  type RegexGeneratorLanguage,
+} from '@/lib/tools/inspection';
 
 // ── Clipboard ─────────────────────────────────────────────────────────────────
 
@@ -688,6 +694,960 @@ function GenericDetail({ def, onUse }: { def: GeneratorDef; onUse: (v: string) =
   );
 }
 
+// ── Detail panel: Smart Regex Builder ────────────────────────────────────────
+
+type RegexMode =
+  | 'exact'
+  | 'alpha'
+  | 'number'
+  | 'whitespace'
+  | 'any'
+  | 'dateIso'
+  | 'dateFlexible'
+  | 'time'
+  | 'email'
+  | 'url'
+  | 'ipv4'
+  | 'uuid'
+  | 'hex'
+  | 'javaClass'
+  | 'logLevel'
+  | 'httpMethod'
+  | 'httpStatus'
+  | 'isoTimestamp'
+  | 'semver'
+  | 'booleanLiteral'
+  | 'domain'
+  | 'filePath'
+  | 'uppercase'
+  | 'hashtag'
+  | 'quoted'
+  | 'bracketed'
+  | 'custom';
+
+type RegexGroupMode = 'none' | 'capture' | 'named';
+
+interface RegexRule {
+  id: string;
+  start: number;
+  end: number;
+  text: string;
+  mode: RegexMode;
+  label: string;
+  regex: string;
+  groupMode: RegexGroupMode;
+  name: string;
+  optional: boolean;
+  enabled: boolean;
+}
+
+interface RegexSuggestion {
+  mode: RegexMode;
+  label: string;
+  regex: string;
+  meaning: string;
+}
+
+interface RegexCandidate extends RegexSuggestion {
+  id: string;
+  start: number;
+  end: number;
+  text: string;
+  layer: 'semantic' | 'context';
+  color: string;
+}
+
+const REGEX_LANGUAGE_LABELS: Record<RegexGeneratorLanguage, string> = {
+  all: 'All',
+  javascript: 'JS',
+  python: 'Python',
+  java: 'Java',
+  csharp: 'C#',
+  cpp: 'C++',
+  go: 'Go',
+  ruby: 'Ruby',
+  grep: 'grep',
+  php: 'PHP',
+};
+
+const REGEX_LANGUAGES: RegexGeneratorLanguage[] = ['all', ...REGEX_GENERATOR_LANGUAGES];
+
+const enumAlternatives = ['INFO', 'WARN', 'ERROR', 'DEBUG', 'TRACE'];
+const httpMethodAlternatives = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
+const LOG_LEVEL_SOURCE = '(?:TRACE|Trace|trace|DEBUG|Debug|debug|INFO|Info|info|WARN|Warn|warn|WARNING|Warning|warning|ERROR|Error|error|FATAL|Fatal|fatal|CRITICAL|Critical|critical|NOTICE|Notice|notice)';
+const CANDIDATE_COLORS: Record<RegexCandidate['layer'], string> = {
+  semantic: 'rgba(34,197,94,0.72)',
+  context: 'rgba(234,179,8,0.74)',
+};
+
+function escapeRegexPart(value: string): string {
+  return value.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+}
+
+function guessGroupName(text: string, mode: RegexMode): string {
+  if (mode === 'dateIso' || mode === 'dateFlexible') return 'date';
+  if (mode === 'time') return 'time';
+  if (mode === 'email') return 'email';
+  if (mode === 'url') return 'url';
+  if (mode === 'ipv4') return 'ip';
+  if (mode === 'uuid') return 'uuid';
+  if (mode === 'hex') return 'hex';
+  if (mode === 'javaClass') return 'className';
+  if (mode === 'logLevel') return 'level';
+  if (mode === 'httpMethod') return 'method';
+  if (mode === 'httpStatus') return 'status';
+  if (mode === 'isoTimestamp') return 'timestamp';
+  if (mode === 'semver') return 'version';
+  if (mode === 'booleanLiteral') return 'flag';
+  if (mode === 'domain') return 'domain';
+  if (mode === 'filePath') return 'path';
+  if (mode === 'number') return 'number';
+  if (mode === 'alpha') return 'text';
+  if (mode === 'uppercase') return 'level';
+  if (mode === 'hashtag') return 'tag';
+  if (mode === 'quoted') return 'value';
+  if (mode === 'bracketed') return 'section';
+  const cleaned = text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  const candidate = cleaned.slice(0, 24) || 'value';
+  return /^[a-z_]/.test(candidate) ? candidate : `value_${candidate}`;
+}
+
+function modeRegex(mode: RegexMode, text: string, strictness: number): string {
+  switch (mode) {
+    case 'exact':
+      return escapeRegexPart(text);
+    case 'alpha':
+      return strictness === 0 ? escapeRegexPart(text) : '[A-Za-z]+';
+    case 'number':
+      return strictness === 0 ? escapeRegexPart(text) : strictness === 1 ? '\\d+' : '\\d+(?:\\.\\d+)?';
+    case 'whitespace':
+      return strictness === 0 ? escapeRegexPart(text) : strictness === 1 ? '\\s+' : '\\s*';
+    case 'any':
+      return strictness === 0 ? '.+' : '.*?';
+    case 'dateIso':
+      return strictness === 0 ? escapeRegexPart(text) : '\\d{4}-\\d{2}-\\d{2}';
+    case 'dateFlexible':
+      return strictness === 0 ? escapeRegexPart(text) : strictness === 1 ? '\\d{4}[-/]\\d{2}[-/]\\d{2}' : '\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}';
+    case 'time':
+      return strictness === 0 ? escapeRegexPart(text) : strictness === 1 ? '\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?' : '\\d{1,2}:\\d{2}(?::\\d{2})?(?:\\.\\d+)?';
+    case 'email':
+      return strictness === 0 ? escapeRegexPart(text) : '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}';
+    case 'url':
+      return strictness === 0 ? escapeRegexPart(text) : 'https?:\\/\\/[^\\s]+';
+    case 'ipv4':
+      return strictness === 0 ? escapeRegexPart(text) : strictness === 1 ? '(?:\\d{1,3}\\.){3}\\d{1,3}' : '(?:(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)\\.){3}(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)';
+    case 'uuid':
+      return strictness === 0 ? escapeRegexPart(text) : '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}';
+    case 'hex':
+      return strictness === 0 ? escapeRegexPart(text) : text.startsWith('0x') || text.startsWith('0X') ? '0x[0-9a-fA-F]+' : '[0-9a-fA-F]+';
+    case 'javaClass':
+      return strictness === 0
+        ? escapeRegexPart(text)
+        : text.startsWith('[') && text.endsWith(']')
+          ? '\\[(?:[A-Za-z_$][\\w$]*\\.)+[A-Za-z_$][\\w$]*\\]'
+          : '(?:[A-Za-z_$][\\w$]*\\.)+[A-Za-z_$][\\w$]*';
+    case 'logLevel':
+      return strictness === 0 ? escapeRegexPart(text) : LOG_LEVEL_SOURCE;
+    case 'httpMethod':
+      return strictness === 0 ? escapeRegexPart(text) : `(?:${httpMethodAlternatives.join('|')})`;
+    case 'httpStatus':
+      return strictness === 0 ? escapeRegexPart(text) : '[1-5]\\d{2}';
+    case 'isoTimestamp':
+      return strictness === 0 ? escapeRegexPart(text) : '\\d{4}-\\d{2}-\\d{2}[T\\s]\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:?\\d{2})?';
+    case 'semver':
+      return strictness === 0 ? escapeRegexPart(text) : '\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?';
+    case 'booleanLiteral':
+      return strictness === 0 ? escapeRegexPart(text) : '(?:true|false|null)';
+    case 'domain':
+      return strictness === 0 ? escapeRegexPart(text) : '(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,}';
+    case 'filePath':
+      return strictness === 0 ? escapeRegexPart(text) : '(?:\\.?\\.?\\/|\\/)?(?:[A-Za-z0-9._-]+\\/)*[A-Za-z0-9._-]+';
+    case 'uppercase':
+      return strictness === 0 ? escapeRegexPart(text) : strictness === 1 ? '[A-Z]+' : `(?:${enumAlternatives.join('|')})`;
+    case 'hashtag':
+      return strictness === 0 ? escapeRegexPart(text) : '#[A-Za-z0-9_]+';
+    case 'quoted':
+      return strictness === 0 ? escapeRegexPart(text) : "['\"][^'\"]*['\"]";
+    case 'bracketed':
+      return strictness === 0 ? escapeRegexPart(text) : '\\[[^\\]]+\\]';
+    case 'custom':
+      return text;
+    default:
+      return escapeRegexPart(text);
+  }
+}
+
+function classifyRegexSegment(text: string, strictness: number): { label: string; regex: string } {
+  if (/^\s+$/.test(text)) return { label: 'Whitespace', regex: modeRegex('whitespace', text, strictness) };
+  if (/^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/.test(text)) return { label: 'Log timestamp', regex: modeRegex('isoTimestamp', text, strictness) };
+  if (/^\[[A-Z][A-Z0-9_ -]*:[^\]]+\]$/.test(text)) return { label: 'Bracketed field', regex: '\\[[A-Z][A-Z0-9_ -]*:[^\\]]+\\]' };
+  if (new RegExp(`^\\[${LOG_LEVEL_SOURCE}\\]$`).test(text)) return { label: 'Bracketed log level', regex: `\\[${LOG_LEVEL_SOURCE}\\]` };
+  if (/^\[0x[0-9a-fA-F]+\]$/.test(text)) return { label: 'Bracketed hex code', regex: '\\[0x[0-9a-fA-F]+\\]' };
+  if (/^\[[A-Za-z0-9_.$-]+\.(?:cpp|c|cc|h|hpp|java|js|ts|tsx|py|go|rb|php):\d+\]$/.test(text)) return { label: 'Source location', regex: '\\[[A-Za-z0-9_.$-]+\\.(?:cpp|c|cc|h|hpp|java|js|ts|tsx|py|go|rb|php):\\d+\\]' };
+  if (/^\[[A-Za-z][A-Za-z0-9_ .-]+\]$/.test(text)) return { label: 'Bracketed label', regex: '\\[[A-Za-z][A-Za-z0-9_ .-]+\\]' };
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return { label: 'Date ISO', regex: modeRegex('dateIso', text, strictness) };
+  if (/^\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?$/.test(text)) return { label: 'Time', regex: modeRegex('time', text, strictness) };
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) return { label: 'Email', regex: modeRegex('email', text, strictness) };
+  if (/^https?:\/\/\S+$/i.test(text)) return { label: 'URL', regex: modeRegex('url', text, strictness) };
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(text)) return { label: 'IPv4 address', regex: modeRegex('ipv4', text, strictness) };
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text)) return { label: 'UUID', regex: modeRegex('uuid', text, strictness) };
+  if (/^(?:0x)?[0-9a-f]+$/i.test(text) && /[a-f]/i.test(text)) return { label: 'Hex value', regex: modeRegex('hex', text, strictness) };
+  if (/^(?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*$/.test(text) || /^\[(?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*\]$/.test(text)) return { label: 'Java class name', regex: modeRegex('javaClass', text, strictness) };
+  if (/^(?:TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|CRITICAL|NOTICE)$/i.test(text)) return { label: 'Log level', regex: modeRegex('logLevel', text, strictness) };
+  if (/^(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/i.test(text)) return { label: 'HTTP method', regex: modeRegex('httpMethod', text, strictness) };
+  if (/^[1-5]\d{2}$/.test(text)) return { label: 'HTTP status', regex: modeRegex('httpStatus', text, strictness) };
+  if (/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(text)) return { label: 'SemVer', regex: modeRegex('semver', text, strictness) };
+  if (/^(?:true|false|null)$/i.test(text)) return { label: 'Boolean/null', regex: modeRegex('booleanLiteral', text, strictness) };
+  if (/^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}$/.test(text)) return { label: 'Domain', regex: modeRegex('domain', text, strictness) };
+  if (/^(?:\.{0,2}\/|\/)?(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+$/.test(text)) return { label: 'File path', regex: modeRegex('filePath', text, strictness) };
+  if (/^[A-Z]+$/.test(text)) return { label: 'Uppercase word', regex: modeRegex('uppercase', text, strictness) };
+  if (/^#\w+$/.test(text)) return { label: 'Hashtag', regex: modeRegex('hashtag', text, strictness) };
+  if (/^['"].*['"]$/.test(text)) return { label: 'Quoted string', regex: modeRegex('quoted', text, strictness) };
+  if (/^\[[^\]]+\]$/.test(text)) return { label: 'Bracketed value', regex: modeRegex('bracketed', text, strictness) };
+  if (/^\d+$/.test(text)) return { label: 'Number', regex: modeRegex('number', text, strictness) };
+  if (/^[A-Za-z]+$/.test(text)) return { label: 'Alpha', regex: modeRegex('alpha', text, strictness) };
+  if (/^\/[^\s]+$/.test(text)) return { label: 'URL path', regex: '\\/[^\\s]+' };
+  if (/^[A-Za-z0-9_]+$/.test(text)) return { label: 'Word', regex: '[A-Za-z0-9_]+' };
+  return { label: 'Exact', regex: escapeRegexPart(text) };
+}
+
+function compositeSuggestionsFor(text: string, strictness: number): RegexSuggestion[] {
+  const tokens = text.match(/\s+|\S+/g) ?? [];
+  if (tokens.length <= 1) return [];
+
+  const parts = tokens.map((token) => classifyRegexSegment(token, strictness));
+  const label = parts.map((part) => part.label).join(' + ');
+  const regex = parts.map((part) => part.regex).join('');
+  const suggestions: RegexSuggestion[] = [
+    {
+      mode: 'custom',
+      label,
+      regex,
+      meaning: 'match this selected sequence by recognizing each part',
+    },
+  ];
+
+  const trimmed = text.trim();
+  if (trimmed && trimmed !== text) {
+    const inner = classifyRegexSegment(trimmed, strictness);
+    suggestions.push({
+      mode: 'custom',
+      label: `Optional whitespace + ${inner.label}`,
+      regex: `\\s*${inner.regex}\\s*`,
+      meaning: 'allow optional padding around the selected value',
+    });
+  }
+
+  return suggestions;
+}
+
+function suggestionsFor(text: string, strictness: number) {
+  const suggestions: RegexSuggestion[] = [
+    { mode: 'exact', label: 'Exact', regex: modeRegex('exact', text, strictness), meaning: 'match this exact value' },
+    ...compositeSuggestionsFor(text, strictness),
+  ];
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    suggestions.push(
+      { mode: 'dateIso', label: 'Date ISO', regex: modeRegex('dateIso', text, strictness), meaning: 'match ISO dates' },
+      { mode: 'dateFlexible', label: 'Flexible date', regex: modeRegex('dateFlexible', text, strictness), meaning: 'allow - or / separators' }
+    );
+  }
+  if (/^\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?$/.test(text)) {
+    suggestions.push({ mode: 'time', label: 'Time', regex: modeRegex('time', text, strictness), meaning: 'match similar time values' });
+  }
+  if (/^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/.test(text)) {
+    suggestions.push({ mode: 'isoTimestamp', label: 'Log timestamp', regex: modeRegex('isoTimestamp', text, strictness), meaning: 'match API and application log timestamps' });
+  }
+  if (/^\[[A-Z][A-Z0-9_ -]*:[^\]]+\]$/.test(text)) {
+    suggestions.push({ mode: 'custom', label: 'Bracketed field', regex: '\\[[A-Z][A-Z0-9_ -]*:[^\\]]+\\]', meaning: 'match metadata fields like [HOST:value] or [PID:8712]' });
+  }
+  if (new RegExp(`^\\[${LOG_LEVEL_SOURCE}\\]$`).test(text)) {
+    suggestions.push({ mode: 'custom', label: 'Bracketed log level', regex: `\\[${LOG_LEVEL_SOURCE}\\]`, meaning: 'match severity inside square brackets' });
+  }
+  if (/^\[0x[0-9a-fA-F]+\]$/.test(text)) {
+    suggestions.push({ mode: 'custom', label: 'Bracketed hex code', regex: '\\[0x[0-9a-fA-F]+\\]', meaning: 'match bracketed error or HRESULT code' });
+  }
+  if (/^\[[A-Za-z0-9_.$-]+\.(?:cpp|c|cc|h|hpp|java|js|ts|tsx|py|go|rb|php):\d+\]$/.test(text)) {
+    suggestions.push({ mode: 'custom', label: 'Source location', regex: '\\[[A-Za-z0-9_.$-]+\\.(?:cpp|c|cc|h|hpp|java|js|ts|tsx|py|go|rb|php):\\d+\\]', meaning: 'match source file and line number inside brackets' });
+  }
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) {
+    suggestions.push({ mode: 'email', label: 'Email', regex: modeRegex('email', text, strictness), meaning: 'match email addresses' });
+  }
+  if (/^https?:\/\/\S+$/i.test(text)) {
+    suggestions.push({ mode: 'url', label: 'URL', regex: modeRegex('url', text, strictness), meaning: 'match HTTP URLs' });
+  }
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(text)) {
+    suggestions.push({ mode: 'ipv4', label: 'IPv4 address', regex: modeRegex('ipv4', text, strictness), meaning: 'match IPv4 addresses' });
+  }
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text)) {
+    suggestions.push({ mode: 'uuid', label: 'UUID', regex: modeRegex('uuid', text, strictness), meaning: 'match standard UUID values' });
+  }
+  if (/^(?:0x)?[0-9a-f]+$/i.test(text) && /[a-f]/i.test(text)) {
+    suggestions.push({ mode: 'hex', label: 'Hex value', regex: modeRegex('hex', text, strictness), meaning: 'match hexadecimal values' });
+  }
+  if (/^(?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*$/.test(text) || /^\[(?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*\]$/.test(text)) {
+    suggestions.push({ mode: 'javaClass', label: 'Java class name', regex: modeRegex('javaClass', text, strictness), meaning: 'match dotted package/class names' });
+  }
+  if (/^(?:TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|CRITICAL|NOTICE)$/i.test(text)) {
+    suggestions.push({ mode: 'logLevel', label: 'Log level', regex: modeRegex('logLevel', text, strictness), meaning: 'match common application log levels' });
+  }
+  if (/^(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/i.test(text)) {
+    suggestions.push({ mode: 'httpMethod', label: 'HTTP method', regex: modeRegex('httpMethod', text, strictness), meaning: 'match common HTTP verbs' });
+  }
+  if (/^[1-5]\d{2}$/.test(text)) {
+    suggestions.push({ mode: 'httpStatus', label: 'HTTP status', regex: modeRegex('httpStatus', text, strictness), meaning: 'match HTTP response status codes' });
+  }
+  if (/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(text)) {
+    suggestions.push({ mode: 'semver', label: 'SemVer', regex: modeRegex('semver', text, strictness), meaning: 'match semantic version strings' });
+  }
+  if (/^(?:true|false|null)$/i.test(text)) {
+    suggestions.push({ mode: 'booleanLiteral', label: 'Boolean/null', regex: modeRegex('booleanLiteral', text, strictness), meaning: 'match JSON-style boolean or null values' });
+  }
+  if (/^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}$/.test(text)) {
+    suggestions.push({ mode: 'domain', label: 'Domain', regex: modeRegex('domain', text, strictness), meaning: 'match hostnames and domains' });
+  }
+  if (/^(?:\.{0,2}\/|\/)?(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+$/.test(text)) {
+    suggestions.push({ mode: 'filePath', label: 'File path', regex: modeRegex('filePath', text, strictness), meaning: 'match Unix-style file or route paths' });
+  }
+  if (/^[A-Z]+$/.test(text)) {
+    suggestions.push({ mode: 'uppercase', label: 'Uppercase word', regex: modeRegex('uppercase', text, strictness), meaning: 'match log levels or enum-like tokens' });
+  }
+  if (/^#\w+$/.test(text)) {
+    suggestions.push({ mode: 'hashtag', label: 'Hashtag', regex: modeRegex('hashtag', text, strictness), meaning: 'match hashtag tokens' });
+  }
+  if (/^['"].*['"]$/.test(text)) {
+    suggestions.push({ mode: 'quoted', label: 'Quoted string', regex: modeRegex('quoted', text, strictness), meaning: 'match quoted values' });
+  }
+  if (/^\[[^\]]+\]$/.test(text)) {
+    suggestions.push({ mode: 'bracketed', label: 'Bracketed value', regex: modeRegex('bracketed', text, strictness), meaning: 'match text inside square brackets' });
+  }
+  if (/^[A-Za-z]+$/.test(text)) suggestions.push({ mode: 'alpha', label: 'Alpha', regex: modeRegex('alpha', text, strictness), meaning: 'match letters' });
+  if (/^\d+$/.test(text)) suggestions.push({ mode: 'number', label: 'Number', regex: modeRegex('number', text, strictness), meaning: 'match numeric values' });
+  if (/^\s+$/.test(text)) suggestions.push({ mode: 'whitespace', label: 'Whitespace', regex: modeRegex('whitespace', text, strictness), meaning: 'match spacing' });
+  suggestions.push({ mode: 'any', label: 'Any', regex: modeRegex('any', text, strictness), meaning: 'match any text here' });
+  return suggestions.filter((suggestion, index, all) => all.findIndex((item) => item.regex === suggestion.regex && item.label === suggestion.label) === index);
+}
+
+function findRegexCandidates(sample: string, strictness: number): RegexCandidate[] {
+  const candidates: RegexCandidate[] = [];
+  const seen = new Set<string>();
+
+  const add = (
+    layer: RegexCandidate['layer'],
+    start: number,
+    end: number,
+    suggestion: RegexSuggestion
+  ) => {
+    if (end <= start) return;
+    const text = sample.slice(start, end);
+    if (text.length < 2 && !/^\s+$/.test(text)) return;
+    if (/^\s$/.test(text)) return;
+    const key = `${layer}:${start}:${end}:${suggestion.label}:${suggestion.regex}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    candidates.push({
+      ...suggestion,
+      id: key,
+      start,
+      end,
+      text,
+      layer,
+      color: CANDIDATE_COLORS[layer],
+    });
+  };
+
+  const scan = (
+    layer: RegexCandidate['layer'],
+    regex: RegExp,
+    mode: RegexMode,
+    label: string,
+    meaning: string
+  ) => {
+    for (const match of sample.matchAll(regex)) {
+      if (match.index === undefined) continue;
+      const text = match[0];
+      if (!text || text.length < 2) continue;
+      add(layer, match.index, match.index + text.length, {
+        mode,
+        label,
+        regex: modeRegex(mode, text, strictness),
+        meaning,
+      });
+    }
+  };
+
+  scan('semantic', /\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?/g, 'isoTimestamp', 'Log timestamp', 'API and application log timestamp');
+  scan('semantic', /\d{4}-\d{2}-\d{2}/g, 'dateIso', 'Date ISO', 'calendar date');
+  scan('semantic', /\b\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?\b/g, 'time', 'Time', 'clock time');
+  scan('semantic', /\b(?:\d{1,3}\.){3}\d{1,3}\b/g, 'ipv4', 'IPv4 address', 'network address');
+  scan('semantic', /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, 'uuid', 'UUID', 'standard UUID');
+  scan('semantic', /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, 'email', 'Email', 'email address');
+  scan('semantic', /https?:\/\/[^\s]+/gi, 'url', 'URL', 'HTTP URL');
+  scan('semantic', /\b(?:TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|CRITICAL|NOTICE)\b/gi, 'logLevel', 'Log level', 'application log severity');
+  scan('semantic', /\b(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b/gi, 'httpMethod', 'HTTP method', 'HTTP request method');
+  scan('semantic', /\b[1-5]\d{2}\b/g, 'httpStatus', 'HTTP status', 'response status code');
+  scan('semantic', /\b\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?\b/g, 'semver', 'SemVer', 'semantic version');
+  scan('semantic', /\b(?:true|false|null)\b/gi, 'booleanLiteral', 'Boolean/null', 'JSON literal');
+  scan('semantic', /\b(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}\b/g, 'domain', 'Domain', 'hostname or domain');
+  for (const match of sample.matchAll(/\[[^\]]+\]/g)) {
+    if (match.index === undefined) continue;
+    const text = match[0];
+    const inner = text.slice(1, -1);
+    let suggestion: RegexSuggestion;
+    if (/^[A-Z][A-Z0-9_ -]*:.+$/.test(inner)) {
+      suggestion = { mode: 'custom', label: 'Bracketed field', regex: '\\[[A-Z][A-Z0-9_ -]*:[^\\]]+\\]', meaning: 'metadata field inside square brackets' };
+    } else if (new RegExp(`^${LOG_LEVEL_SOURCE}$`).test(inner)) {
+      suggestion = { mode: 'custom', label: 'Bracketed log level', regex: `\\[${LOG_LEVEL_SOURCE}\\]`, meaning: 'severity inside square brackets' };
+    } else if (/^0x[0-9a-fA-F]+$/.test(inner)) {
+      suggestion = { mode: 'custom', label: 'Bracketed hex code', regex: '\\[0x[0-9a-fA-F]+\\]', meaning: 'error or HRESULT code inside brackets' };
+    } else if (/^[A-Za-z0-9_.$-]+\.(?:cpp|c|cc|h|hpp|java|js|ts|tsx|py|go|rb|php):\d+$/.test(inner)) {
+      suggestion = { mode: 'custom', label: 'Source location', regex: '\\[[A-Za-z0-9_.$-]+\\.(?:cpp|c|cc|h|hpp|java|js|ts|tsx|py|go|rb|php):\\d+\\]', meaning: 'source file and line number' };
+    } else if (/^(?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*$/.test(inner)) {
+      suggestion = { mode: 'javaClass', label: 'Bracketed Java class', regex: modeRegex('javaClass', text, strictness), meaning: 'class name inside brackets' };
+    } else {
+      suggestion = { mode: 'bracketed', label: 'Bracketed label', regex: '\\[[^\\]]+\\]', meaning: 'single square-bracketed section' };
+    }
+    add('semantic', match.index, match.index + text.length, suggestion);
+  }
+  scan('semantic', /(?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*/g, 'javaClass', 'Java class name', 'dotted package/class name');
+  scan('semantic', /#[A-Za-z0-9_]+/g, 'hashtag', 'Hashtag', 'tag token');
+  scan('semantic', /'[^']*'|"[^"]*"/g, 'quoted', 'Quoted string', 'quoted value');
+  scan('semantic', /(?:\.{0,2}\/|\/)(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+/g, 'filePath', 'File path', 'Unix-style path');
+
+  const semanticCandidates = candidates.filter((candidate) => candidate.layer === 'semantic');
+  for (const candidate of semanticCandidates) {
+    let start = candidate.start;
+    let end = candidate.end;
+    while (start > 0 && /\s/.test(sample[start - 1])) start -= 1;
+    while (end < sample.length && /\s/.test(sample[end])) end += 1;
+    if (start !== candidate.start || end !== candidate.end) {
+      const text = sample.slice(start, end);
+      const composite = compositeSuggestionsFor(text, strictness)[0];
+      if (composite) add('context', start, end, composite);
+    }
+  }
+
+  for (const match of sample.matchAll(/\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?\s+(?:(?:TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|CRITICAL|NOTICE)|(?:\[[^\]]+\]))(?:\s*\[[^\]]+\])*/gi)) {
+    if (match.index === undefined) continue;
+    const text = match[0];
+    const composite = compositeSuggestionsFor(text, strictness)[0];
+    if (composite) {
+      add('context', match.index, match.index + text.length, {
+        ...composite,
+        label: 'Log prefix',
+        meaning: 'timestamp and bracketed metadata prefix',
+      });
+    }
+  }
+
+  for (const match of sample.matchAll(/(?:\[[^\]]+\]){2,}/g)) {
+    if (match.index === undefined) continue;
+    const text = match[0];
+    add('context', match.index, match.index + text.length, {
+      mode: 'custom',
+      label: 'Bracketed metadata sequence',
+      regex: '(?:\\[[^\\]]+\\])+',
+      meaning: 'one or more adjacent bracketed metadata fields',
+    });
+  }
+
+  const semantic: RegexCandidate[] = [];
+  for (const candidate of candidates
+    .filter((item) => item.layer === 'semantic')
+    .sort((a, b) => (b.end - b.start) - (a.end - a.start) || a.start - b.start)) {
+    const overlaps = semantic.some((kept) => candidate.start < kept.end && candidate.end > kept.start);
+    if (!overlaps) semantic.push(candidate);
+  }
+
+  return [
+    ...semantic.sort((a, b) => a.start - b.start || b.end - a.end),
+    ...candidates.filter((item) => item.layer === 'context').sort((a, b) => a.start - b.start || b.end - a.end),
+  ];
+}
+
+function applyGroup(regex: string, rule: RegexRule): string {
+  let inner = regex;
+  if (rule.groupMode === 'capture') inner = `(${inner})`;
+  if (rule.groupMode === 'named') inner = `(?<${rule.name || 'value'}>${inner})`;
+  if (rule.optional) inner = `(?:${inner})?`;
+  return inner;
+}
+
+function buildManualRegex(sample: string, rules: RegexRule[]): string {
+  const ordered = rules
+    .filter((rule) => rule.enabled)
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+
+  if (ordered.length === 0) {
+    return generateRegexFromSample(sample || 'sample').pattern;
+  }
+
+  let cursor = 0;
+  const parts: string[] = ['^'];
+  for (const rule of ordered) {
+    if (rule.start > cursor) parts.push(escapeRegexPart(sample.slice(cursor, rule.start)));
+    parts.push(applyGroup(rule.regex, rule));
+    cursor = Math.max(cursor, rule.end);
+  }
+  if (cursor < sample.length) parts.push(escapeRegexPart(sample.slice(cursor)));
+  parts.push('$');
+  return parts.join('');
+}
+
+function extractMatches(sample: string, pattern: string): Record<string, string> | null {
+  try {
+    const regex = new RegExp(pattern);
+    const match = regex.exec(sample);
+    if (!match) return null;
+    if (match.groups) return match.groups;
+    return Object.fromEntries(match.slice(1).map((value, index) => [`group${index + 1}`, value]));
+  } catch {
+    return null;
+  }
+}
+
+function CandidateLanes({
+  sample,
+  candidates,
+  hoveredId,
+  onHover,
+  onAdd,
+}: {
+  sample: string;
+  candidates: RegexCandidate[];
+  hoveredId: string | null;
+  onHover: (candidate: RegexCandidate | null) => void;
+  onAdd: (candidate: RegexCandidate) => void;
+}) {
+  const layerLabels: Array<{ id: RegexCandidate['layer']; label: string }> = [
+    { id: 'semantic', label: 'Patterns' },
+    { id: 'context', label: 'Structure' },
+  ];
+  const sampleLength = Math.max(sample.length, 1);
+
+  return (
+    <div data-testid="smart-split-lanes" style={{ marginTop: '10px', padding: '9px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '6px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+        <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase' }}>Smart pattern suggestions</span>
+        <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)' }}>{candidates.length} candidates</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+        {layerLabels.map(({ id, label }) => {
+          const layerCandidates = candidates.filter((candidate) => candidate.layer === id);
+          return (
+            <div key={id} style={{ display: 'grid', gridTemplateColumns: '72px minmax(0, 1fr)', alignItems: 'center', gap: '8px' }}>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)', fontWeight: 700 }}>{label}</div>
+              <div style={{ position: 'relative', height: '28px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '5px', overflow: 'hidden' }}>
+                {layerCandidates.length === 0 ? (
+                  <span style={{ position: 'absolute', left: '8px', top: '6px', fontSize: 'var(--fs-2xs)', color: 'var(--text4)' }}>No recognized pattern</span>
+                ) : layerCandidates.map((candidate) => {
+                  const left = (candidate.start / sampleLength) * 100;
+                  const width = ((candidate.end - candidate.start) / sampleLength) * 100;
+                  const active = hoveredId === candidate.id;
+                  return (
+                    <button
+                      key={candidate.id}
+                      onMouseEnter={() => onHover(candidate)}
+                      onFocus={() => onHover(candidate)}
+                      onClick={() => onAdd(candidate)}
+                      title={`${candidate.label}: ${candidate.regex}`}
+                      style={{
+                        position: 'absolute',
+                        left: `${left}%`,
+                        top: '4px',
+                        width: `max(${Math.max(width, 2)}%, 42px)`,
+                        height: '18px',
+                        borderRadius: '4px',
+                        border: active ? '1px solid var(--text)' : '1px solid rgba(255,255,255,0.18)',
+                        background: candidate.color,
+                        color: '#07120c',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font)',
+                        fontSize: 'var(--fs-2xs)',
+                        fontWeight: 800,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        padding: '0 5px',
+                        boxShadow: active ? '0 0 0 2px var(--green-bg)' : 'none',
+                      }}
+                    >
+                      {candidate.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RegexBuilderDetail({ onUse, fullPanel = false }: { onUse: (v: string) => void; fullPanel?: boolean }) {
+  const initialInput = useDevboxStore((state) => state.input);
+  const [sample, setSample] = useState(initialInput || "2020-03-12T13:34:56.123Z INFO [org.example.Class]: This is a #simple #logline containing a 'value'.");
+  const [selection, setSelection] = useState<{ start: number; end: number; text: string } | null>(null);
+  const [rules, setRules] = useState<RegexRule[]>([]);
+  const [activeRuleId, setActiveRuleId] = useState<string | null>(null);
+  const [hoveredCandidateId, setHoveredCandidateId] = useState<string | null>(null);
+  const [strictness, setStrictness] = useState(1);
+  const [language, setLanguage] = useState<RegexGeneratorLanguage>('all');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const candidates = useMemo(() => findRegexCandidates(sample, strictness), [sample, strictness]);
+  const hoveredCandidate = hoveredCandidateId ? candidates.find((candidate) => candidate.id === hoveredCandidateId) ?? null : null;
+  const activeRule = activeRuleId ? rules.find((rule) => rule.id === activeRuleId) ?? null : null;
+  const selectedText = selection?.text || activeRule?.text || '';
+  const suggestions = selectedText ? suggestionsFor(selectedText, strictness) : [];
+  const pattern = buildManualRegex(sample, rules);
+  const snippets = buildRegexLanguageSnippets(pattern, { language });
+  const extracted = extractMatches(sample, pattern);
+  const testOk = extracted !== null;
+
+  const readSelection = () => {
+    const el = textareaRef.current;
+    if (!el || el.selectionStart === el.selectionEnd) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    setSelection({ start, end, text: sample.slice(start, end) });
+    setHoveredCandidateId(null);
+  };
+
+  const addRuleFromRange = (start: number, end: number, mode: RegexMode, regex: string, label: string) => {
+    const text = sample.slice(start, end);
+    const isComposite = mode === 'custom';
+    const id = `${Date.now()}-${start}-${end}`;
+    const rule: RegexRule = {
+      id,
+      start,
+      end,
+      text,
+      mode,
+      label,
+      regex,
+      groupMode: mode === 'exact' || mode === 'whitespace' || isComposite ? 'none' : 'named',
+      name: guessGroupName(text, mode),
+      optional: false,
+      enabled: true,
+    };
+    setRules((prev) => [...prev.filter((item) => item.end <= rule.start || item.start >= rule.end), rule].sort((a, b) => a.start - b.start));
+    setActiveRuleId(id);
+    setSelection({ start, end, text });
+  };
+
+  const addRule = (mode: RegexMode, regexOverride?: string, labelOverride?: string) => {
+    if (!selection) return;
+    const regex = regexOverride ?? modeRegex(mode, selection.text, strictness);
+    const label = labelOverride ?? (mode === 'dateIso' ? 'date' : mode === 'dateFlexible' ? 'date' : mode);
+    addRuleFromRange(selection.start, selection.end, mode, regex, label);
+  };
+
+  const addCandidateRule = (candidate: RegexCandidate) => {
+    addRuleFromRange(candidate.start, candidate.end, candidate.mode, candidate.regex, candidate.label);
+  };
+
+  const updateRule = (id: string, patch: Partial<RegexRule>) => {
+    setRules((prev) => prev.map((rule) => rule.id === id ? { ...rule, ...patch } : rule));
+  };
+
+  const quickModes: { mode: RegexMode; label: string }[] = [
+    { mode: 'exact', label: 'Exact' },
+    { mode: 'alpha', label: 'Alpha' },
+    { mode: 'number', label: 'Number' },
+    { mode: 'whitespace', label: 'Whitespace' },
+    { mode: 'any', label: 'Any' },
+    { mode: 'dateIso', label: 'Date' },
+    { mode: 'email', label: 'Email' },
+    { mode: 'url', label: 'URL' },
+    { mode: 'ipv4', label: 'IP' },
+    { mode: 'custom', label: 'Custom' },
+  ];
+
+  return (
+    <div className="flex flex-col gap-3" style={{ minWidth: 0, height: fullPanel ? '100%' : undefined, overflow: fullPanel ? 'auto' : undefined, padding: fullPanel ? '2px' : undefined }}>
+      <div style={{ display: 'grid', gridTemplateColumns: fullPanel ? 'minmax(0, 1.45fr) minmax(320px, 0.75fr)' : 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: '12px' }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase' }}>Sample text</span>
+            {selection && (
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--green)' }}>selected: {selection.text.length} chars</span>
+            )}
+          </div>
+          <div style={{ position: 'relative' }}>
+            <textarea
+              data-testid="regex-builder-sample"
+              ref={textareaRef}
+              value={sample}
+              onChange={(event) => {
+                setSample(event.target.value);
+                setRules([]);
+                setSelection(null);
+                setActiveRuleId(null);
+                setHoveredCandidateId(null);
+              }}
+              onMouseUp={readSelection}
+              onKeyUp={readSelection}
+              spellCheck={false}
+              style={{
+                width: '100%',
+                minHeight: fullPanel ? '260px' : '150px',
+                maxHeight: fullPanel ? '420px' : '210px',
+                resize: 'vertical',
+                padding: '10px',
+                borderRadius: '6px',
+                outline: 'none',
+                background: 'var(--bg3)',
+                border: '1px solid var(--border)',
+                color: 'var(--text)',
+                fontSize: 'var(--fs-xs)',
+                lineHeight: 1.7,
+                fontFamily: 'var(--font)',
+              }}
+            />
+            <CandidateLanes
+              sample={sample}
+              candidates={candidates}
+              hoveredId={hoveredCandidateId}
+              onHover={(candidate) => setHoveredCandidateId(candidate?.id ?? null)}
+              onAdd={addCandidateRule}
+            />
+            {selection && (
+              <div
+                style={{
+                  marginTop: '6px',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '4px',
+                  alignItems: 'center',
+                  padding: '6px',
+                  background: 'var(--bg2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                }}
+              >
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)', fontWeight: 700 }}>Match as:</span>
+                {suggestions.slice(0, 4).map((suggestion) => (
+                  <button
+                    key={`suggested-${suggestion.mode}-${suggestion.regex}`}
+                    onClick={() => addRule(suggestion.mode, suggestion.regex, suggestion.label)}
+                    style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid var(--green-dim)', background: 'var(--green-bg)', color: 'var(--green)', fontSize: 'var(--fs-2xs)', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 700 }}
+                  >
+                    {suggestion.label}
+                  </button>
+                ))}
+                {quickModes.map(({ mode, label }) => (
+                  <button
+                    key={mode}
+                    onClick={() => addRule(mode)}
+                    style={{ padding: '3px 7px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 'var(--fs-2xs)', cursor: 'pointer', fontFamily: 'var(--font)' }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginTop: '10px' }}>
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Regex builder timeline</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', minHeight: '34px', padding: '8px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '6px' }}>
+              {rules.length === 0 ? (
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text4)' }}>Select text above, then choose a match mode.</span>
+              ) : rules.map((rule) => (
+                <button
+                  key={rule.id}
+                  onClick={() => setActiveRuleId(rule.id)}
+                  title={rule.regex}
+                  style={{
+                    padding: '5px 8px',
+                    borderRadius: '5px',
+                    border: `1px solid ${activeRuleId === rule.id ? 'var(--green)' : 'var(--border2)'}`,
+                    background: activeRuleId === rule.id ? 'var(--green-bg)' : 'var(--bg3)',
+                    color: rule.enabled ? 'var(--text2)' : 'var(--text4)',
+                    fontSize: 'var(--fs-2xs)',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font)',
+                    textDecoration: rule.enabled ? 'none' : 'line-through',
+                  }}
+                >
+                  {rule.groupMode === 'named' ? `${rule.name}: ` : ''}{rule.regex}{rule.optional ? '?' : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ minWidth: 0, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px' }}>
+          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Selection rule panel</div>
+          {selectedText ? (
+            <>
+              <div style={{ color: 'var(--text4)', fontSize: 'var(--fs-2xs)', marginBottom: '4px' }}>Selected text</div>
+              <code style={{ display: 'block', padding: '6px 8px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 'var(--fs-xs)' }}>{selectedText}</code>
+
+              <label style={{ display: 'block', marginTop: '10px', color: 'var(--text3)', fontSize: 'var(--fs-2xs)', fontWeight: 700 }}>
+                Strict <span style={{ color: 'var(--text4)' }}>↔</span> Flexible
+                <input
+                  type="range"
+                  min={0}
+                  max={2}
+                  step={1}
+                  value={strictness}
+                  onChange={(event) => setStrictness(Number(event.target.value))}
+                  style={{ width: '100%', accentColor: 'var(--green)', marginTop: '6px' }}
+                />
+              </label>
+
+              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                {suggestions[1] && (
+                  <button
+                    onClick={() => activeRule ? updateRule(activeRule.id, { mode: suggestions[1].mode, regex: suggestions[1].regex, label: suggestions[1].label, name: guessGroupName(activeRule.text, suggestions[1].mode) }) : addRule(suggestions[1].mode, suggestions[1].regex, suggestions[1].label)}
+                    style={{ textAlign: 'left', padding: '8px 9px', borderRadius: '5px', border: '1px solid var(--green-dim)', background: 'var(--green-bg)', color: 'var(--green)', cursor: 'pointer', fontFamily: 'var(--font)' }}
+                  >
+                    <span style={{ display: 'block', fontSize: 'var(--fs-2xs)', fontWeight: 800 }}>Best suggestion: {suggestions[1].label}</span>
+                    <code style={{ display: 'block', fontSize: 'var(--fs-2xs)', color: 'var(--green)', marginTop: '2px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{suggestions[1].regex}</code>
+                  </button>
+                )}
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={`${suggestion.mode}-${suggestion.regex}`}
+                    onClick={() => activeRule ? updateRule(activeRule.id, { mode: suggestion.mode, regex: suggestion.regex, label: suggestion.label, name: guessGroupName(activeRule.text, suggestion.mode) }) : addRule(suggestion.mode, suggestion.regex, suggestion.label)}
+                    style={{ textAlign: 'left', padding: '7px 8px', borderRadius: '5px', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer', fontFamily: 'var(--font)' }}
+                  >
+                    <span style={{ display: 'block', fontSize: 'var(--fs-2xs)', color: 'var(--green)', fontWeight: 700 }}>{suggestion.label}</span>
+                    <code style={{ display: 'block', fontSize: 'var(--fs-2xs)', color: 'var(--text)', marginTop: '2px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{suggestion.regex}</code>
+                    <span style={{ display: 'block', fontSize: 'var(--fs-2xs)', color: 'var(--text4)', marginTop: '2px' }}>{suggestion.meaning}</span>
+                  </button>
+                ))}
+              </div>
+
+              {activeRule && (
+                <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {(['none', 'capture', 'named'] as RegexGroupMode[]).map((mode) => (
+                      <ToggleChip key={mode} label={mode === 'none' ? 'No group' : mode === 'capture' ? 'Capture' : 'Named'} active={activeRule.groupMode === mode} onClick={() => updateRule(activeRule.id, { groupMode: mode })} />
+                    ))}
+                    <ToggleChip label="Optional" active={activeRule.optional} onClick={() => updateRule(activeRule.id, { optional: !activeRule.optional })} />
+                    <ToggleChip label={activeRule.enabled ? 'Enabled' : 'Disabled'} active={activeRule.enabled} onClick={() => updateRule(activeRule.id, { enabled: !activeRule.enabled })} />
+                  </div>
+                  {activeRule.groupMode === 'named' && (
+                    <input
+                      value={activeRule.name}
+                      onChange={(event) => updateRule(activeRule.id, { name: event.target.value.replace(/[^A-Za-z0-9_]/g, '') })}
+                      placeholder="Group name"
+                      style={{ padding: '5px 8px', borderRadius: '4px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)' }}
+                    />
+                  )}
+                  <input
+                    value={activeRule.regex}
+                    onChange={(event) => updateRule(activeRule.id, { regex: event.target.value, mode: 'custom' })}
+                    placeholder="Custom regex"
+                    style={{ padding: '5px 8px', borderRadius: '4px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 'var(--fs-xs)', fontFamily: 'var(--font)' }}
+                  />
+                  <button
+                    onClick={() => {
+                      setRules((prev) => prev.filter((rule) => rule.id !== activeRule.id));
+                      setActiveRuleId(null);
+                    }}
+                    style={{ alignSelf: 'flex-start', color: 'var(--error)', background: 'transparent', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', fontSize: 'var(--fs-2xs)', cursor: 'pointer', fontFamily: 'var(--font)' }}
+                  >
+                    Delete chip
+                  </button>
+                </div>
+              )}
+            </>
+          ) : hoveredCandidate ? (
+            <>
+              <div style={{ color: 'var(--text4)', fontSize: 'var(--fs-2xs)', marginBottom: '4px' }}>Candidate</div>
+              <code style={{ display: 'block', padding: '6px 8px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 'var(--fs-xs)' }}>{hoveredCandidate.text}</code>
+              <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--green)', fontWeight: 800 }}>{hoveredCandidate.label}</span>
+                <code style={{ padding: '7px 8px', borderRadius: '4px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 'var(--fs-2xs)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{hoveredCandidate.regex}</code>
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)' }}>{hoveredCandidate.meaning}</span>
+                <button
+                  onClick={() => addCandidateRule(hoveredCandidate)}
+                  style={{ alignSelf: 'flex-start', padding: '5px 10px', borderRadius: '4px', border: '1px solid var(--green-dim)', background: 'var(--green-bg)', color: 'var(--green)', fontSize: 'var(--fs-2xs)', fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font)' }}
+                >
+                  Add candidate
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ color: 'var(--text4)', fontSize: 'var(--fs-xs)', lineHeight: 1.6 }}>
+              Select text or hover a colored split suggestion to add it.
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+          <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase' }}>Generated regex</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            <button onClick={() => copyToClipboard(pattern)} style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 'var(--fs-2xs)', cursor: 'pointer', fontFamily: 'var(--font)' }}>Copy</button>
+            {REGEX_LANGUAGES.map((lang) => (
+              <button key={lang} onClick={() => setLanguage(lang)} style={{ padding: '3px 7px', borderRadius: '4px', border: `1px solid ${language === lang ? 'var(--green)' : 'var(--border)'}`, background: language === lang ? 'var(--green-bg)' : 'var(--bg3)', color: language === lang ? 'var(--green)' : 'var(--text3)', fontSize: 'var(--fs-2xs)', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                {REGEX_LANGUAGE_LABELS[lang]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <code data-testid="regex-builder-output" style={{ display: 'block', padding: '8px 10px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '4px', color: testOk ? 'var(--green)' : 'var(--error)', fontSize: 'var(--fs-xs)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{pattern}</code>
+        <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '8px' }}>
+          {Object.entries(snippets).map(([lang, snippet]) => (
+            <div key={lang} style={{ border: '1px solid var(--border)', borderRadius: '5px', overflow: 'hidden', background: 'var(--bg3)' }}>
+              <div style={{ padding: '5px 8px', borderBottom: '1px solid var(--border)', color: 'var(--text3)', fontSize: 'var(--fs-2xs)', fontWeight: 700 }}>{REGEX_LANGUAGE_LABELS[lang as RegexGeneratorLanguage] ?? lang}</div>
+              <pre style={{ margin: 0, padding: '8px', overflowX: 'auto', color: 'var(--text2)', fontSize: 'var(--fs-2xs)', lineHeight: 1.55 }}><code>{snippet}</code></pre>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '10px' }}>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px' }}>
+          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Match preview</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: testOk ? 'var(--green)' : 'var(--error)', marginBottom: '6px' }}>
+            {testOk ? 'Pattern matches the sample.' : 'Pattern does not match the sample.'}
+          </div>
+          <pre style={{ margin: 0, padding: '8px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text2)', fontSize: 'var(--fs-2xs)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '110px', overflow: 'auto' }}>{sample}</pre>
+        </div>
+
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px' }}>
+          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Extracted JSON</div>
+          <pre style={{ margin: 0, padding: '8px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text2)', fontSize: 'var(--fs-2xs)', whiteSpace: 'pre-wrap', maxHeight: '142px', overflow: 'auto' }}>{JSON.stringify(extracted ?? {}, null, 2)}</pre>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
+        <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--text4)' }}>Select text. Tell what it means. Get the regex.</span>
+        <button
+          onClick={() => onUse(pattern)}
+          style={{ padding: '6px 18px', borderRadius: '4px', fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', background: 'var(--green)', color: '#0a0a0a', border: 'none', fontFamily: 'var(--font)', whiteSpace: 'nowrap' }}
+        >
+          Use regex as input
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function SmartRegexBuilderPanel() {
+  const { setInput, setDetectionResults } = useDevboxStore();
+
+  const handleUse = (value: string) => {
+    setInput(value);
+    setDetectionResults(runDetection(value));
+  };
+
+  return (
+    <div data-testid="smart-regex-panel" className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+      <RegexBuilderDetail onUse={handleUse} fullPanel />
+    </div>
+  );
+}
+
 // ── Generator Hub (master-detail) ─────────────────────────────────────────────
 
 // Flat entry used by the list + search
@@ -697,7 +1657,7 @@ interface FlatEntry {
   description?: string;
   group: string;
   /** 'uuid' → custom; otherwise a GeneratorDef id */
-  kind: 'uuid' | 'generic';
+  kind: 'uuid' | 'regex-builder' | 'generic';
   def?: GeneratorDef;
 }
 
@@ -706,6 +1666,13 @@ function buildFlatList(pluginGenerators: ReturnType<typeof getGeneratorPlugins>)
 
   // UUID first
   entries.push({ id: 'uuid', label: 'UUID v4', description: 'Cryptographically random UUID', group: 'IDs & Tokens', kind: 'uuid' });
+  entries.push({
+    id: 'smart-regex-builder',
+    label: 'Smart Regex Builder',
+    description: 'Select text, choose intent, generate regex snippets',
+    group: 'Text',
+    kind: 'regex-builder',
+  });
 
   // Built-in groups
   for (const group of buildBuiltinGroups()) {
@@ -764,16 +1731,15 @@ function GeneratorHub({ onUse }: { onUse: (v: string) => void }) {
 
   const selected = allEntries.find(e => e.id === selectedId) ?? filtered[0];
 
-  // Group the filtered list for display
-  const groups: { label: string; entries: FlatEntry[] }[] = [];
+  // Group the filtered list for display. Custom entries can appear before the
+  // built-in group block, so merge by label instead of assuming adjacency.
+  const groupMap = new Map<string, { label: string; entries: FlatEntry[] }>();
   for (const entry of filtered) {
-    const last = groups[groups.length - 1];
-    if (last && last.label === entry.group) {
-      last.entries.push(entry);
-    } else {
-      groups.push({ label: entry.group, entries: [entry] });
-    }
+    const group = groupMap.get(entry.group);
+    if (group) group.entries.push(entry);
+    else groupMap.set(entry.group, { label: entry.group, entries: [entry] });
   }
+  const groups = Array.from(groupMap.values());
 
   // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -787,7 +1753,7 @@ function GeneratorHub({ onUse }: { onUse: (v: string) => void }) {
     }
   };
 
-  const HUB_HEIGHT = 440;
+  const HUB_HEIGHT = 620;
   const LIST_WIDTH = 220;
 
   return (
@@ -900,7 +1866,9 @@ function GeneratorHub({ onUse }: { onUse: (v: string) => void }) {
             {/* Options + generate */}
             {selected.kind === 'uuid'
               ? <UuidDetail onUse={onUse} />
-              : selected.def && <GenericDetail def={selected.def} onUse={onUse} />
+              : selected.kind === 'regex-builder'
+                ? <RegexBuilderDetail onUse={onUse} />
+                : selected.def && <GenericDetail def={selected.def} onUse={onUse} />
             }
           </>
         ) : (
@@ -975,8 +1943,8 @@ export function GeneratorBar() {
             border: '1px solid var(--border2)',
             borderRadius: '8px',
             boxShadow: 'var(--shadow-lg)',
-            width: 'min(680px, 92vw)',
-            minWidth: '420px',
+            width: 'min(980px, 94vw)',
+            minWidth: 'min(720px, 94vw)',
             overflow: 'hidden',
           }}
           onMouseDown={e => e.stopPropagation()}

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { TOOL_SEO_DATA } from '@/lib/tools/seo-data';
+import { ENGINEERING_RECIPES } from '@/lib/recipes';
 
 const BASE_URL = 'https://smartdevbox.com';
 
@@ -9,6 +10,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: new Date('2025-05-01'),
     changeFrequency: 'monthly' as const,
     priority: 0.8,
+  }));
+
+  const recipePages: MetadataRoute.Sitemap = ENGINEERING_RECIPES.map((recipe) => ({
+    url: `${BASE_URL}/recipes/${recipe.slug}`,
+    lastModified: new Date('2026-06-03'),
+    changeFrequency: 'monthly' as const,
+    priority: 0.85,
   }));
 
   return [
@@ -22,6 +30,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${BASE_URL}/tools`,
       lastModified: new Date('2025-05-15'),
       changeFrequency: 'monthly',
+      priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}/recipes`,
+      lastModified: new Date('2026-06-03'),
+      changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
@@ -69,6 +83,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: `${BASE_URL}/vs/jwt-io`,
       lastModified: new Date('2025-05-01'),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${BASE_URL}/vs/jsonlint`,
+      lastModified: new Date('2026-06-04'),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${BASE_URL}/vs/transform-tools`,
+      lastModified: new Date('2026-06-04'),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${BASE_URL}/alternatives/cyberchef`,
+      lastModified: new Date('2026-06-04'),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
@@ -169,5 +201,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     ...toolPages,
+    ...recipePages,
   ];
 }

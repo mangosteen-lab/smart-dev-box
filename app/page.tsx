@@ -1,6 +1,8 @@
 import DevboxApp from './DevboxApp';
 import Link from 'next/link';
 import { TOOL_SEO_DATA } from '@/lib/tools/seo-data';
+import { ENGINEERING_RECIPES } from '@/lib/recipes';
+import { HOME_PAGE_JSON_LD } from '@/lib/home-schema';
 
 /**
  * Server component wrapper.
@@ -16,6 +18,11 @@ import { TOOL_SEO_DATA } from '@/lib/tools/seo-data';
 export default function Home() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(HOME_PAGE_JSON_LD) }}
+      />
+
       {/* ── Crawlable SEO / GEO content ─────────────────────────────────────
           Visually hidden, but present in the server-rendered HTML for
           search engines and AI crawlers.
@@ -27,7 +34,7 @@ export default function Home() {
           Paste any text — Base64, JSON, JWT tokens, XML, SQL, URLs, Unix timestamps,
           hex strings, cron expressions, X.509 certificates, color codes, and more —
           and SmartDevBox automatically detects the format and applies the right tool.
-          No sign-up required. All processing runs in the browser. 91 tools across
+          No sign-up required. All processing runs in the browser. 98+ tools across
           6 categories: Encoding/Decoding, Formatting, Conversion, Generation,
           Inspection, and Text.
         </p>
@@ -102,6 +109,7 @@ export default function Home() {
           <li><strong>Random Number Generator</strong> — Generate random integers or decimals within a custom range.</li>
           <li><strong>Random IP Generator</strong> — Generate random IPv4 addresses.</li>
           <li><strong>Random MAC Generator</strong> — Generate random MAC addresses.</li>
+          <li><strong>Regex Generator</strong> — Select sample text, assign match intent, and export regex snippets for JavaScript, Python, Java, C#, C++, Go, Ruby, grep, and PHP.</li>
         </ul>
 
         <h2>Inspection Tools</h2>
@@ -134,11 +142,28 @@ export default function Home() {
         <ul>
           <li><Link href="/features/tools">All 97+ Built-in Tools</Link> — complete list of every tool across all 6 categories.</li>
           <li><Link href="/tools">Tool Guides</Link> — in-depth reference articles for every tool: what it does, worked examples, and FAQs.</li>
+          <li><Link href="/recipes">Engineering Recipes</Link> — workflow-first tutorials for comparing API responses, decoding JWTs, extracting log data, reviewing secrets, and documenting requests.</li>
           <li><Link href="/features/auto-detection">Auto Format Detection</Link> — how SmartDevBox detects Base64, JSON, JWT, XML, and 80+ formats automatically.</li>
           <li><Link href="/features/smart-extract">Smart Extract</Link> — extract emails, URLs, and numbers from any block of text.</li>
           <li><Link href="/features/compare">Compare / Diff</Link> — free side-by-side text and code diff tool.</li>
           <li><Link href="/features/plugins">Plugin System</Link> — extend SmartDevBox with custom tools.</li>
           <li><Link href="/features/privacy">Privacy &amp; Security</Link> — why 100% client-side means your data never leaves your browser.</li>
+        </ul>
+
+        <h2>Engineering Recipes</h2>
+        <p>
+          Practical workflow guides for real developer problems that combine multiple
+          SmartDevBox tools:
+        </p>
+        <ul>
+          {ENGINEERING_RECIPES.map((recipe) => (
+            <li key={recipe.slug}>
+              <Link href={`/recipes/${recipe.slug}`}>
+                <strong>{recipe.title}</strong>
+              </Link>{' '}
+              — {recipe.summary}
+            </li>
+          ))}
         </ul>
 
         <h2>Individual Tool Pages</h2>
@@ -172,10 +197,19 @@ export default function Home() {
             and it decodes automatically — no switching to a dedicated site.
           </li>
           <li>
-            <strong>SmartDevBox vs jsonlint.com</strong> — jsonlint.com validates JSON with a
+            <Link href="/vs/jsonlint"><strong>SmartDevBox vs JSONLint</strong></Link> — JSONLint validates JSON with a
             button click. SmartDevBox validates JSON instantly on paste, shows the error with
             line and column numbers, and also pretty-prints or minifies the input — all
             automatically detected.
+          </li>
+          <li>
+            <Link href="/vs/transform-tools"><strong>SmartDevBox vs Transform.tools</strong></Link> — Transform.tools
+            specializes in source-to-target code and schema conversion. SmartDevBox covers
+            broader everyday formatting, inspection, encoding, generation, and conversion tasks.
+          </li>
+          <li>
+            <Link href="/alternatives/cyberchef"><strong>CyberChef alternative</strong></Link> — use SmartDevBox
+            for common single-step developer tasks and CyberChef for complex transformation recipes.
           </li>
           <li>
             <Link href="/alternatives/base64decode-org"><strong>SmartDevBox vs base64decode.org</strong></Link> — base64decode.org handles only
@@ -191,7 +225,7 @@ export default function Home() {
 
         <h2>Key Facts About SmartDevBox</h2>
         <ul>
-          <li><strong>91 built-in tools</strong> across 6 categories: Encoding/Decoding (18 tools), Formatting (12 tools), Conversion (21 tools), Generation (10 tools), Inspection (6 tools), Text (17 tools).</li>
+          <li><strong>98+ built-in tools</strong> across 6 categories, including encoding, formatting, conversion, generation, inspection, networking, security, and text workflows.</li>
           <li><strong>19 auto-detected format families</strong> including Base64, JSON, JWT, XML, SQL, URLs, Unix timestamps, X.509 certificates, cron expressions, hex strings, color codes, YAML, CSV/TSV, Markdown, UUIDs, ULIDs, Base32, Roman numerals, and H:M:S durations.</li>
           <li><strong>600 ms debounce</strong> — detection runs 600 milliseconds after you stop typing, keeping the interface responsive during fast input.</li>
           <li><strong>Two-tier confidence system</strong>: tools scoring above 0.8 fire automatically; tools scoring 0.3–0.8 appear as suggestion chips you can select with one click.</li>
@@ -359,14 +393,14 @@ export default function Home() {
           Yes. SmartDevBox has a plugin system that lets developers register custom
           tools by providing a name, a detector function (returns a confidence score
           0–1), and a transformer function (takes input string, returns output string).
-          Custom tools appear in the sidebar alongside the 91 built-in tools and
+          Custom tools appear in the sidebar alongside the 98+ built-in tools and
           participate in auto-detection.
         </p>
 
         <h3>Does SmartDevBox work offline?</h3>
         <p>
           SmartDevBox is a Progressive Web App (PWA) with a web app manifest.
-          All 91 tools run entirely client-side with no server dependency. Once the
+          All 98+ tools run entirely client-side with no server dependency. Once the
           page is loaded, the tools work without an internet connection (AI mode,
           which uses OpenAI, requires connectivity).
         </p>

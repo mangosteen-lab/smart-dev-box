@@ -202,7 +202,7 @@ export default function PluginsPage() {
           <p>
             Plugins also integrate with SmartDevBox&apos;s auto-detection system. A plugin
             that provides a <code>detector</code> function participates in the same confidence
-            scoring used by all 91 built-in tools — so your custom tool can fire automatically
+            scoring used by all 98+ built-in tools — so your custom tool can fire automatically
             on paste, just like the built-ins.
           </p>
 
