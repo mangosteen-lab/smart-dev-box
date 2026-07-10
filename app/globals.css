@@ -667,11 +667,20 @@ textarea, pre, code {
   gap: 4rem;
 }
 
+.feat-body-tools {
+  max-width: 1440px;
+}
+
 @media (min-width: 1024px) {
   .feat-body {
     grid-template-columns: minmax(0, 1fr) 200px;
     align-items: start;
     padding: 3.5rem 2rem 6rem;
+  }
+
+  .feat-body-tools {
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 2rem;
   }
 }
 
@@ -771,6 +780,210 @@ textarea, pre, code {
   line-height: 1.65;
   margin: 0;
   max-width: 62ch;
+}
+
+/* ── Article tool runner ────────────────────────────────────────────────── */
+
+.article-tool-panel {
+  margin: -1.25rem 0 2.75rem;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.article-tool-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.article-tool-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.article-tool-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.article-tool-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  margin-left: auto;
+}
+
+.article-tool-action,
+.article-tool-copy {
+  min-height: 32px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg1);
+  color: var(--text2);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 0.375rem 0.75rem;
+  transition: background .12s, border-color .12s, color .12s;
+}
+
+.article-tool-action:hover,
+.article-tool-copy:hover:not(:disabled) {
+  border-color: var(--green-dim);
+  color: var(--green);
+}
+
+.article-tool-action[aria-pressed="true"] {
+  background: var(--green-bg);
+  border-color: var(--green-dim);
+  color: var(--green);
+}
+
+.article-tool-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 280px;
+}
+
+.article-tool-pane {
+  display: flex;
+  min-width: 0;
+  min-height: 260px;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+}
+
+.article-tool-output-pane {
+  border-right: 0;
+}
+
+.article-tool-pane-label {
+  color: var(--text4);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.article-tool-pane > .article-tool-pane-label {
+  padding: 0.75rem 0.875rem 0;
+}
+
+.article-tool-pane textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  caret-color: var(--green);
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+  padding: 0.75rem 0.875rem 0.875rem;
+}
+
+.article-tool-output-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.article-tool-output-actions {
+  display: flex;
+  gap: 0.375rem;
+  margin-left: auto;
+}
+
+.article-tool-copy {
+  min-height: 28px;
+  padding: 0.25rem 0.625rem;
+  color: var(--text3);
+  font-size: var(--fs-2xs);
+}
+
+.article-tool-copy:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.article-tool-output {
+  flex: 1;
+  min-height: 218px;
+  overflow: auto;
+  padding: 0.875rem;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.article-tool-output pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.article-tool-output.is-error {
+  color: var(--error);
+  background: var(--error-muted);
+}
+
+.article-tool-empty {
+  color: var(--text4);
+}
+
+@media (max-width: 720px) {
+  .article-tool-panel {
+    margin-top: -1.5rem;
+  }
+
+  .article-tool-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .article-tool-actions {
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
+  .article-tool-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .article-tool-pane {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .article-tool-output-pane {
+    border-bottom: 0;
+  }
 }
 
 /* Section headings */

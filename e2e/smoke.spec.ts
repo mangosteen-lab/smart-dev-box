@@ -39,6 +39,45 @@ test('runs a searched tool from the command palette', async ({ page }) => {
   await expect(page.getByTestId('output-content')).toContainText('Hello World');
 });
 
+test('runs focused actions from the Base64 decoder article', async ({ page }) => {
+  await page.goto('/tools/base64-decoder');
+
+  const panel = page.getByTestId('article-tool-panel');
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Base64 Decode' })).toHaveAttribute('aria-pressed', 'true');
+
+  await panel.getByTestId('article-tool-input').fill('SGVsbG8gV29ybGQ=');
+  await panel.getByRole('button', { name: 'Base64 Decode' }).click();
+  await expect(panel.getByTestId('article-tool-output')).toContainText('Hello World');
+
+  await panel.getByTestId('article-tool-input').fill('Hello World');
+  await panel.getByRole('button', { name: 'Base64 Encode' }).click();
+  await expect(panel.getByRole('button', { name: 'Base64 Encode' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(panel.getByTestId('article-tool-output')).toContainText('SGVsbG8gV29ybGQ=');
+});
+
+test('shows the focused runner on the JWT encoder article', async ({ page }) => {
+  await page.goto('/tools/jwt-encoder');
+
+  const panel = page.getByTestId('article-tool-panel');
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'JWT Encoder' })).toHaveAttribute('aria-pressed', 'true');
+
+  await panel.getByTestId('article-tool-input').fill('{"sub":"user-123"}');
+  await panel.getByRole('button', { name: 'JWT Encoder' }).click();
+  await expect(panel.getByTestId('article-tool-output')).toContainText('Algorithm: HS256');
+  await expect(panel.getByTestId('article-tool-output')).toContainText(/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
+});
+
+test('header brand link returns to the homepage', async ({ page }) => {
+  await page.goto('/tools/base64-decoder');
+
+  await page.getByTestId('navbar-home-link').click();
+
+  await expect(page).toHaveURL('/');
+  await expect(page.getByTestId('universal-input')).toBeVisible();
+});
+
 test('generates a UUID and sends it back to the universal input', async ({ page }) => {
   await page.getByRole('button', { name: /^Generate/ }).click();
   await expect(page.getByTestId('generator-hub')).toBeVisible();
