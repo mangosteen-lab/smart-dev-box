@@ -117,6 +117,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: `${BASE_URL}/glossary/what-is-lz-string`,
+      lastModified: new Date('2026-07-10'),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
       url: `${BASE_URL}/glossary/what-is-a-jwt`,
       lastModified: new Date('2025-05-01'),
       changeFrequency: 'monthly',

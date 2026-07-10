@@ -26,6 +26,8 @@ Complete inventory of all tools, their IDs, categories, and what they do.
 | `base32-decode` | Base32 Decode | Decodes Base32 to plain text |
 | `url-parser` | URL Parser | Breaks a URL into its components (protocol, host, path, params, etc.) |
 | `base64-image-decode` | Base64 Image Decode | Decodes a Base64 data URI and renders the image |
+| `lz-string-compress` | LZ-String Compress | Compresses text with LZ-String into a URL-safe (EncodedURIComponent) string |
+| `lz-string-decompress` | LZ-String Decompress | Decompresses an LZ-String value back to text (auto-detects URL-safe, Base64, UTF-16, and raw variants) |
 
 ---
 

@@ -1,4 +1,68 @@
 import { registerTool } from '../registry';
+import {
+  compressToEncodedURIComponent,
+  decompressFromEncodedURIComponent,
+  decompressFromBase64,
+  decompressFromUTF16,
+  decompress as lzDecompress,
+} from 'lz-string';
+
+// ── LZ-String helpers ─────────────────────────────────────────────────────────
+// LZ-String has several output variants (URL-safe / Base64 / UTF-16 / raw) that
+// are NOT interchangeable. We can't tell them apart reliably from the alphabet
+// alone (they overlap heavily), so we attempt every variant and keep the result
+// that decompresses to the longest run of plausible text.
+
+type LzVariant = 'URL-safe' | 'Base64' | 'UTF-16' | 'raw';
+
+const LZ_DECOMPRESSORS: [LzVariant, (s: string) => string | null][] = [
+  ['URL-safe', decompressFromEncodedURIComponent],
+  ['Base64', decompressFromBase64],
+  ['UTF-16', decompressFromUTF16],
+  ['raw', lzDecompress],
+];
+
+// For auto-detection we only consider the variants people actually paste into a
+// text field (URL-safe and Base64). The UTF-16 and raw variants emit arbitrary
+// high/control characters, and plain `decompress` returns a stray 1-char result
+// for all sorts of non-LZ input — both are false-positive magnets. They stay
+// available for manual execution below.
+const LZ_DETECT_VARIANTS = new Set<LzVariant>(['URL-safe', 'Base64']);
+
+/** True when `s` is mostly printable text (no U+FFFD, ≥90% printable/whitespace). */
+function looksLikeText(s: string): boolean {
+  if (!s || s.includes('�')) return false;
+  const chars = [...s];
+  let printable = 0;
+  for (const ch of chars) {
+    const c = ch.codePointAt(0)!;
+    if (c === 9 || c === 10 || c === 13 || (c >= 32 && c !== 127)) printable++;
+  }
+  return printable / chars.length >= 0.9;
+}
+
+/**
+ * Try LZ-String variants and return the longest valid-text decode, or null.
+ * `detectOnly` restricts to the pasteable variants and requires a non-trivial
+ * result so detection doesn't fire on ordinary Base64/text.
+ */
+function decompressLzAnyVariant(
+  input: string,
+  detectOnly = false,
+): { text: string; variant: LzVariant } | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  let best: { text: string; variant: LzVariant } | null = null;
+  for (const [variant, fn] of LZ_DECOMPRESSORS) {
+    if (detectOnly && !LZ_DETECT_VARIANTS.has(variant)) continue;
+    let out: string | null = null;
+    try { out = fn(trimmed); } catch { out = null; }
+    if (!out || !looksLikeText(out)) continue;
+    if (detectOnly && out.length < 3) continue;
+    if (!best || out.length > best.text.length) best = { text: out, variant };
+  }
+  return best;
+}
 
 registerTool({
   id: 'base64-encode',
@@ -497,5 +561,54 @@ registerTool({
       `background-image: url("${t.slice(0, 60)}...");`,
     ];
     return { output: lines.join('\n'), outputLanguage: 'text' };
+  },
+});
+
+// ── LZ-String Compress / Decompress ───────────────────────────────────────────
+
+registerTool({
+  id: 'lz-string-compress',
+  name: 'LZ-String Compress',
+  category: 'Encoding / Decoding',
+  description: 'Compress text with LZ-String into a URL-safe (EncodedURIComponent) string',
+  keywords: ['lz-string', 'lzstring', 'lz string', 'compress', 'compression', 'url', 'encodeduricomponent', 'lz'],
+  outputExtension: 'txt',
+  // Manual only — plain text is ambiguous, so never auto-suggest compression
+  detect: () => 0,
+  execute: (input) => {
+    if (!input) return { output: '', outputLanguage: 'text' };
+    try {
+      return { output: compressToEncodedURIComponent(input), outputLanguage: 'text' };
+    } catch (err) {
+      return { output: '', error: err instanceof Error ? err.message : 'LZ-String compression failed' };
+    }
+  },
+});
+
+registerTool({
+  id: 'lz-string-decompress',
+  name: 'LZ-String Decompress',
+  category: 'Encoding / Decoding',
+  description: 'Decompress an LZ-String value (URL-safe, Base64, UTF-16, or raw) back to text',
+  keywords: ['lz-string', 'lzstring', 'lz string', 'decompress', 'decompression', 'url', 'base64', 'utf16', 'lz'],
+  outputExtension: 'txt',
+  detect: (input) => {
+    // Attempt an actual decompress across every variant — this is far more
+    // reliable than an alphabet guess. Require a reasonably long input so we
+    // don't fire on short Base64/text that happens to decode to a few chars.
+    if (input.trim().length < 24) return 0;
+    // High confidence when it fires: LZ-String Base64 output is also valid
+    // plain Base64, so Base64 Decode (0.85) would otherwise win and hand back
+    // binary garbage. A successful decompress to clean text is a much stronger
+    // signal than "looks like Base64", so we rank above it.
+    return decompressLzAnyVariant(input, true) ? 0.9 : 0;
+  },
+  execute: (input) => {
+    if (!input) return { output: '', outputLanguage: 'text' };
+    const result = decompressLzAnyVariant(input);
+    if (!result) {
+      return { output: '', error: 'Not a valid LZ-String value (tried URL-safe, Base64, UTF-16, and raw variants)' };
+    }
+    return { output: result.text, outputLanguage: 'text' };
   },
 });

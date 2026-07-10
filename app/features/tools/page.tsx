@@ -33,6 +33,8 @@ const TOOLS: Array<{
       { name: 'ROT13',                desc: 'Apply or reverse the ROT13 cipher.',                                        slug: 'rot13' },
       { name: 'ROT47',                desc: 'Apply or reverse ROT47 (full printable ASCII range).',                      slug: 'rot47' },
       { name: 'Base64 Image Decode',  desc: 'Decode a Base64 data URI and display the embedded image.',                  slug: 'base64-image-decoder' },
+      { name: 'LZ-String Compress',   desc: 'Compress text with LZ-String into a URL-safe string.',                       slug: 'lz-string-compress' },
+      { name: 'LZ-String Decompress', desc: 'Decompress a URL-safe LZ-String value back to text.',                         slug: 'lz-string-decompress' },
     ],
   },
   {

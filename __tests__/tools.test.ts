@@ -12,7 +12,8 @@ import '../lib/tools/encoding';
 import '../lib/tools/formatting';
 import '../lib/tools/conversion';
 import '../lib/tools/inspection';
-import { executeTool } from '../lib/tools/registry';
+import { executeTool, runDetection } from '../lib/tools/registry';
+import { compressToBase64, compressToUTF16 } from 'lz-string';
 import { buildPcre2Pattern } from '../lib/tools/inspection';
 
 describe('JSON Formatter', () => {
@@ -54,6 +55,72 @@ describe('Base64 Decode', () => {
   test('returns error for invalid Base64', async () => {
     const result = await executeTool('base64-decode', '!@#$%^&*()');
     expect(result.error).toBeDefined();
+  });
+});
+
+describe('LZ-String Compress / Decompress', () => {
+  test('round-trips text through URL-safe compression', async () => {
+    const original = 'The quick brown fox jumps over the lazy dog '.repeat(4);
+    const compressed = await executeTool('lz-string-compress', original);
+    expect(compressed.error).toBeUndefined();
+    expect(compressed.output).not.toBe('');
+    // Output must be URL-safe (no characters that need percent-encoding)
+    expect(compressed.output).toMatch(/^[A-Za-z0-9+\-$]+$/);
+
+    const decompressed = await executeTool('lz-string-decompress', compressed.output);
+    expect(decompressed.error).toBeUndefined();
+    expect(decompressed.output).toBe(original);
+  });
+
+  test('decompress also handles the Base64 variant (compressToBase64)', async () => {
+    const original = JSON.stringify({ state: 'app', items: [1, 2, 3], user: 'sean' });
+    const compressed = compressToBase64(original); // contains Base64-only chars like "/"
+    const result = await executeTool('lz-string-decompress', compressed);
+    expect(result.error).toBeUndefined();
+    expect(result.output).toBe(original);
+  });
+
+  test('decompress also handles the UTF-16 variant (compressToUTF16)', async () => {
+    const original = 'localStorage payload '.repeat(6);
+    const result = await executeTool('lz-string-decompress', compressToUTF16(original));
+    expect(result.error).toBeUndefined();
+    expect(result.output).toBe(original);
+  });
+
+  test('decompress is auto-detected for compressed input', () => {
+    const compressed = compressToBase64('The quick brown fox jumps over the lazy dog '.repeat(4));
+    const hits = runDetection(compressed);
+    expect(hits.some((h) => h.toolId === 'lz-string-decompress')).toBe(true);
+  });
+
+  test('decompress outranks base64-decode for Base64-variant LZ payloads', () => {
+    // compressToBase64 output is ALSO valid plain Base64, so base64-decode
+    // would fire too — but it produces garbage, so LZ must rank first.
+    const compressed = compressToBase64('The quick brown fox jumps over the lazy dog '.repeat(4));
+    const hits = runDetection(compressed);
+    const lz = hits.findIndex((h) => h.toolId === 'lz-string-decompress');
+    const b64 = hits.findIndex((h) => h.toolId === 'base64-decode');
+    expect(lz).toBeGreaterThanOrEqual(0);
+    if (b64 >= 0) expect(lz).toBeLessThan(b64); // lz ranked ahead of base64-decode
+  });
+
+  test('decompress is NOT auto-detected for ordinary text or JSON', () => {
+    for (const input of ['{"name":"test","values":[1,2,3,4,5],"ok":true}', 'The quick brown fox jumps over the lazy dog.']) {
+      const hits = runDetection(input);
+      expect(hits.some((h) => h.toolId === 'lz-string-decompress')).toBe(false);
+    }
+  });
+
+  test('compress handles empty input gracefully', async () => {
+    const result = await executeTool('lz-string-compress', '');
+    expect(result.error).toBeUndefined();
+    expect(result.output).toBe('');
+  });
+
+  test('decompress returns an error for invalid input', async () => {
+    const result = await executeTool('lz-string-decompress', '!!!not a valid lz-string value at all!!!');
+    expect(result.error).toBeDefined();
+    expect(result.output).toBe('');
   });
 });
 

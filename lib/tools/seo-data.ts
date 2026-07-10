@@ -591,6 +591,97 @@ export const TOOL_SEO_DATA: ToolSeoData[] = [
   },
 
   {
+    id: 'lz-string-compress',
+    slug: 'lz-string-compress',
+    heading: 'LZ-String Compress — Compress Text for URLs Online',
+    primaryKeyword: 'lz-string compress online',
+    metaDescription:
+      'Compress text with LZ-String into a URL-safe string in your browser. Free, no sign-up, 100% client-side.',
+    intro:
+      'LZ-String Compress shrinks text using the popular lz-string algorithm and outputs a URL-safe string ' +
+      '(the EncodedURIComponent variant), so the result can be dropped straight into a query string or hash fragment. ' +
+      'It is ideal for packing application state, JSON payloads, or long text into short, shareable links. ' +
+      'Everything runs locally in your browser — no data is sent to a server.',
+    useCases: [
+      'Packing app or editor state into a shareable URL',
+      'Storing large values in localStorage more compactly',
+      'Shrinking JSON payloads before putting them in a query string',
+    ],
+    faqs: [
+      {
+        q: 'What LZ-String variant does this use?',
+        a: 'It uses compressToEncodedURIComponent, which produces a string containing only URL-safe characters (A–Z, a–z, 0–9, +, -, and $). Decompress it with the LZ-String Decompress tool.',
+      },
+      {
+        q: 'Is LZ-String compressed output the same as gzip?',
+        a: 'No. LZ-String is a JavaScript-native LZ-based compressor optimized for short strings and browser use; it is not compatible with gzip or zlib.',
+      },
+    ],
+    relatedToolIds: ['lz-string-decompress', 'base64-encode', 'url-encode'],
+    keywords: ['lz-string compress', 'lz-string online', 'compress string for url', 'lzstring encode', 'compresstoencodeduricomponent'],
+    bodySections: [
+      {
+        heading: 'What LZ-String compression is good for',
+        paragraphs: [
+          'LZ-String is a dependency-free JavaScript library that compresses a string into a much shorter, text-safe form. It shines when you need to move a chunk of data through a channel that is not built for bulk payloads — a URL query string, a hash fragment, an HTTP header, or the browser\'s localStorage quota.',
+          'The classic use case is a "share this" link: a playground or editor serialises its entire state to JSON, compresses it with LZ-String, and appends the result to the URL so a single link fully restores the view — with no backend and no database. This tool emits the URL-safe (EncodedURIComponent) variant, so the output can be pasted straight into a link without any further percent-encoding.',
+        ],
+      },
+      {
+        heading: 'Why the output is URL-safe',
+        paragraphs: [
+          'LZ-String can output several alphabets. This tool uses compressToEncodedURIComponent, whose alphabet is A–Z, a–z, 0–9, plus the URL-friendly symbols + - and $. Because none of those characters need escaping inside a query string or fragment, you avoid the double-encoding headaches that come from wrapping standard Base64 (which uses / and =) in a URL.',
+          'To reverse it, use the LZ-String Decompress tool — it automatically recognises this and every other LZ-String variant. Note that LZ-String output is not compatible with gzip or zlib: only LZ-String can decompress it.',
+        ],
+      },
+    ],
+  },
+
+  {
+    id: 'lz-string-decompress',
+    slug: 'lz-string-decompress',
+    heading: 'LZ-String Decompress — Decode Compressed Strings Online',
+    primaryKeyword: 'lz-string decompress online',
+    metaDescription:
+      'Decompress a URL-safe LZ-String value back to plain text instantly. Free, no sign-up, 100% client-side.',
+    intro:
+      'LZ-String Decompress turns an lz-string compressed value back into its original text. It automatically ' +
+      'recognises every lz-string output variant — URL-safe (EncodedURIComponent), Base64, UTF-16, and raw — so you ' +
+      'can paste a value from a shared link, localStorage, or an API and read the decoded result instantly. ' +
+      'All decompression happens locally in your browser.',
+    useCases: [
+      'Recovering app state encoded in a shared URL',
+      'Inspecting lz-string compressed values from localStorage',
+      'Decoding Base64-variant lz-string payloads from APIs or logs',
+      'Debugging links that pack data via lz-string',
+    ],
+    faqs: [
+      {
+        q: 'Which lz-string variants are supported?',
+        a: 'All of them. The tool tries compressToEncodedURIComponent (URL-safe), compressToBase64, compressToUTF16, and plain compress, and returns whichever produces valid text — so you do not need to know how the value was compressed.',
+      },
+    ],
+    relatedToolIds: ['lz-string-compress', 'base64-decode', 'url-decode'],
+    keywords: ['lz-string decompress', 'lz-string decode online', 'decompress lz-string', 'lzstring decode', 'decompressfromencodeduricomponent'],
+    bodySections: [
+      {
+        heading: 'Every variant, detected automatically',
+        paragraphs: [
+          'The most common LZ-String frustration is a variant mismatch: a value produced by compressToBase64 will not decode with the EncodedURIComponent function, and vice versa. This tool removes the guesswork — it tries all four output variants (URL-safe, Base64, UTF-16, and raw) and returns whichever one yields valid text, so you can paste a compressed value from a URL, from localStorage, or from an API without knowing how it was created.',
+          'Because LZ-String\'s Base64 output is also valid plain Base64, SmartDevBox\'s auto-detection deliberately ranks this tool ahead of the generic Base64 Decoder for LZ-String payloads — plain Base64 decoding of a compressed value would just hand back binary garbage, whereas decompressing it recovers the original text.',
+        ],
+      },
+      {
+        heading: 'How to read the result',
+        paragraphs: [
+          'A successful decompression returns the exact original string that was compressed — often JSON application state, a serialised document, or a block of text. If the value is not a valid LZ-String at all, you will see an error rather than a corrupted guess.',
+          'Everything runs locally in your browser; the compressed value and its decompressed contents are never sent to a server. To create compressed values, use the companion LZ-String Compress tool.',
+        ],
+      },
+    ],
+  },
+
+  {
     id: 'backslash-escape',
     slug: 'backslash-escape',
     heading: 'Backslash Escape — Escape Special Characters in Strings',
