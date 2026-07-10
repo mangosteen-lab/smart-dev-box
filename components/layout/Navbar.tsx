@@ -89,7 +89,13 @@ export function Navbar() {
       </div>
 
       {/* Logo */}
-      <div className="flex items-center" style={{ gap: '8px', marginLeft: '4px' }}>
+      <Link
+        href="/"
+        aria-label="SmartDevBox home"
+        data-testid="navbar-home-link"
+        className="flex items-center"
+        style={{ gap: '8px', marginLeft: '4px', textDecoration: 'none', flexShrink: 0 }}
+      >
         <div
           style={{
             width: '22px',
@@ -110,7 +116,7 @@ export function Navbar() {
         <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--text)' }}>
           smart<span style={{ color: 'var(--green)' }}>dev</span>box
         </span>
-      </div>
+      </Link>
 
       {/* Tagline — hidden on mobile */}
       <span className="hidden lg:inline" style={{ fontSize: 'var(--fs-xs)', color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>

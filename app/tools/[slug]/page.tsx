@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { TOOL_SEO_DATA, TOOL_SLUG_MAP } from '@/lib/tools/seo-data';
 import { ENGINEERING_RECIPES } from '@/lib/recipes';
+import { ArticleToolPanel } from '@/components/tools/ArticleToolPanel';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Static params — Next.js generates one page per slug at build time.
@@ -208,6 +209,8 @@ export default async function ToolPage({
           <h1 className="feat-h1" itemProp="name">{tool.heading}</h1>
           <p className="feat-lead" itemProp="description">{tool.intro}</p>
         </div>
+
+        <ArticleToolPanel toolId={tool.id} title={tool.heading.split(' — ')[0].trim()} />
 
         <div className="feat-prose">
           {/* Body sections (long-form educational content) */}

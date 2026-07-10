@@ -72,7 +72,7 @@ export default function FeaturesLayout({
       {/* ── Header CTA ───────────────────────────────────────────────────── */}
       <div className="feat-hero">
         <Link href="/" className="feat-hero-cta">
-          Open SmartDevBox — free, no sign-up
+          Paste anything here — we’ll help you rest.
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -90,7 +90,7 @@ export default function FeaturesLayout({
       {/* ── Footer CTA ───────────────────────────────────────────────────── */}
       <footer className="feat-footer">
         <Link href="/" className="feat-footer-cta">
-          Open SmartDevBox — free, no sign-up
+          Paste anything here — we’ll help you rest.
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/>
