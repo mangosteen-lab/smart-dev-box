@@ -10,6 +10,7 @@ Given a text input and a user's natural language command, identify:
 Available tool IDs:
 - base64-encode, base64-decode
 - base32-encode, base32-decode
+- lz-string-compress, lz-string-decompress
 - url-encode, url-decode, url-parser
 - rot13, rot47
 - jwt-inspector

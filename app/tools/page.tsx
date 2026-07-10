@@ -13,7 +13,7 @@ export const metadata: Metadata = {
    We derive this from the tool id prefix rather than importing the registry to
    keep this a pure server component with no client bundle. */
 const CATEGORY_PREFIXES: { label: string; test: (id: string) => boolean }[] = [
-  { label: 'Encoding & Decoding', test: (id) => /base64|base32|url-enc|url-dec|url-pars|jwt|html-enc|html-dec|hex-|ascii-|backslash|rot1|rot4|image-dec/.test(id) },
+  { label: 'Encoding & Decoding', test: (id) => /base64|base32|url-enc|url-dec|url-pars|jwt|html-enc|html-dec|hex-|ascii-|backslash|rot1|rot4|image-dec|lz-string/.test(id) },
   { label: 'Formatting',          test: (id) => /format|beautif|minif|validat|prettif/.test(id) },
   { label: 'Conversion',          test: (id) => /to-|csv|yaml|markdown|color|number-base|unix|timestamp|seconds|roman|uuid-hex|hex-uuid/.test(id) },
   { label: 'Generation',          test: (id) => /generat|uuid$|ulid|hash|random|lorem|qr-code|hmac|totp|nanoid/.test(id) },
@@ -118,6 +118,7 @@ export default function ToolsIndexPage() {
             <h3 className="feat-h3">Developer Glossary</h3>
             <ul className="feat-tool-list">
               <li className="feat-tool-row"><Link href="/glossary/what-is-base64-encoding" className="feat-tool-name">What is Base64 encoding?</Link><span className="feat-tool-desc">Binary-to-text encoding used in email, HTTP, and data URIs.</span></li>
+              <li className="feat-tool-row"><Link href="/glossary/what-is-lz-string" className="feat-tool-name">What is LZ-String?</Link><span className="feat-tool-desc">JavaScript string compression for packing state into URLs and localStorage.</span></li>
               <li className="feat-tool-row"><Link href="/glossary/what-is-a-jwt" className="feat-tool-name">What is a JWT?</Link><span className="feat-tool-desc">Compact, self-contained token for transmitting authentication claims.</span></li>
               <li className="feat-tool-row"><Link href="/glossary/what-is-json" className="feat-tool-name">What is JSON?</Link><span className="feat-tool-desc">Lightweight text format for structured data.</span></li>
               <li className="feat-tool-row"><Link href="/glossary/what-is-xml" className="feat-tool-name">What is XML?</Link><span className="feat-tool-desc">Hierarchical markup language for structured data interchange.</span></li>
