@@ -94,12 +94,38 @@ function getResultText(result: ToolResult | null) {
   return result.output;
 }
 
+function getDetectedActionId(
+  value: string,
+  actions: Array<{ id: string; name: string }>,
+  fallbackToolId: string,
+) {
+  if (!value.trim()) return fallbackToolId;
+
+  let best: { id: string; confidence: number } | null = null;
+  for (const action of actions) {
+    try {
+      const confidence = getToolById(action.id)?.detect(value) ?? 0;
+      if (confidence > 0 && (!best || confidence > best.confidence)) {
+        best = { id: action.id, confidence };
+      }
+    } catch {
+      // Keep typing resilient if one detector rejects an intermediate value.
+    }
+  }
+  if (best) return best.id;
+
+  const hasBase64Pair = actions.some((action) => action.id === 'base64-decode')
+    && actions.some((action) => action.id === 'base64-encode');
+  if (hasBase64Pair) return 'base64-encode';
+
+  return fallbackToolId;
+}
+
 export function ArticleToolPanel({ toolId, title }: ArticleToolPanelProps) {
   const actions = useMemo(() => getArticleActions(toolId), [toolId]);
   const [activeToolId, setActiveToolId] = useState(toolId);
   const [input, setInput] = useState('');
   const [result, setResult] = useState<ToolResult | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
   const [copied, setCopied] = useState(false);
 
   if (actions.length === 0) return null;
@@ -123,7 +149,6 @@ export function ArticleToolPanel({ toolId, title }: ArticleToolPanelProps) {
       return;
     }
 
-    setIsRunning(true);
     try {
       setResult(await nextTool.execute(input));
     } catch (err) {
@@ -131,9 +156,14 @@ export function ArticleToolPanel({ toolId, title }: ArticleToolPanelProps) {
         output: '',
         error: err instanceof Error ? err.message : String(err),
       });
-    } finally {
-      setIsRunning(false);
     }
+  };
+
+  const handleInputChange = (value: string) => {
+    setInput(value);
+    setActiveToolId(getDetectedActionId(value, actions, toolId));
+    setResult(null);
+    setCopied(false);
   };
 
   const copyOutput = async () => {
@@ -186,11 +216,7 @@ export function ArticleToolPanel({ toolId, title }: ArticleToolPanelProps) {
           <textarea
             data-testid="article-tool-input"
             value={input}
-            onChange={(event) => {
-              setInput(event.target.value);
-              setResult(null);
-              setCopied(false);
-            }}
+            onChange={(event) => handleInputChange(event.target.value)}
             onKeyDown={(event) => {
               if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
                 event.preventDefault();
@@ -213,14 +239,6 @@ export function ArticleToolPanel({ toolId, title }: ArticleToolPanelProps) {
                 disabled={!getResultText(result)}
               >
                 {copied ? 'copied' : 'copy'}
-              </button>
-              <button
-                type="button"
-                className="article-tool-copy"
-                onClick={() => runTool()}
-                disabled={isRunning}
-              >
-                {isRunning ? 'running' : 'run'}
               </button>
             </div>
           </div>

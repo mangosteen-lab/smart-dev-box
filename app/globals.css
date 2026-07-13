@@ -782,6 +782,10 @@ textarea, pre, code {
   max-width: 62ch;
 }
 
+.feat-body-tools .feat-lead {
+  max-width: none;
+}
+
 /* ── Article tool runner ────────────────────────────────────────────────── */
 
 .article-tool-panel {
@@ -858,20 +862,21 @@ textarea, pre, code {
 
 .article-tool-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   min-height: 280px;
 }
 
 .article-tool-pane {
   display: flex;
+  width: 100%;
   min-width: 0;
   min-height: 260px;
   flex-direction: column;
-  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 .article-tool-output-pane {
-  border-right: 0;
+  border-bottom: 0;
 }
 
 .article-tool-pane-label {
@@ -972,18 +977,6 @@ textarea, pre, code {
     margin-left: 0;
   }
 
-  .article-tool-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .article-tool-pane {
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .article-tool-output-pane {
-    border-bottom: 0;
-  }
 }
 
 /* Section headings */
@@ -1013,6 +1006,12 @@ textarea, pre, code {
   line-height: 1.8;
   margin: 0 0 1.1rem;
   max-width: 72ch;
+}
+
+.feat-body-tools .feat-prose p,
+.feat-body-tools .feat-faq-a,
+.feat-body-tools .feat-tool-desc {
+  max-width: none;
 }
 
 /* Lists */
