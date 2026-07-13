@@ -44,13 +44,26 @@ test('runs focused actions from the Base64 decoder article', async ({ page }) =>
 
   const panel = page.getByTestId('article-tool-panel');
   await expect(panel).toBeVisible();
+  const panelBox = await panel.boundingBox();
+  const inputBox = await panel.getByTestId('article-tool-input').boundingBox();
+  expect(panelBox).not.toBeNull();
+  expect(inputBox).not.toBeNull();
+  expect(inputBox!.width).toBeGreaterThan(panelBox!.width * 0.9);
+  await expect(panel.getByRole('button', { name: /^run$/i })).toHaveCount(0);
   await expect(panel.getByRole('button', { name: 'Base64 Decode' })).toHaveAttribute('aria-pressed', 'true');
 
+  const bodyParagraph = page.locator('#bs-how-base64-encoding-works + p').first();
+  const paragraphBox = await bodyParagraph.boundingBox();
+  expect(paragraphBox).not.toBeNull();
+  expect(paragraphBox!.width).toBeGreaterThan(panelBox!.width * 0.9);
+
   await panel.getByTestId('article-tool-input').fill('SGVsbG8gV29ybGQ=');
+  await expect(panel.getByRole('button', { name: 'Base64 Decode' })).toHaveAttribute('aria-pressed', 'true');
   await panel.getByRole('button', { name: 'Base64 Decode' }).click();
   await expect(panel.getByTestId('article-tool-output')).toContainText('Hello World');
 
   await panel.getByTestId('article-tool-input').fill('Hello World');
+  await expect(panel.getByRole('button', { name: 'Base64 Encode' })).toHaveAttribute('aria-pressed', 'true');
   await panel.getByRole('button', { name: 'Base64 Encode' }).click();
   await expect(panel.getByRole('button', { name: 'Base64 Encode' })).toHaveAttribute('aria-pressed', 'true');
   await expect(panel.getByTestId('article-tool-output')).toContainText('SGVsbG8gV29ybGQ=');
