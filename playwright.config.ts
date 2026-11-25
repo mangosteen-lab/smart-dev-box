@@ -21,7 +21,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: serverPort === 3000 ? 'npm run dev:e2e' : `npx next dev -H 127.0.0.1 -p ${serverPort}`,
+    command: serverPort === 3000 ? 'npm run dev:e2e' : `npx next dev --webpack -H 127.0.0.1 -p ${serverPort}`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

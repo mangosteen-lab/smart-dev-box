@@ -72,10 +72,8 @@ registerTool({
   keywords: ['base64', 'encode', 'b64'],
   outputExtension: 'txt',
   detect: (input) => {
-    // Plain text is more likely to be encoded than decoded
-    const isBase64 = /^[A-Za-z0-9+/]+=*$/.test(input.trim().replace(/\s/g, ''));
-    // Prefer encode for short non-base64 strings
-    return isBase64 ? 0 : 0.1;
+    // Offer encode for anything that isn't already Base64
+    return detectBase64(input) > 0 ? 0 : 0.1;
   },
   execute: async (input) => {
     const { toBase64 } = await import('js-base64');
@@ -90,11 +88,7 @@ registerTool({
   description: 'Decode a Base64 string back to text',
   keywords: ['base64', 'decode', 'b64'],
   outputExtension: 'txt',
-  detect: (input) => {
-    const clean = input.trim().replace(/\s/g, '');
-    const isBase64 = /^[A-Za-z0-9+/]+=*$/.test(clean) && clean.length % 4 === 0;
-    return isBase64 && clean.length >= 8 ? 0.85 : 0;
-  },
+  detect: detectBase64,
   execute: async (input) => {
     try {
       const clean = input.trim().replace(/\s/g, '');
@@ -612,3 +606,32 @@ registerTool({
     return { output: result.text, outputLanguage: 'text' };
   },
 });
+
+/**
+ * Confidence that the input is Base64. Plain words such as "password" or
+ * "select a from t" (once spaces are dropped) are valid Base64 by shape alone,
+ * so also require no spaces inside a line and a decoded result that looks like
+ * data: readable UTF-8 text scores high, binary only when the input carries
+ * Base64-typical characters (digits, + / or = padding) and is reasonably long.
+ */
+export function detectBase64(input: string): number {
+  const lines = input.trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0 || lines.some((l) => /\s/.test(l))) return 0;
+  const clean = lines.join('');
+  if (clean.length < 8 || clean.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(clean)) return 0;
+
+  let bytes: Uint8Array;
+  try {
+    bytes = Uint8Array.from(atob(clean), (c) => c.charCodeAt(0));
+  } catch {
+    return 0;
+  }
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const printable = [...text].filter((c) => /[\P{C}\t\n\r]/u.test(c)).length;
+    if (text.length > 0 && printable / [...text].length >= 0.95) return 0.85;
+  } catch {
+    // not UTF-8: fall through to the binary check
+  }
+  return clean.length >= 24 && /[0-9+/=]/.test(clean) ? 0.5 : 0;
+}

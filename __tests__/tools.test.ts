@@ -47,6 +47,30 @@ describe('Base64 Encode', () => {
 });
 
 describe('Base64 Decode', () => {
+  const top = (input: string) => runDetection(input)[0]?.toolId;
+  const b64Score = (input: string) => runDetection(input).find((d) => d.toolId === 'base64-decode')?.confidence ?? 0;
+
+  test('detects Base64 of readable text', () => {
+    expect(top('SGVsbG8gV29ybGQ=')).toBe('base64-decode');
+  });
+
+  test('detects line-wrapped Base64', () => {
+    const wrapped = Buffer.from('The quick brown fox jumps over the lazy dog. '.repeat(4)).toString('base64').replace(/(.{76})/g, '$1\n');
+    expect(b64Score(wrapped)).toBe(0.85);
+  });
+
+  test('detects binary Base64 with medium confidence', () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 0x49, 0x48, 0x44, 0x52, 0xff, 0xfe, 0x80, 0x81, 0x90, 0xa0, 0xb0, 0xc0]).toString('base64');
+    expect(b64Score(png)).toBe(0.5);
+  });
+
+  test('does not treat words or SQL as Base64', () => {
+    expect(b64Score('select a from t')).toBe(0);
+    expect(b64Score('password')).toBe(0);
+    expect(b64Score('helloworld12')).toBe(0);
+    expect(top('select a from t')).toBe('sql-formatter');
+  });
+
   test('decodes a valid Base64 string', async () => {
     const result = await executeTool('base64-decode', 'SGVsbG8gV29ybGQ=');
     expect(result.error).toBeUndefined();
