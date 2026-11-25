@@ -105,15 +105,54 @@ registerTool({
     const matches = keywords.filter((k) => upper.includes(k)).length;
     return matches >= 1 ? 0.7 : 0;
   },
-  execute: async (input) => {
-    try {
-      const { format } = await import('sql-formatter');
-      return { output: format(input, { language: 'sql', tabWidth: 2 }), outputLanguage: 'sql' };
-    } catch (err) {
-      return { output: '', error: err instanceof Error ? err.message : 'SQL format failed' };
+  execute: async (input, options) => {
+    const { format } = await import('sql-formatter');
+    const forced = typeof options?.dialect === 'string' ? (options.dialect as SqlDialect) : undefined;
+    const candidates = forced ? [forced] : sqlDialectCandidates(input);
+    let firstError: unknown;
+    for (const language of candidates) {
+      try {
+        return { output: format(input, { language, tabWidth: 2 }), outputLanguage: 'sql' };
+      } catch (err) {
+        firstError ??= err;
+      }
     }
+    const msg = firstError instanceof Error ? firstError.message : 'SQL format failed';
+    return { output: '', error: `${msg} (tried dialects: ${candidates.join(', ')})` };
   },
 });
+
+type SqlDialect =
+  | 'sql' | 'postgresql' | 'mysql' | 'mariadb' | 'tsql' | 'plsql'
+  | 'bigquery' | 'sqlite' | 'snowflake' | 'redshift' | 'spark' | 'trino';
+
+/** Dialect-specific syntax markers, checked against the SQL with strings and comments removed. */
+const SQL_DIALECT_HINTS: [SqlDialect, RegExp[]][] = [
+  ['postgresql', [/#>>?/, /->>?/, /::\s*[a-z_]/i, /\bILIKE\b/i, /\bDISTINCT\s+ON\b/i, /\bjsonb\b/i, /\$\d+/, /@>|<@/, /\bRETURNING\b/i, /\bSERIAL\b/i]],
+  ['tsql', [/\bTOP\s*\(?\d/i, /\[[\w ]+\]\.\[?/, /\bNVARCHAR\b/i, /\bIDENTITY\s*\(/i, /^\s*GO\s*$/im, /@@?\w+/, /\bGETDATE\s*\(/i]],
+  ['plsql', [/\bROWNUM\b/i, /\bNVL\s*\(/i, /\bFROM\s+DUAL\b/i, /\bVARCHAR2\b/i, /\bCONNECT\s+BY\b/i, /\bSYSDATE\b/i]],
+  ['bigquery', [/`[\w-]+\.[\w-]+\.[\w-]+`/, /\bSTRUCT\s*</i, /\bSAFE_CAST\s*\(/i, /\bUNNEST\s*\(/i]],
+  ['snowflake', [/\bLATERAL\s+FLATTEN\b/i, /\bVARIANT\b/i, /\bQUALIFY\b/i]],
+  ['sqlite', [/\bAUTOINCREMENT\b/i, /\bPRAGMA\b/i]],
+  ['mysql', [/`\w+`/, /\bAUTO_INCREMENT\b/i, /\bENGINE\s*=/i, /\bLIMIT\s+\d+\s*,\s*\d+/i]],
+];
+
+/** Fallback order when hints don't settle it. MySQL is last because it treats `#` as a comment. */
+const SQL_FALLBACK_ORDER: SqlDialect[] = ['sql', 'postgresql', 'tsql', 'plsql', 'bigquery', 'snowflake', 'sqlite', 'mysql'];
+
+/** Ranks dialects by how many of their markers appear in the input, then appends the fallbacks. */
+export function sqlDialectCandidates(input: string): SqlDialect[] {
+  const code = input
+    .replace(/'(?:[^']|'')*'/g, "''")
+    .replace(/--[^\n]*/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const scored = SQL_DIALECT_HINTS
+    .map(([dialect, patterns]) => ({ dialect, score: patterns.filter((p) => p.test(code)).length }))
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((s) => s.dialect);
+  return [...new Set([...scored, ...SQL_FALLBACK_ORDER])];
+}
 
 registerTool({
   id: 'css-beautifier',
