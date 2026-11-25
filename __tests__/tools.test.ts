@@ -12,6 +12,7 @@ import '../lib/tools/encoding';
 import '../lib/tools/formatting';
 import '../lib/tools/conversion';
 import '../lib/tools/inspection';
+import '../lib/tools/text';
 import { executeTool, runDetection } from '../lib/tools/registry';
 import { compressToBase64, compressToUTF16 } from 'lz-string';
 import { buildPcre2Pattern } from '../lib/tools/inspection';
@@ -240,5 +241,79 @@ describe('Regex Generator', () => {
     expect(pcre2Pattern).toBe(`(?ism)${pattern}`);
     expect(pcre2Pattern).toContain('\\s+');
     expect(pcre2Pattern).toContain('(?:TRACE|DEBUG|INFO|WARN)');
+  });
+});
+
+describe('SQL Formatter', () => {
+  const run = (input: string, options?: Record<string, unknown>) => executeTool('sql-formatter', input, options);
+
+  test('formats PostgreSQL JSON path operators', async () => {
+    const r = await run(
+      "SELECT e.data_persistence #>> '{configuration,server}' AS ip FROM public.environment AS e WHERE (c.data_persistence #>> '{configuration,shared}') = 'false'",
+    );
+    expect(r.error).toBeUndefined();
+    expect(r.output).toContain("#>> '{configuration,server}'");
+    expect(r.output).toContain("#>> '{configuration,shared}'");
+  });
+
+  test('formats PostgreSQL casts and ILIKE', async () => {
+    const r = await run("select id::text from users where name ilike '%a%' returning id");
+    expect(r.error).toBeUndefined();
+    expect(r.output).toMatch(/id::text/);
+  });
+
+  test('formats T-SQL bracket identifiers and TOP', async () => {
+    const r = await run('SELECT TOP 10 [user name] FROM [dbo].[Users]');
+    expect(r.error).toBeUndefined();
+    expect(r.output).toContain('[dbo].[Users]');
+  });
+
+  test('formats MySQL backticks', async () => {
+    const r = await run('SELECT `id` FROM `users` LIMIT 5, 10');
+    expect(r.error).toBeUndefined();
+    expect(r.output).toContain('`users`');
+  });
+
+  test('still formats plain ANSI SQL', async () => {
+    const r = await run('select a, b from t where a = 1');
+    expect(r.error).toBeUndefined();
+    expect(r.output).toMatch(/^select\n  a,\n  b/);
+  });
+
+  test('honours an explicit dialect option', async () => {
+    const r = await run("SELECT a #>> '{x}' FROM t", { dialect: 'sql' });
+    expect(r.error).toMatch(/tried dialects: sql/);
+  });
+});
+
+describe('Terminal Paste Cleaner', () => {
+  const run = (input: string) => executeTool('terminal-paste-cleaner', input);
+
+  test('removes the blank line inserted after every line', async () => {
+    const r = await run('line one\n\nline two\n\nline three\n');
+    expect(r.output).toBe('line one\nline two\nline three');
+  });
+
+  test('keeps original paragraph breaks when lines were doubled', async () => {
+    // "a\nb\n\nc" with every break doubled
+    const r = await run('a\n\nb\n\n\n\nc');
+    expect(r.output).toBe('a\nb\n\nc');
+  });
+
+  test('leaves normal blank lines alone', async () => {
+    const r = await run('a\nb\n\nc\nd');
+    expect(r.output).toBe('a\nb\n\nc\nd');
+  });
+
+  test('strips width padding, CRLF, ANSI codes and shared margin', async () => {
+    const pad = ' '.repeat(120);
+    const r = await run(`   \x1b[32mSELECT\x1b[0m a${pad}\r\n     FROM t${pad}\r\n`);
+    expect(r.output).toBe('SELECT a\n  FROM t');
+  });
+
+  test('is detected for padded terminal output', async () => {
+    const pad = ' '.repeat(100);
+    const ids = runDetection(`SELECT a${pad}\nFROM t${pad}\nWHERE x = 1${pad}`).map((d) => d.toolId);
+    expect(ids).toContain('terminal-paste-cleaner');
   });
 });
