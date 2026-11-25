@@ -616,3 +616,70 @@ registerTool({
     outputLanguage: 'text',
   }),
 });
+
+// ── Terminal Paste Cleaner ────────────────────────────────────────────────────
+//
+// Text copied from a terminal often comes with artifacts that show up as
+// "an empty line after every line" in an editor:
+//   - CRLF / stray CR line endings, which some editors count as two breaks
+//   - rows padded with spaces to the terminal width, which soft-wrap into a
+//     blank-looking line whenever the editor is narrower than the terminal
+//   - an actual blank line inserted between every line by some terminal/tmux setups
+// Plus ANSI colour codes and the left margin that TUIs draw.
+
+// eslint-disable-next-line no-control-regex
+const ANSI_RE = /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[@-Z\\-_]/g;
+
+export function cleanTerminalPaste(input: string): string {
+  let lines = input
+    .replace(ANSI_RE, '')
+    .replace(/\r+\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map((l) => l.replace(/[ \t ]+$/, ''));
+
+  // Undo "blank line after every line": when nearly all line breaks are doubled,
+  // a run of k blank lines was originally floor(k / 2) blank lines.
+  const nonBlank = lines.filter((l) => l !== '').length;
+  let followedByBlank = 0;
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (lines[i] !== '' && lines[i + 1] === '') followedByBlank++;
+  }
+  if (nonBlank >= 2 && followedByBlank >= Math.max(1, (nonBlank - 1) * 0.8)) {
+    const out: string[] = [];
+    let run = 0;
+    for (const line of [...lines, '\u0000']) {
+      if (line === '') { run++; continue; }
+      if (out.length > 0) for (let k = 0; k < Math.floor(run / 2); k++) out.push('');
+      run = 0;
+      if (line !== '\u0000') out.push(line);
+    }
+    lines = out;
+  }
+
+  // Remove the shared left margin.
+  const indents = lines.filter((l) => l.trim()).map((l) => l.match(/^[ \t]*/)![0].length);
+  const margin = indents.length ? Math.min(...indents) : 0;
+  if (margin > 0) lines = lines.map((l) => l.slice(margin));
+
+  while (lines.length && lines[0] === '') lines.shift();
+  while (lines.length && lines[lines.length - 1] === '') lines.pop();
+  return lines.join('\n');
+}
+
+registerTool({
+  id: 'terminal-paste-cleaner',
+  name: 'Terminal Paste Cleaner',
+  category: 'Text',
+  description: 'Fix text copied from a terminal: remove doubled blank lines, width padding, CRLF, ANSI colours and left margin',
+  keywords: ['terminal', 'paste', 'clean', 'blank lines', 'empty lines', 'trailing spaces', 'crlf', 'ansi', 'console', 'copy'],
+  outputExtension: 'txt',
+  detect: (input) => {
+    if (!input.includes('\n')) return 0;
+    if (/\x1b\[/.test(input) || /\r/.test(input)) return 0.65;
+    const lines = input.split('\n');
+    const padded = lines.filter((l) => /\S {20,}$/.test(l) || /^ {20,}$/.test(l)).length;
+    return padded >= Math.max(2, lines.length * 0.5) ? 0.65 : 0;
+  },
+  execute: (input) => ({ output: cleanTerminalPaste(input), outputLanguage: 'text' }),
+});

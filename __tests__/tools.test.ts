@@ -12,6 +12,7 @@ import '../lib/tools/encoding';
 import '../lib/tools/formatting';
 import '../lib/tools/conversion';
 import '../lib/tools/inspection';
+import '../lib/tools/text';
 import { executeTool, runDetection } from '../lib/tools/registry';
 import { compressToBase64, compressToUTF16 } from 'lz-string';
 import { buildPcre2Pattern } from '../lib/tools/inspection';
@@ -282,5 +283,37 @@ describe('SQL Formatter', () => {
   test('honours an explicit dialect option', async () => {
     const r = await run("SELECT a #>> '{x}' FROM t", { dialect: 'sql' });
     expect(r.error).toMatch(/tried dialects: sql/);
+  });
+});
+
+describe('Terminal Paste Cleaner', () => {
+  const run = (input: string) => executeTool('terminal-paste-cleaner', input);
+
+  test('removes the blank line inserted after every line', async () => {
+    const r = await run('line one\n\nline two\n\nline three\n');
+    expect(r.output).toBe('line one\nline two\nline three');
+  });
+
+  test('keeps original paragraph breaks when lines were doubled', async () => {
+    // "a\nb\n\nc" with every break doubled
+    const r = await run('a\n\nb\n\n\n\nc');
+    expect(r.output).toBe('a\nb\n\nc');
+  });
+
+  test('leaves normal blank lines alone', async () => {
+    const r = await run('a\nb\n\nc\nd');
+    expect(r.output).toBe('a\nb\n\nc\nd');
+  });
+
+  test('strips width padding, CRLF, ANSI codes and shared margin', async () => {
+    const pad = ' '.repeat(120);
+    const r = await run(`   \x1b[32mSELECT\x1b[0m a${pad}\r\n     FROM t${pad}\r\n`);
+    expect(r.output).toBe('SELECT a\n  FROM t');
+  });
+
+  test('is detected for padded terminal output', async () => {
+    const pad = ' '.repeat(100);
+    const ids = runDetection(`SELECT a${pad}\nFROM t${pad}\nWHERE x = 1${pad}`).map((d) => d.toolId);
+    expect(ids).toContain('terminal-paste-cleaner');
   });
 });
