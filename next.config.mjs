@@ -5,7 +5,10 @@ import os from 'node:os';
 // un-hydrated, so allow this machine's hostname and IPs plus any extra hosts
 // listed in DEV_ALLOWED_ORIGINS (comma-separated, wildcards like *.corp.com ok).
 // Only affects `next dev`.
+// Setting the list drops Next's implicit 127.0.0.1, which Playwright/CI use.
 const devOrigins = [
+  'localhost',
+  '127.0.0.1',
   os.hostname(),
   ...Object.values(os.networkInterfaces())
     .flat()
